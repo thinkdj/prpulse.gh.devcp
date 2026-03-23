@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 type CopilotReview = 'approved' | 'changes_requested' | 'not_run'
@@ -157,20 +158,15 @@ const saveRepoState = (state: RepoState) => {
 const fetchDashboardPullRequests = async (): Promise<PullRequest[]> => seedPullRequests
 
 function App() {
-  const [repos, setRepos] = useState<string[]>([])
-  const [selectedRepos, setSelectedRepos] = useState<string[]>([])
+  const [initialRepoState] = useState<RepoState>(() => loadRepoState())
+  const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
+  const [selectedRepos, setSelectedRepos] = useState<string[]>(initialRepoState.selectedRepos)
   const [newRepo, setNewRepo] = useState('')
 
   const { data: pullRequests = [] } = useQuery({
     queryKey: ['pull-requests'],
     queryFn: fetchDashboardPullRequests,
   })
-
-  useEffect(() => {
-    const state = loadRepoState()
-    setRepos(state.repos)
-    setSelectedRepos(state.selectedRepos)
-  }, [])
 
   useEffect(() => {
     if (repos.length > 0) {

@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# GitHub Dev Control Panel (gh.devcp)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A lightweight GitHub-style dashboard for personal repositories with many collaborators and frequent pull requests.
 
-Currently, two official plugins are available:
+Built with **TypeScript + React + Tailwind CSS + TanStack Query** using Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What this dashboard solves
 
-## React Compiler
+When notifications become noisy, this dashboard gives a bird's-eye view of PRs that need your attention across selectable repositories.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Dashboard preview
 
-## Expanding the ESLint configuration
+![Dashboard preview](./public/dashboard-preview.png)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Practical requirements implemented
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Show all PRs for selected repositories in one dashboard
+- Show who created each PR
+- Show PR status details (checks, Copilot review, merge safety)
+- Show when each PR was opened
+- Show how many pushes happened after open
+- Keep repository selection persistent locally (localStorage)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 3 great-to-have features included in planning widget
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Daily digest mode for new blockers since yesterday
+- Auto-priority queue by age/risk/ownership
+- SLA watchlist for near-breach PR response targets
+
+## Architecture notes
+
+- **Storage choice:** `localStorage` is used for a simple local-first setup (no backend required for this scope)
+- **Data model:** currently seeded dashboard data in UI layer to keep the first iteration simple
+- **UI:** GitHub-inspired dark design with compact status widgets and PR table
+
+If you later need multi-device sync, audit history, or team-shared state, Cloudflare Wrangler services (D1/KV) can be added as a next step.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open http://localhost:5173
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `npm run dev` - start development server
+- `npm run lint` - run ESLint
+- `npm run test` - run unit tests (Vitest)
+- `npm run build` - type-check and build
+- `npm run preview` - preview production build
+
+## Testing
+
+Focused tests validate:
+
+- Dashboard renders key widgets and requirement section
+- Repository toggle filters visible PR summary
