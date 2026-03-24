@@ -12,45 +12,72 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 
 ![Dashboard preview](./public/dashboard-preview.png)
 
-## Practical requirements implemented
+## Features
 
-- Show all PRs for selected repositories in one dashboard
-- Show who created each PR
-- Show PR status details (checks, Copilot review, merge safety)
-- Show when each PR was opened
-- Show how many pushes happened after open
-- Keep repository selection persistent locally (localStorage)
+- **Live GitHub API integration** — fetches open PRs, reviews, and check-run status in real time using your GitHub PAT
+- **Repository selector** — add, toggle, and remove repositories; selection persists in localStorage
+- **Summary widgets** — at-a-glance counts for open PRs, items needing your review, safe-to-merge, and blocked
+- **Color-coded status badges** — visual indicators for CI checks, Copilot review state, and merge safety
+- **Relative time display** — "3d ago" instead of raw dates, with full timestamp on hover
+- **PR filtering** — quick-filter by All / Needs review / Safe to merge / Blocked
+- **"Needs your review" highlighting** — amber dot and subtle background on PRs awaiting your review
+- **Draft PR indicator** — clearly marks draft PRs in the table
+- **Push count tracking** — highlights PRs with many pushes after opening (potential re-review candidates)
+- **Auto-refresh** — data refreshes every 5 minutes; manual refresh button available
+- **Error handling** — clear messages for auth failures, rate limits, and API errors
+- **Demo mode** — shows seed data when no token is configured so the dashboard is immediately useful
 
-## 3 great-to-have features included in planning widget
+## Architecture
 
-- Daily digest mode for new blockers since yesterday
-- Auto-priority queue by age/risk/ownership
-- SLA watchlist for near-breach PR response targets
+```
+src/
+├── types.ts              # Shared type definitions
+├── github-api.ts         # GitHub REST API client
+├── storage.ts            # localStorage helpers (repos & token)
+├── utils.ts              # Formatters and relative-time helper
+├── seed-data.ts          # Fallback demo data
+├── components/
+│   ├── StatusBadge.tsx   # Color-coded status pill
+│   ├── SummaryWidgets.tsx# Summary cards
+│   ├── RepoSelector.tsx  # Repo add/toggle/remove UI
+│   ├── PullRequestTable.tsx # PR table with filter bar
+│   └── TokenSettings.tsx # PAT input panel
+├── App.tsx               # Dashboard orchestrator
+├── App.test.tsx          # Component & integration tests
+├── main.tsx              # Entry point
+├── index.css             # Global styles with Tailwind
+└── test/
+    └── setup.ts          # Vitest setup
+```
 
-## Architecture notes
-
-- **Storage choice:** `localStorage` is used for a simple local-first setup (no backend required for this scope)
-- **Data model:** currently seeded dashboard data in UI layer to keep the first iteration simple
-- **UI:** GitHub-inspired dark design with compact status widgets and PR table
+- **Storage:** `localStorage` for repo selection and token (local-first, no backend needed)
+- **Data fetching:** GitHub REST API via `fetch` with TanStack Query for caching, refetch, and error handling
+- **UI:** GitHub-inspired dark theme with Tailwind CSS utility classes
 
 If you later need multi-device sync, audit history, or team-shared state, Cloudflare Wrangler services (D1/KV) can be added as a next step.
 
-## Run locally
+## Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173, click **Set token**, and paste a GitHub fine-grained Personal Access Token with read-only access to the repositories you want to monitor (pull requests, checks, and metadata).
+
+> **Security note:** The token is stored in your browser's `localStorage` so it persists between sessions.
+> For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
+> (read-only access to pull requests, checks, and repository metadata). Avoid classic tokens with broad
+> scopes. If you suspect your browser environment may be compromised, use a short-lived token or clear
+> it after each session via the settings panel.
 
 ## Scripts
 
-- `npm run dev` - start development server
-- `npm run lint` - run ESLint
-- `npm run test` - run unit tests (Vitest)
-- `npm run build` - type-check and build
-- `npm run preview` - preview production build
+- `npm run dev` — start development server
+- `npm run lint` — run ESLint
+- `npm run test` — run unit tests (Vitest)
+- `npm run build` — type-check and build
+- `npm run preview` — preview production build
 
 ## GitHub Pages CI/CD
 
@@ -64,5 +91,10 @@ Open http://localhost:5173
 
 Focused tests validate:
 
-- Dashboard renders key widgets and requirement section
-- Repository toggle filters visible PR summary
+- Dashboard renders summary widgets with seed data
+- Repository toggle filters visible PR counts
+- localStorage hydration and persistence
+- Invalid JSON fallback to defaults
+- Settings panel visibility toggle
+- PR filter buttons (All / Needs review)
+- Repository removal
