@@ -193,6 +193,8 @@ function App() {
           needsReview={summary.needsReview}
           safeToMerge={summary.safeToMerge}
           blocked={summary.blocked}
+          activeFilter={filter}
+          onFilterClick={setFilter}
         />
 
         <RepoSelector
