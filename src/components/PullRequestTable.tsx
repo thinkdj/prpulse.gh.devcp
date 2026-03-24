@@ -8,6 +8,7 @@ type PullRequestTableProps = {
   onFilterChange: (filter: DashboardFilter) => void
   isLoading: boolean
   hasToken: boolean
+  hasSelectedRepos: boolean
 }
 
 const filterLabels: { value: DashboardFilter; label: string }[] = [
@@ -23,6 +24,7 @@ export default function PullRequestTable({
   onFilterChange,
   isLoading,
   hasToken,
+  hasSelectedRepos,
 }: PullRequestTableProps) {
   const filtered = pullRequests.filter((pr) => {
     if (filter === 'needs_review') return pr.needsYourReview
@@ -63,9 +65,11 @@ export default function PullRequestTable({
         <div className="px-4 py-12 text-center text-sm text-[#8b949e]">
           {!hasToken
             ? 'Add a GitHub token in settings to fetch live data.'
-            : pullRequests.length === 0
-              ? 'No open pull requests found.'
-              : 'No PRs match the current filter.'}
+            : !hasSelectedRepos
+              ? 'Select a repository above to view pull requests.'
+              : pullRequests.length === 0
+                ? 'No open pull requests found.'
+                : 'No PRs match the current filter.'}
         </div>
       ) : (
         <div className="overflow-x-auto">

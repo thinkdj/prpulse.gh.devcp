@@ -79,7 +79,12 @@ function deriveChecksStatus(checkRuns: GitHubCheckRun[]): ChecksStatus {
   if (checkRuns.length === 0) return 'pending'
 
   const hasFailure = checkRuns.some(
-    (c) => c.conclusion === 'failure' || c.conclusion === 'cancelled' || c.conclusion === 'timed_out',
+    (c) =>
+      c.status === 'completed' &&
+      c.conclusion !== null &&
+      c.conclusion !== 'success' &&
+      c.conclusion !== 'neutral' &&
+      c.conclusion !== 'skipped',
   )
   if (hasFailure) return 'failing'
 

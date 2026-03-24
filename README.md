@@ -63,7 +63,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173, click **Set token**, and paste a GitHub Personal Access Token with `repo` scope.
+Open http://localhost:5173, click **Set token**, and paste a GitHub fine-grained Personal Access Token with read-only access to the repositories you want to monitor (pull requests, checks, and metadata).
 
 > **Security note:** The token is stored in your browser's `localStorage` so it persists between sessions.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
