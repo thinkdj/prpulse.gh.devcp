@@ -52,7 +52,7 @@ function App() {
   const { data: userRepos = [], isLoading: reposLoading } = useQuery({
     queryKey: ['user-repos', token],
     queryFn: () => fetchUserRepos(token),
-    enabled: !!token,
+    enabled: !!token && showRepoPicker,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   })
@@ -162,8 +162,13 @@ function App() {
   }, [])
 
   const handleRepoPickerSave = (selected: string[]) => {
+    const selectedSet = new Set(selected)
     setRepos(selected)
-    setSelectedRepos(selected)
+    setSelectedRepos((prev) => {
+      const kept = prev.filter((repo) => selectedSet.has(repo))
+      const newlyAdded = selected.filter((repo) => !repos.includes(repo))
+      return [...kept, ...newlyAdded]
+    })
   }
 
   return (
