@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  flexRender,
+} from '@tanstack/react-table'
+import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table'
 import type { PullRequest, DashboardFilter } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
-
-type SortField = 'opened' | 'author' | 'pushes' | 'title'
-type SortDirection = 'asc' | 'desc'
 
 type PullRequestTableProps = {
   pullRequests: PullRequest[]
@@ -13,6 +18,8 @@ type PullRequestTableProps = {
   isLoading: boolean
   hasToken: boolean
   hasSelectedRepos: boolean
+  onRefresh?: () => void
+  dataUpdatedAt?: number
 }
 
 const filterLabels: { value: DashboardFilter; label: string }[] = [
@@ -46,8 +53,8 @@ function ageColor(dateString: string): string {
   return 'text-gh-fg-muted'
 }
 
-const selectStyle =
-  'rounded-md border border-gh-border bg-gh-bg px-2 py-1.5 text-xs text-gh-fg-default focus:border-gh-accent focus:outline-none cursor-pointer'
+const columnFilterInputStyle =
+  'mt-1 w-full rounded border border-gh-border bg-gh-surface px-1.5 py-0.5 text-[10px] text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none'
 
 export default function PullRequestTable({
   pullRequests,
@@ -56,160 +63,235 @@ export default function PullRequestTable({
   isLoading,
   hasToken,
   hasSelectedRepos,
+  onRefresh,
+  dataUpdatedAt,
 }: PullRequestTableProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [authorFilter, setAuthorFilter] = useState('')
-  const [repoFilter, setRepoFilter] = useState('')
-  const [labelFilter, setLabelFilter] = useState('')
+  const [globalFilter, setGlobalFilter] = useState('')
   const [hideDrafts, setHideDrafts] = useState(false)
-  const [sortField, setSortField] = useState<SortField>('opened')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'openedAt', desc: true }])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
-  const uniqueAuthors = useMemo(
-    () => Array.from(new Set(pullRequests.map((pr) => pr.author))).sort(),
-    [pullRequests],
-  )
-  const uniqueRepos = useMemo(
-    () => Array.from(new Set(pullRequests.map((pr) => pr.repo))).sort(),
-    [pullRequests],
-  )
-  const uniqueLabels = useMemo(
-    () => Array.from(new Set(pullRequests.flatMap((pr) => pr.labels))).filter(Boolean).sort(),
-    [pullRequests],
-  )
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortField(field)
-      setSortDirection(field === 'title' || field === 'author' ? 'asc' : 'desc')
-    }
-  }
-
-  const sortIcon = (field: SortField) => {
-    if (sortField !== field) return '↕'
-    return sortDirection === 'asc' ? '▲' : '▼'
-  }
-
-  const ariaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
-    if (sortField !== field) return 'none'
-    return sortDirection === 'asc' ? 'ascending' : 'descending'
-  }
-
-  const filtered = useMemo(() => {
+  /* ── Dashboard-level filter (needs_review / safe / blocked) ── */
+  const dashboardFiltered = useMemo(() => {
     let result = pullRequests
-
     if (filter === 'needs_review') result = result.filter((pr) => pr.needsYourReview)
     else if (filter === 'safe') result = result.filter((pr) => pr.mergeSafety === 'safe')
     else if (filter === 'blocked') result = result.filter((pr) => pr.mergeSafety === 'blocked')
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(
-        (pr) =>
-          pr.title.toLowerCase().includes(q) ||
-          `#${pr.id}`.includes(q) ||
-          pr.author.toLowerCase().includes(q) ||
-          pr.repo.toLowerCase().includes(q),
-      )
-    }
-
-    if (authorFilter) result = result.filter((pr) => pr.author === authorFilter)
-    if (repoFilter) result = result.filter((pr) => pr.repo === repoFilter)
-    if (labelFilter) result = result.filter((pr) => pr.labels.includes(labelFilter))
     if (hideDrafts) result = result.filter((pr) => !pr.isDraft)
+    return result
+  }, [pullRequests, filter, hideDrafts])
 
-    return [...result].sort((a, b) => {
-      let cmp = 0
-      switch (sortField) {
-        case 'opened':
-          cmp = new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime()
-          break
-        case 'author':
-          cmp = a.author.localeCompare(b.author)
-          break
-        case 'pushes':
-          cmp = a.pushesAfterOpen - b.pushesAfterOpen
-          break
-        case 'title':
-          cmp = a.title.localeCompare(b.title)
-          break
-      }
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-  }, [pullRequests, filter, searchQuery, authorFilter, repoFilter, labelFilter, hideDrafts, sortField, sortDirection])
+  const columns: ColumnDef<PullRequest, unknown>[] = [
+      {
+        id: 'title',
+        accessorFn: (row) => `#${row.id} ${row.title} ${row.repo} ${row.labels.join(' ')}`,
+        header: 'PR',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => {
+          const pr = row.original
+          return (
+            <div className="flex items-start gap-2">
+              {pr.needsYourReview && (
+                <span
+                  className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-gh-warning"
+                  title="Needs your review"
+                />
+              )}
+              <div className="min-w-0">
+                <a
+                  href={pr.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-gh-accent-fg hover:underline"
+                >
+                  #{pr.id} {pr.title}
+                </a>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gh-fg-muted">{pr.repo}</span>
+                  {pr.isDraft && (
+                    <span className="rounded-full border border-gh-border bg-gh-border/50 px-1.5 py-0 text-[10px] text-gh-fg-muted">
+                      Draft
+                    </span>
+                  )}
+                  {pr.labels.map((label) => (
+                    <span
+                      key={label}
+                      className={`inline-flex cursor-pointer items-center rounded-full border px-1.5 py-0 text-[10px] hover:opacity-80 ${getLabelStyle(label)}`}
+                      title={`Filter by label: ${label}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        const col = table.getColumn('title')
+                        col?.setFilterValue(label)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          const col = table.getColumn('title')
+                          col?.setFilterValue(label)
+                        }
+                      }}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'author',
+        accessorKey: 'author',
+        header: 'Author',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => {
+          const pr = row.original
+          return (
+            <div className="flex items-center gap-2">
+              {pr.authorAvatar && (
+                <img src={pr.authorAvatar} alt="" className="h-5 w-5 rounded-full" />
+              )}
+              <span
+                className="cursor-pointer text-gh-fg-default hover:text-gh-accent-fg"
+                title={`Filter by author: ${pr.author}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  const col = table.getColumn('author')
+                  col?.setFilterValue(pr.author)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    const col = table.getColumn('author')
+                    col?.setFilterValue(pr.author)
+                  }
+                }}
+              >
+                {pr.author}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'openedAt',
+        accessorKey: 'openedAt',
+        header: 'Opened',
+        enableColumnFilter: false,
+        cell: ({ row }) => {
+          const pr = row.original
+          return (
+            <span
+              className={ageColor(pr.openedAt)}
+              title={new Date(pr.openedAt).toLocaleString()}
+            >
+              {relativeTime(pr.openedAt)}
+            </span>
+          )
+        },
+        sortingFn: (a, b) =>
+          new Date(a.original.openedAt).getTime() - new Date(b.original.openedAt).getTime(),
+      },
+      {
+        id: 'checksStatus',
+        accessorKey: 'checksStatus',
+        header: 'Checks',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => <StatusBadge kind="checksStatus" value={row.original.checksStatus} />,
+      },
+      {
+        id: 'copilotReview',
+        accessorKey: 'copilotReview',
+        header: 'Copilot',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => <StatusBadge kind="copilotReview" value={row.original.copilotReview} />,
+      },
+      {
+        id: 'mergeSafety',
+        accessorKey: 'mergeSafety',
+        header: 'Merge',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => <StatusBadge kind="mergeSafety" value={row.original.mergeSafety} />,
+      },
+      {
+        id: 'pushesAfterOpen',
+        accessorKey: 'pushesAfterOpen',
+        header: 'Pushes',
+        enableColumnFilter: false,
+        cell: ({ row }) => {
+          const pr = row.original
+          return (
+            <span
+              className={`text-sm ${
+                pr.pushesAfterOpen >= 3 ? 'font-medium text-gh-warning' : 'text-gh-fg-muted'
+              }`}
+            >
+              {pr.pushesAfterOpen}
+            </span>
+          )
+        },
+      },
+  ]
 
-  const hasActiveLocalFilters = !!(searchQuery || authorFilter || repoFilter || labelFilter || hideDrafts)
+  const table = useReactTable({
+    data: dashboardFiltered,
+    columns,
+    state: { sorting, columnFilters, globalFilter },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: 'includesString',
+    getRowId: (row) => `${row.repo}#${row.id}`,
+  })
+
+  const rows = table.getRowModel().rows
+  const hasActiveColumnFilters = columnFilters.length > 0
+  const hasActiveFilters = !!(globalFilter || hasActiveColumnFilters || hideDrafts)
 
   const clearAllFilters = () => {
-    setSearchQuery('')
-    setAuthorFilter('')
-    setRepoFilter('')
-    setLabelFilter('')
+    setGlobalFilter('')
+    setColumnFilters([])
     setHideDrafts(false)
     onFilterChange('all')
   }
 
   return (
     <section className="overflow-hidden rounded-md border border-gh-border bg-gh-surface">
-      {/* Search & facet filters */}
+      {/* Toolbar: search, facets, refresh */}
       <div className="space-y-2 border-b border-gh-border bg-gh-bg px-3 py-2.5">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search PRs by title, author, or #number…"
-          aria-label="Search pull requests"
-          className="w-full rounded-md border border-gh-border bg-gh-surface py-1.5 pl-3 pr-3 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search PRs by title, author, or #number…"
+            aria-label="Search pull requests"
+            className="flex-1 rounded-md border border-gh-border bg-gh-surface py-1.5 pl-3 pr-3 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none"
+          />
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="shrink-0 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
+              title="Refresh data (clears cache)"
+            >
+              ↻ Refresh
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={authorFilter}
-            onChange={(e) => setAuthorFilter(e.target.value)}
-            aria-label="Filter by author"
-            className={selectStyle}
-          >
-            <option value="">All authors ({uniqueAuthors.length})</option>
-            {uniqueAuthors.map((author) => (
-              <option key={author} value={author}>
-                {author}
-              </option>
-            ))}
-          </select>
-
-          {uniqueRepos.length > 1 && (
-            <select
-              value={repoFilter}
-              onChange={(e) => setRepoFilter(e.target.value)}
-              aria-label="Filter by repository"
-              className={selectStyle}
-            >
-              <option value="">All repos ({uniqueRepos.length})</option>
-              {uniqueRepos.map((repo) => (
-                <option key={repo} value={repo}>
-                  {repo}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {uniqueLabels.length > 0 && (
-            <select
-              value={labelFilter}
-              onChange={(e) => setLabelFilter(e.target.value)}
-              aria-label="Filter by label"
-              className={selectStyle}
-            >
-              <option value="">All labels ({uniqueLabels.length})</option>
-              {uniqueLabels.map((label) => (
-                <option key={label} value={label}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          )}
-
           <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
             <input
               type="checkbox"
@@ -220,7 +302,13 @@ export default function PullRequestTable({
             Hide drafts
           </label>
 
-          {(hasActiveLocalFilters || filter !== 'all') && (
+          {dataUpdatedAt != null && dataUpdatedAt > 0 && (
+            <span className="text-xs text-gh-fg-muted">
+              Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+            </span>
+          )}
+
+          {(hasActiveFilters || filter !== 'all') && (
             <button
               type="button"
               onClick={clearAllFilters}
@@ -251,7 +339,7 @@ export default function PullRequestTable({
           </button>
         ))}
         <span className="ml-auto text-xs text-gh-fg-muted">
-          {filtered.length} {filtered.length === 1 ? 'PR' : 'PRs'}
+          {rows.length} {rows.length === 1 ? 'PR' : 'PRs'}
         </span>
       </div>
 
@@ -259,13 +347,13 @@ export default function PullRequestTable({
         <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
           Loading pull requests…
         </div>
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
           {!hasToken
             ? 'Add a GitHub token in settings to fetch live data.'
             : !hasSelectedRepos
               ? 'Select a repository above to view pull requests.'
-              : pullRequests.length === 0
+              : dashboardFiltered.length === 0 && pullRequests.length === 0
                 ? 'No open pull requests found.'
                 : 'No PRs match the current filters.'}
         </div>
@@ -273,138 +361,71 @@ export default function PullRequestTable({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm" data-testid="pr-table">
             <thead className="bg-gh-bg text-xs uppercase tracking-wide text-gh-fg-muted">
-              <tr>
-                <th className="px-3 py-2" aria-sort={ariaSort('title')}>
-                  <button type="button" onClick={() => handleSort('title')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
-                    PR <span className="text-[10px] opacity-60">{sortIcon('title')}</span>
-                  </button>
-                </th>
-                <th className="px-3 py-2" aria-sort={ariaSort('author')}>
-                  <button type="button" onClick={() => handleSort('author')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
-                    Author <span className="text-[10px] opacity-60">{sortIcon('author')}</span>
-                  </button>
-                </th>
-                <th className="px-3 py-2" aria-sort={ariaSort('opened')}>
-                  <button type="button" onClick={() => handleSort('opened')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
-                    Opened <span className="text-[10px] opacity-60">{sortIcon('opened')}</span>
-                  </button>
-                </th>
-                <th className="px-3 py-2">Checks</th>
-                <th className="px-3 py-2">Copilot</th>
-                <th className="px-3 py-2">Merge</th>
-                <th className="px-3 py-2 text-right" aria-sort={ariaSort('pushes')}>
-                  <button type="button" onClick={() => handleSort('pushes')} className="inline-flex w-full items-center justify-end gap-1 text-inherit hover:text-gh-fg-default">
-                    Pushes <span className="text-[10px] opacity-60">{sortIcon('pushes')}</span>
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((pr) => (
-                <tr
-                  key={`${pr.repo}#${pr.id}`}
-                  className={`border-t border-gh-border ${
-                    pr.needsYourReview ? 'bg-gh-warning/5' : ''
-                  }`}
-                >
-                  <td className="px-3 py-3">
-                    <div className="flex items-start gap-2">
-                      {pr.needsYourReview && (
-                        <span
-                          className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-gh-warning"
-                          title="Needs your review"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <a
-                          href={pr.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-gh-accent-fg hover:underline"
-                        >
-                          #{pr.id} {pr.title}
-                        </a>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs text-gh-fg-muted">{pr.repo}</span>
-                          {pr.isDraft && (
-                            <span className="rounded-full border border-gh-border bg-gh-border/50 px-1.5 py-0 text-[10px] text-gh-fg-muted">
-                              Draft
-                            </span>
-                          )}
-                          {pr.labels.map((label) => (
-                            <span
-                              key={label}
-                              className={`inline-flex cursor-pointer items-center rounded-full border px-1.5 py-0 text-[10px] hover:opacity-80 ${getLabelStyle(label)}`}
-                              title={`Filter by label: ${label}`}
-                              onClick={() => setLabelFilter(label)}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  setLabelFilter(label)
-                                }
-                              }}
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
-                      {pr.authorAvatar && (
-                        <img
-                          src={pr.authorAvatar}
-                          alt=""
-                          className="h-5 w-5 rounded-full"
-                        />
-                      )}
-                      <span
-                        className="cursor-pointer text-gh-fg-default hover:text-gh-accent-fg"
-                        title={`Filter by author: ${pr.author}`}
-                        onClick={() => setAuthorFilter(pr.author)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setAuthorFilter(pr.author)
-                          }
-                        }}
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const canSort = header.column.getCanSort()
+                    const sorted = header.column.getIsSorted()
+                    const sortIcon = sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'
+                    const isLast = header.column.id === 'pushesAfterOpen'
+                    return (
+                      <th
+                        key={header.id}
+                        className={`px-3 py-2 ${isLast ? 'text-right' : ''}`}
+                        aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
                       >
-                        {pr.author}
-                      </span>
-                    </div>
-                  </td>
-                  <td
-                    className={`px-3 py-3 ${ageColor(pr.openedAt)}`}
-                    title={new Date(pr.openedAt).toLocaleString()}
-                  >
-                    {relativeTime(pr.openedAt)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge kind="checksStatus" value={pr.checksStatus} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge kind="copilotReview" value={pr.copilotReview} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge kind="mergeSafety" value={pr.mergeSafety} />
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <span
-                      className={`text-sm ${
-                        pr.pushesAfterOpen >= 3 ? 'font-medium text-gh-warning' : 'text-gh-fg-muted'
-                      }`}
-                    >
-                      {pr.pushesAfterOpen}
-                    </span>
-                  </td>
+                        {canSort ? (
+                          <button
+                            type="button"
+                            onClick={header.column.getToggleSortingHandler()}
+                            className={`inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default ${isLast ? 'justify-end' : ''}`}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}{' '}
+                            <span className="text-[10px] opacity-60">{sortIcon}</span>
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                        {header.column.getCanFilter() && (
+                          <input
+                            type="text"
+                            value={(header.column.getFilterValue() as string) ?? ''}
+                            onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                            placeholder={`Filter…`}
+                            aria-label={`Filter by ${header.column.columnDef.header as string}`}
+                            className={columnFilterInputStyle}
+                          />
+                        )}
+                      </th>
+                    )
+                  })}
                 </tr>
               ))}
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const pr = row.original
+                return (
+                  <tr
+                    key={row.id}
+                    className={`border-t border-gh-border ${
+                      pr.needsYourReview ? 'bg-gh-warning/5' : ''
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const isLast = cell.column.id === 'pushesAfterOpen'
+                      return (
+                        <td
+                          key={cell.id}
+                          className={`px-3 py-3 ${isLast ? 'text-right' : ''}`}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

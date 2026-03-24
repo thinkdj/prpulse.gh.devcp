@@ -41,7 +41,38 @@ const COPILOT_BOT_LOGINS = [
   'copilot[bot]',
 ]
 
+/* ── In-memory API response cache (3-minute TTL) ── */
+
+type CacheEntry<T = unknown> = { data: T; timestamp: number }
+
+const DEFAULT_CACHE_TTL = 3 * 60 * 1000 // 3 minutes
+
+const apiCache = new Map<string, CacheEntry>()
+
+function getCached<T>(key: string): T | undefined {
+  const entry = apiCache.get(key)
+  if (!entry) return undefined
+  if (Date.now() - entry.timestamp > DEFAULT_CACHE_TTL) {
+    apiCache.delete(key)
+    return undefined
+  }
+  return entry.data as T
+}
+
+function setCache<T>(key: string, data: T): void {
+  apiCache.set(key, { data, timestamp: Date.now() })
+}
+
+/** Clear all cached API responses. Call on manual refresh. */
+export function clearApiCache(): void {
+  apiCache.clear()
+}
+
 async function githubFetch<T>(path: string, token: string): Promise<T> {
+  const cacheKey = `${token}:${path}`
+  const cached = getCached<T>(cacheKey)
+  if (cached !== undefined) return cached
+
   const response = await fetch(`${GITHUB_API}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -68,7 +99,9 @@ async function githubFetch<T>(path: string, token: string): Promise<T> {
     throw new Error(`GitHub API error: ${response.status}`)
   }
 
-  return response.json() as Promise<T>
+  const data = await response.json() as T
+  setCache(cacheKey, data)
+  return data
 }
 
 function deriveCopilotReview(reviews: GitHubReview[]): CopilotReview {

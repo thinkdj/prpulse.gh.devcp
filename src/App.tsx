@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { DashboardFilter, PullRequest, RepoState } from './types'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { DashboardFilter, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, saveRepoState, saveToken, saveTheme } from './storage'
 import type { Theme } from './storage'
-import { fetchCurrentUser, fetchRepoPullRequests, fetchUserRepos } from './github-api'
+import { clearApiCache, fetchCurrentUser, fetchRepoPullRequests, fetchUserRepos } from './github-api'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
 import PullRequestTable from './components/PullRequestTable'
@@ -56,62 +56,37 @@ function App() {
     retry: 1,
   })
 
-  const fetchAllPRs = useCallback(async (): Promise<PullRequest[]> => {
-    if (!token || selectedRepos.length === 0) return []
+  const STALE_TIME = 3 * 60 * 1000 // 3 minutes – matches API cache TTL
 
-    const results = await Promise.allSettled(
-      selectedRepos.map((repo) => fetchRepoPullRequests(repo, token, currentUser)),
-    )
-
-    const allPrs = results
-      .filter((r): r is PromiseFulfilledResult<PullRequest[]> => r.status === 'fulfilled')
-      .flatMap((r) => r.value)
-
-    if (allPrs.length === 0) {
-      const firstError = results.find(
-        (r): r is PromiseRejectedResult => r.status === 'rejected',
-      )
-      if (firstError) {
-        throw firstError.reason instanceof Error
-          ? firstError.reason
-          : new Error('Failed to fetch pull requests.')
-      }
-    }
-
-    return allPrs
-  }, [token, selectedRepos, currentUser])
-
-  const {
-    data: pullRequests = [],
-    isLoading,
-    error,
-    dataUpdatedAt,
-  } = useQuery({
-    queryKey: ['pull-requests', token, selectedRepos, currentUser],
-    queryFn: fetchAllPRs,
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    retry: 1,
-    enabled: !!token && !!currentUser && selectedRepos.length > 0,
+  const repoQueries = useQueries({
+    queries: selectedRepos.map((repo) => ({
+      queryKey: ['repo-prs', token, repo, currentUser],
+      queryFn: () => fetchRepoPullRequests(repo, token, currentUser),
+      staleTime: STALE_TIME,
+      refetchInterval: 5 * 60 * 1000,
+      retry: 1,
+      enabled: !!token && !!currentUser,
+    })),
   })
+
+  const isLoading = repoQueries.some((q) => q.isLoading)
+  const error = repoQueries.find((q) => q.error)?.error ?? null
+  const dataUpdatedAt = Math.max(0, ...repoQueries.map((q) => q.dataUpdatedAt))
+
+  const pullRequests = repoQueries.flatMap((q) => q.data ?? [])
 
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
 
-  const visiblePrs = useMemo(
-    () => pullRequests.filter((pr) => selectedRepos.includes(pr.repo)),
-    [pullRequests, selectedRepos],
-  )
-
   const summary = useMemo(
     () => ({
-      total: visiblePrs.length,
-      needsReview: visiblePrs.filter((pr) => pr.needsYourReview).length,
-      safeToMerge: visiblePrs.filter((pr) => pr.mergeSafety === 'safe').length,
-      blocked: visiblePrs.filter((pr) => pr.mergeSafety === 'blocked').length,
+      total: pullRequests.length,
+      needsReview: pullRequests.filter((pr) => pr.needsYourReview).length,
+      safeToMerge: pullRequests.filter((pr) => pr.mergeSafety === 'safe').length,
+      blocked: pullRequests.filter((pr) => pr.mergeSafety === 'blocked').length,
     }),
-    [visiblePrs],
+    [pullRequests],
   )
 
   const toggleRepo = (repo: string) => {
@@ -147,12 +122,14 @@ function App() {
   const handleSaveToken = (newToken: string) => {
     saveToken(newToken)
     setToken(newToken)
-    void queryClient.invalidateQueries({ queryKey: ['pull-requests'] })
+    clearApiCache()
+    void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
   }
 
   const handleRefresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['pull-requests'] })
+    clearApiCache()
+    void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
   }
 
   const handleNewRepoChange = useCallback((v: string) => {
@@ -285,12 +262,14 @@ function App() {
             />
 
             <PullRequestTable
-              pullRequests={visiblePrs}
+              pullRequests={pullRequests}
               filter={filter}
               onFilterChange={setFilter}
               isLoading={isLoading}
               hasToken={!!token}
               hasSelectedRepos={selectedRepos.length > 0}
+              onRefresh={handleRefresh}
+              dataUpdatedAt={dataUpdatedAt}
             />
 
             {showRepoPicker && (
