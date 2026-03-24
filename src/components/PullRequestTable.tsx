@@ -92,6 +92,11 @@ export default function PullRequestTable({
     return sortDirection === 'asc' ? '▲' : '▼'
   }
 
+  const ariaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none'
+    return sortDirection === 'asc' ? 'ascending' : 'descending'
+  }
+
   const filtered = useMemo(() => {
     let result = pullRequests
 
@@ -269,17 +274,17 @@ export default function PullRequestTable({
           <table className="w-full border-collapse text-left text-sm" data-testid="pr-table">
             <thead className="bg-gh-bg text-xs uppercase tracking-wide text-gh-fg-muted">
               <tr>
-                <th className="px-3 py-2">
+                <th className="px-3 py-2" aria-sort={ariaSort('title')}>
                   <button type="button" onClick={() => handleSort('title')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
                     PR <span className="text-[10px] opacity-60">{sortIcon('title')}</span>
                   </button>
                 </th>
-                <th className="px-3 py-2">
+                <th className="px-3 py-2" aria-sort={ariaSort('author')}>
                   <button type="button" onClick={() => handleSort('author')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
                     Author <span className="text-[10px] opacity-60">{sortIcon('author')}</span>
                   </button>
                 </th>
-                <th className="px-3 py-2">
+                <th className="px-3 py-2" aria-sort={ariaSort('opened')}>
                   <button type="button" onClick={() => handleSort('opened')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
                     Opened <span className="text-[10px] opacity-60">{sortIcon('opened')}</span>
                   </button>
@@ -287,7 +292,7 @@ export default function PullRequestTable({
                 <th className="px-3 py-2">Checks</th>
                 <th className="px-3 py-2">Copilot</th>
                 <th className="px-3 py-2">Merge</th>
-                <th className="px-3 py-2 text-right">
+                <th className="px-3 py-2 text-right" aria-sort={ariaSort('pushes')}>
                   <button type="button" onClick={() => handleSort('pushes')} className="inline-flex w-full items-center justify-end gap-1 text-inherit hover:text-gh-fg-default">
                     Pushes <span className="text-[10px] opacity-60">{sortIcon('pushes')}</span>
                   </button>
