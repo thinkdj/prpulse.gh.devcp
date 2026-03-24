@@ -1,7 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { seedPullRequests } from './seed-data'
+
+/* ── Mock the GitHub API module ── */
+vi.mock('./github-api', () => ({
+  fetchCurrentUser: vi.fn().mockResolvedValue('test-user'),
+  fetchRepoPullRequests: vi.fn().mockImplementation((repoFullName: string) =>
+    Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
+  ),
+  fetchUserRepos: vi.fn().mockResolvedValue([]),
+}))
+
+const TOKEN_KEY = 'gh.devcp.dashboard.token'
+const REPOS_KEY = 'gh.devcp.dashboard.repositories'
+
+const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 
 afterEach(() => {
   cleanup()
@@ -21,93 +36,33 @@ const renderApp = () => {
   )
 }
 
+/** Set up localStorage so the app boots in "authenticated" mode with seed repos */
+function seedAuthenticatedState() {
+  localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+  localStorage.setItem(
+    REPOS_KEY,
+    JSON.stringify({ repos: defaultRepos, selectedRepos: defaultRepos }),
+  )
+}
+
 describe('GitHub Dev Control Panel', () => {
-  it('renders the dashboard and summary widgets', async () => {
+  /* ── Empty / welcome state (no token) ── */
+
+  it('shows welcome state when no token is configured', async () => {
     renderApp()
 
-    expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
-
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
-    })
+    expect(await screen.findByTestId('welcome-state')).toBeInTheDocument()
+    expect(screen.getByText(/Welcome to GitHub Dev CP/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Connect GitHub Token/i })).toBeInTheDocument()
   })
 
-  it('filters PRs when a repository is toggled off', async () => {
+  it('shows settings panel when connect button is clicked from welcome state', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
+    await screen.findByTestId('welcome-state')
+    fireEvent.click(screen.getByRole('button', { name: /Connect GitHub Token/i }))
 
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
-    })
-  })
-
-  it('hydrates selected repositories from localStorage', async () => {
-    localStorage.setItem(
-      'gh.devcp.dashboard.repositories',
-      JSON.stringify({
-        repos: ['thinkdj/gh.devcp', 'thinkdj/website'],
-        selectedRepos: ['thinkdj/gh.devcp'],
-      }),
-    )
-
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('2')
-    })
-  })
-
-  it('falls back to defaults when localStorage has invalid JSON', async () => {
-    localStorage.setItem('gh.devcp.dashboard.repositories', '{not-valid-json')
-
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
-    })
-  })
-
-  it('persists repository selection changes to localStorage', async () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
-
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
-    })
-
-    setItemSpy.mockClear()
-    fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
-
-    await waitFor(() => {
-      expect(setItemSpy).toHaveBeenCalled()
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
-    })
-
-    const lastCall = setItemSpy.mock.calls.at(-1)
-    expect(lastCall?.[0]).toBe('gh.devcp.dashboard.repositories')
-
-    const payload = JSON.parse(lastCall?.[1] ?? '{}') as {
-      repos?: string[]
-      selectedRepos?: string[]
-    }
-    expect(payload.repos).toContain('thinkdj/website')
-    expect(payload.selectedRepos).not.toContain('thinkdj/website')
-  })
-
-  it('shows demo data notice when no token is configured', async () => {
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    expect(screen.getByText(/demo data/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/GitHub Personal Access Token/i)).toBeInTheDocument()
   })
 
   it('shows settings panel when "Set token" button is clicked', async () => {
@@ -119,69 +74,290 @@ describe('GitHub Dev Control Panel', () => {
     expect(screen.getByLabelText(/GitHub Personal Access Token/i)).toBeInTheDocument()
   })
 
-  it('filters visible PRs using the filter buttons', async () => {
-    renderApp()
+  /* ── Authenticated dashboard ── */
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+  describe('with token', () => {
+    beforeEach(seedAuthenticatedState)
+
+    it('renders the dashboard and summary widgets', async () => {
+      renderApp()
+
+      expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Needs review' }))
+    it('filters PRs when a repository is toggled off', async () => {
+      renderApp()
 
-    await waitFor(() => {
-      expect(screen.getByText('3 PRs')).toBeInTheDocument()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
+      })
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+    it('hydrates selected repositories from localStorage', async () => {
+      localStorage.setItem(
+        REPOS_KEY,
+        JSON.stringify({
+          repos: ['thinkdj/gh.devcp', 'thinkdj/website'],
+          selectedRepos: ['thinkdj/gh.devcp'],
+        }),
+      )
 
-    await waitFor(() => {
-      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('2')
+      })
+    })
+
+    it('falls back to empty repos when localStorage has invalid JSON', async () => {
+      localStorage.setItem(REPOS_KEY, '{not-valid-json')
+
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('0')
+      })
+    })
+
+    it('persists repository selection changes to localStorage', async () => {
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
+
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      setItemSpy.mockClear()
+      fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
+
+      await waitFor(() => {
+        expect(setItemSpy).toHaveBeenCalled()
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
+      })
+
+      const lastCall = setItemSpy.mock.calls.at(-1)
+      expect(lastCall?.[0]).toBe(REPOS_KEY)
+
+      const payload = JSON.parse(lastCall?.[1] ?? '{}') as {
+        repos?: string[]
+        selectedRepos?: string[]
+      }
+      expect(payload.repos).toContain('thinkdj/website')
+      expect(payload.selectedRepos).not.toContain('thinkdj/website')
+    })
+
+    it('filters visible PRs using the filter buttons', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Needs review' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('3 PRs')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'All' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+    })
+
+    it('removes a repository when the remove button is clicked', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
+      })
+      expect(screen.queryByRole('button', { name: 'thinkdj/website' })).not.toBeInTheDocument()
+    })
+
+    it('shows validation error for invalid repo format', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      const input = screen.getByLabelText('Add repository')
+      fireEvent.change(input, { target: { value: 'invalid-no-slash' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
+      })
+      expect(input).toHaveAttribute('aria-invalid', 'true')
+    })
+
+    it('rejects repo names with more than one slash', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      const input = screen.getByLabelText('Add repository')
+      fireEvent.change(input, { target: { value: 'a/b/c' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
+      })
+    })
+
+    it('filters PRs by search query on title', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const searchInput = screen.getByLabelText('Search pull requests')
+      fireEvent.change(searchInput, { target: { value: 'audit' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('1 PR')).toBeInTheDocument()
+      })
+    })
+
+    it('filters PRs by author using the dropdown', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const authorSelect = screen.getByLabelText('Filter by author')
+      fireEvent.change(authorSelect, { target: { value: 'kevin-ops' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('1 PR')).toBeInTheDocument()
+      })
+    })
+
+    it('hides draft PRs when hide drafts checkbox is checked', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const checkbox = screen.getByLabelText('Hide drafts')
+      fireEvent.click(checkbox)
+
+      await waitFor(() => {
+        expect(screen.getByText('4 PRs')).toBeInTheDocument()
+      })
+    })
+
+    it('clears all filters when clear button is clicked', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const searchInput = screen.getByLabelText('Search pull requests')
+      fireEvent.change(searchInput, { target: { value: 'audit' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('1 PR')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('✕ Clear filters'))
+
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+    })
+
+    it('filters PRs by label using the dropdown', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const labelSelect = screen.getByLabelText('Filter by label')
+      fireEvent.change(labelSelect, { target: { value: 'bug' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('1 PR')).toBeInTheDocument()
+      })
+    })
+
+    it('applies filter when clicking a summary widget', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      const blockedWidget = screen.getByTestId('summary-blocked').closest('button')!
+      fireEvent.click(blockedWidget)
+
+      await waitFor(() => {
+        expect(screen.getByText('1 PR')).toBeInTheDocument()
+      })
+    })
+
+    it('displays labels on PR rows', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      const table = screen.getByTestId('pr-table')
+      expect(table.querySelectorAll('[title^="Filter by label:"]').length).toBeGreaterThan(0)
+      expect(screen.getByTitle('Filter by label: bug')).toBeInTheDocument()
+      expect(screen.getByTitle('Filter by label: urgent')).toBeInTheDocument()
+      expect(screen.getByTitle('Filter by label: chore')).toBeInTheDocument()
     })
   })
 
-  it('removes a repository when the remove button is clicked', async () => {
+  /* ── Theme toggle ── */
+
+  it('toggles theme when theme button is clicked', async () => {
     renderApp()
 
     await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
-    })
+    const themeBtn = screen.getByRole('button', { name: /Toggle theme/i })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
+    // Default is dark → click toggles to light
+    fireEvent.click(themeBtn)
+    expect(document.documentElement.classList.contains('light')).toBe(true)
 
-    await waitFor(() => {
-      expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
-    })
-    expect(screen.queryByRole('button', { name: 'thinkdj/website' })).not.toBeInTheDocument()
-  })
-
-  it('shows validation error for invalid repo format', async () => {
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-
-    const input = screen.getByLabelText('Add repository')
-    fireEvent.change(input, { target: { value: 'invalid-no-slash' } })
-    fireEvent.submit(input.closest('form')!)
-
-    await waitFor(() => {
-      expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
-    })
-    expect(input).toHaveAttribute('aria-invalid', 'true')
-  })
-
-  it('rejects repo names with more than one slash', async () => {
-    renderApp()
-
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-
-    const input = screen.getByLabelText('Add repository')
-    fireEvent.change(input, { target: { value: 'a/b/c' } })
-    fireEvent.submit(input.closest('form')!)
-
-    await waitFor(() => {
-      expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
-    })
+    // Click again → toggles back to dark
+    fireEvent.click(themeBtn)
+    expect(document.documentElement.classList.contains('light')).toBe(false)
   })
 })

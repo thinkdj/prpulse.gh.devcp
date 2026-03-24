@@ -1,7 +1,71 @@
 @import 'tailwindcss';
 
+/* ── Theme tokens: dark (default) ── */
 :root {
+  color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+
+  --gh-bg: #0d1117;
+  --gh-surface: #161b22;
+  --gh-overlay: #21262d;
+  --gh-border: #30363d;
+  --gh-border-hover: #484f58;
+  --gh-fg: #f0f6fc;
+  --gh-fg-default: #c9d1d9;
+  --gh-fg-muted: #8b949e;
+  --gh-fg-placeholder: #484f58;
+  --gh-accent: #1f6feb;
+  --gh-accent-fg: #58a6ff;
+  --gh-success: #238636;
+  --gh-success-fg: #3fb950;
+  --gh-danger: #da3633;
+  --gh-danger-fg: #f85149;
+  --gh-warning: #d29922;
+  --gh-purple: #a371f7;
+}
+
+/* ── Theme tokens: light ── */
+.light {
+  color-scheme: light;
+
+  --gh-bg: #ffffff;
+  --gh-surface: #f6f8fa;
+  --gh-overlay: #eaeef2;
+  --gh-border: #d0d7de;
+  --gh-border-hover: #afb8c1;
+  --gh-fg: #1f2328;
+  --gh-fg-default: #1f2328;
+  --gh-fg-muted: #656d76;
+  --gh-fg-placeholder: #6e7781;
+  --gh-accent: #0969da;
+  --gh-accent-fg: #0969da;
+  --gh-success: #1a7f37;
+  --gh-success-fg: #1a7f37;
+  --gh-danger: #cf222e;
+  --gh-danger-fg: #cf222e;
+  --gh-warning: #9a6700;
+  --gh-purple: #8250df;
+}
+
+/* ── Register theme colors for Tailwind v4 utility classes ── */
+@theme inline {
+  --color-gh-bg: var(--gh-bg);
+  --color-gh-surface: var(--gh-surface);
+  --color-gh-overlay: var(--gh-overlay);
+  --color-gh-border: var(--gh-border);
+  --color-gh-border-hover: var(--gh-border-hover);
+  --color-gh-fg: var(--gh-fg);
+  --color-gh-fg-default: var(--gh-fg-default);
+  --color-gh-fg-muted: var(--gh-fg-muted);
+  --color-gh-fg-placeholder: var(--gh-fg-placeholder);
+  --color-gh-accent: var(--gh-accent);
+  --color-gh-accent-fg: var(--gh-accent-fg);
+  --color-gh-success: var(--gh-success);
+  --color-gh-success-fg: var(--gh-success-fg);
+  --color-gh-danger: var(--gh-danger);
+  --color-gh-danger-fg: var(--gh-danger-fg);
+  --color-gh-warning: var(--gh-warning);
+  --color-gh-purple: var(--gh-purple);
 }
 
 * {

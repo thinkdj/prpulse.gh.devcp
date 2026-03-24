@@ -47,13 +47,13 @@ function TokenSettingsForm({
   }
 
   return (
-    <div className="mb-6 rounded-md border border-[#30363d] bg-[#161b22] p-4">
+    <div className="mb-6 rounded-md border border-gh-border bg-gh-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-[#f0f6fc]">Settings</h2>
+        <h2 className="text-sm font-medium text-gh-fg">Settings</h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-[#8b949e] hover:text-[#c9d1d9]"
+          className="text-xs text-gh-fg-muted hover:text-gh-fg-default"
         >
           Close
         </button>
@@ -61,10 +61,10 @@ function TokenSettingsForm({
 
       <div className="space-y-3">
         <div>
-          <label htmlFor="github-token" className="mb-1 block text-xs text-[#8b949e]">
+          <label htmlFor="github-token" className="mb-1 block text-xs text-gh-fg-muted">
             GitHub Personal Access Token
           </label>
-          <p className="mb-2 text-xs text-[#8b949e]">
+          <p className="mb-2 text-xs text-gh-fg-muted">
             Required for fetching live PR data. Recommend a <strong>fine-grained PAT</strong> with
             read-only access to pull requests and checks. Token is stored in your browser&apos;s localStorage.
           </p>
@@ -74,13 +74,13 @@ function TokenSettingsForm({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-            className="w-full rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#c9d1d9] outline-none focus:border-[#1f6feb]"
+            className="w-full rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-default outline-none focus:border-gh-accent"
             autoComplete="off"
           />
         </div>
 
         {currentUser && (
-          <p className="text-xs text-[#3fb950]">
+          <p className="text-xs text-gh-success-fg">
             Authenticated as <strong>{currentUser}</strong>
           </p>
         )}
@@ -89,7 +89,7 @@ function TokenSettingsForm({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-md border border-[#1f6feb] bg-[#1f6feb] px-3 py-1.5 text-sm font-medium text-white"
+            className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-sm font-medium text-white"
           >
             Save token
           </button>
@@ -97,7 +97,7 @@ function TokenSettingsForm({
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#8b949e] hover:text-[#f85149]"
+              className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-muted hover:text-gh-danger-fg"
             >
               Clear token
             </button>
