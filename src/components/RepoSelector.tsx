@@ -9,6 +9,8 @@ type RepoSelectorProps = {
   onAddRepo: (event: FormEvent<HTMLFormElement>) => void
   onToggleRepo: (repo: string) => void
   onRemoveRepo: (repo: string) => void
+  onBrowseRepos?: () => void
+  hasToken: boolean
 }
 
 export default function RepoSelector({
@@ -20,70 +22,91 @@ export default function RepoSelector({
   onAddRepo,
   onToggleRepo,
   onRemoveRepo,
+  onBrowseRepos,
+  hasToken,
 }: RepoSelectorProps) {
   return (
-    <section className="mb-6 rounded-md border border-[#30363d] bg-[#161b22] p-4">
+    <section className="mb-6 rounded-md border border-gh-border bg-gh-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto text-sm font-medium text-[#f0f6fc]">Repositories</h2>
-        <form onSubmit={onAddRepo} className="flex items-center gap-2">
-          <label htmlFor="add-repo-input" className="sr-only">
-            Add repository
-          </label>
-          <div className="flex flex-col">
-            <input
-              id="add-repo-input"
-              value={newRepo}
-              onChange={(event) => onNewRepoChange(event.target.value)}
-              placeholder="owner/repo"
-              aria-invalid={!!repoError}
-              aria-describedby={repoError ? 'add-repo-error' : undefined}
-              className="rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#c9d1d9] outline-none focus:border-[#1f6feb]"
-            />
-            {repoError && (
-              <span id="add-repo-error" className="mt-1 text-xs text-[#f85149]">{repoError}</span>
-            )}
-          </div>
-          <button
-            type="submit"
-            className="rounded-md border border-[#1f6feb] bg-[#1f6feb] px-3 py-1.5 text-sm font-medium text-white"
-          >
-            Add
-          </button>
-        </form>
+        <h2 className="mr-auto text-sm font-medium text-gh-fg">Repositories</h2>
+        <div className="flex items-center gap-2">
+          {hasToken && onBrowseRepos && (
+            <button
+              type="button"
+              onClick={onBrowseRepos}
+              className="rounded-md border border-gh-accent bg-gh-accent/10 px-3 py-1.5 text-sm text-gh-accent-fg hover:bg-gh-accent/20"
+            >
+              Browse repos
+            </button>
+          )}
+          <form onSubmit={onAddRepo} className="flex items-center gap-2">
+            <label htmlFor="add-repo-input" className="sr-only">
+              Add repository
+            </label>
+            <div className="flex flex-col">
+              <input
+                id="add-repo-input"
+                value={newRepo}
+                onChange={(event) => onNewRepoChange(event.target.value)}
+                placeholder="owner/repo"
+                aria-invalid={!!repoError}
+                aria-describedby={repoError ? 'add-repo-error' : undefined}
+                className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-default outline-none focus:border-gh-accent"
+              />
+              {repoError && (
+                <span id="add-repo-error" className="mt-1 text-xs text-gh-danger-fg">{repoError}</span>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-sm font-medium text-white"
+            >
+              Add
+            </button>
+          </form>
+        </div>
       </div>
 
-      <ul className="flex flex-wrap gap-2">
-        {repos.map((repo) => {
-          const active = selectedRepos.includes(repo)
-          return (
-            <li key={repo} className="group flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => onToggleRepo(repo)}
-                className={`rounded-l-full border px-3 py-1 text-xs ${
-                  active
-                    ? 'border-[#1f6feb] bg-[#1f6feb]/15 text-[#58a6ff]'
-                    : 'border-[#30363d] bg-[#0d1117] text-[#8b949e]'
-                }`}
-              >
-                {repo}
-              </button>
-              <button
-                type="button"
-                onClick={() => onRemoveRepo(repo)}
-                aria-label={`Remove ${repo}`}
-                className={`rounded-r-full border border-l-0 px-1.5 py-1 text-xs opacity-50 hover:opacity-100 ${
-                  active
-                    ? 'border-[#1f6feb] bg-[#1f6feb]/15 text-[#f85149] hover:bg-[#f85149]/15'
-                    : 'border-[#30363d] bg-[#0d1117] text-[#f85149] hover:bg-[#f85149]/15'
-                }`}
-              >
-                ✕
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+      {repos.length === 0 ? (
+        <p className="py-2 text-center text-sm text-gh-fg-muted">
+          {hasToken
+            ? 'No repositories added yet. Click "Browse repos" or add one manually.'
+            : 'Connect a GitHub token to browse and add repositories.'}
+        </p>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {repos.map((repo) => {
+            const active = selectedRepos.includes(repo)
+            return (
+              <li key={repo} className="group flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => onToggleRepo(repo)}
+                  className={`rounded-l-full border px-3 py-1 text-xs ${
+                    active
+                      ? 'border-gh-accent bg-gh-accent/15 text-gh-accent-fg'
+                      : 'border-gh-border bg-gh-bg text-gh-fg-muted'
+                  }`}
+                >
+                  {repo}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemoveRepo(repo)}
+                  aria-label={`Remove ${repo}`}
+                  className={`rounded-r-full border border-l-0 px-1.5 py-1 text-xs opacity-50 hover:opacity-100 ${
+                    active
+                      ? 'border-gh-accent bg-gh-accent/15 text-gh-danger-fg hover:bg-gh-danger-fg/15'
+                      : 'border-gh-border bg-gh-bg text-gh-danger-fg hover:bg-gh-danger-fg/15'
+                  }`}
+                >
+                  ✕
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </section>
   )
 }

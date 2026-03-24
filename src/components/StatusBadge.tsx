@@ -8,17 +8,17 @@ type StatusBadgeProps =
 
 const badgeStyles: Record<string, string> = {
   // Copilot review
-  'copilotReview:approved': 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/40',
-  'copilotReview:changes_requested': 'bg-[#da3633]/20 text-[#f85149] border-[#da3633]/40',
-  'copilotReview:not_run': 'bg-[#30363d]/50 text-[#8b949e] border-[#30363d]',
+  'copilotReview:approved': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
+  'copilotReview:changes_requested': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
+  'copilotReview:not_run': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
   // Merge safety
-  'mergeSafety:safe': 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/40',
-  'mergeSafety:blocked': 'bg-[#da3633]/20 text-[#f85149] border-[#da3633]/40',
-  'mergeSafety:pending': 'bg-[#d29922]/20 text-[#d29922] border-[#d29922]/40',
+  'mergeSafety:safe': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
+  'mergeSafety:blocked': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
+  'mergeSafety:pending': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
   // Checks status
-  'checksStatus:passing': 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/40',
-  'checksStatus:failing': 'bg-[#da3633]/20 text-[#f85149] border-[#da3633]/40',
-  'checksStatus:pending': 'bg-[#d29922]/20 text-[#d29922] border-[#d29922]/40',
+  'checksStatus:passing': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
+  'checksStatus:failing': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
+  'checksStatus:pending': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
 }
 
 const statusIcons: Record<string, string> = {
@@ -41,7 +41,7 @@ const formatters: Record<string, (v: string) => string> = {
 
 export default function StatusBadge(props: StatusBadgeProps) {
   const key = `${props.kind}:${props.value}`
-  const style = badgeStyles[key] ?? 'bg-[#30363d]/50 text-[#8b949e] border-[#30363d]'
+  const style = badgeStyles[key] ?? 'bg-gh-border/50 text-gh-fg-muted border-gh-border'
   const icon = statusIcons[key] ?? ''
   const label = formatters[props.kind]?.(props.value) ?? props.value
 

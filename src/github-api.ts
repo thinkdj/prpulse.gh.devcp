@@ -1,5 +1,14 @@
 import type { ChecksStatus, CopilotReview, MergeSafety, PullRequest } from './types'
 
+export type GitHubRepo = {
+  full_name: string
+  description: string | null
+  private: boolean
+  fork: boolean
+  archived: boolean
+  updated_at: string
+}
+
 type GitHubPR = {
   number: number
   title: string
@@ -192,4 +201,12 @@ export async function fetchRepoPullRequests(
   )
 
   return results
+}
+
+export async function fetchUserRepos(token: string): Promise<GitHubRepo[]> {
+  const repos = await githubFetch<GitHubRepo[]>(
+    '/user/repos?type=all&sort=updated&direction=desc&per_page=100',
+    token,
+  )
+  return repos.filter((r) => !r.archived)
 }
