@@ -4,6 +4,7 @@ type RepoSelectorProps = {
   repos: string[]
   selectedRepos: string[]
   newRepo: string
+  repoError: string
   onNewRepoChange: (value: string) => void
   onAddRepo: (event: FormEvent<HTMLFormElement>) => void
   onToggleRepo: (repo: string) => void
@@ -14,6 +15,7 @@ export default function RepoSelector({
   repos,
   selectedRepos,
   newRepo,
+  repoError,
   onNewRepoChange,
   onAddRepo,
   onToggleRepo,
@@ -23,14 +25,22 @@ export default function RepoSelector({
     <section className="mb-6 rounded-md border border-[#30363d] bg-[#161b22] p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-sm font-medium text-[#f0f6fc]">Repositories</h2>
-        <form onSubmit={onAddRepo} className="flex gap-2">
-          <input
-            aria-label="Add repository"
-            value={newRepo}
-            onChange={(event) => onNewRepoChange(event.target.value)}
-            placeholder="owner/repo"
-            className="rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#c9d1d9] outline-none focus:border-[#1f6feb]"
-          />
+        <form onSubmit={onAddRepo} className="flex items-center gap-2">
+          <label htmlFor="add-repo-input" className="sr-only">
+            Add repository
+          </label>
+          <div className="flex flex-col">
+            <input
+              id="add-repo-input"
+              value={newRepo}
+              onChange={(event) => onNewRepoChange(event.target.value)}
+              placeholder="owner/repo"
+              className="rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#c9d1d9] outline-none focus:border-[#1f6feb]"
+            />
+            {repoError && (
+              <span className="mt-1 text-xs text-[#f85149]">{repoError}</span>
+            )}
+          </div>
           <button
             type="submit"
             className="rounded-md border border-[#1f6feb] bg-[#1f6feb] px-3 py-1.5 text-sm font-medium text-white"
