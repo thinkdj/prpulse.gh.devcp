@@ -5,23 +5,23 @@
   color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 
-  --gh-bg: #0d1117;
-  --gh-surface: #161b22;
-  --gh-overlay: #21262d;
-  --gh-border: #30363d;
-  --gh-border-hover: #484f58;
-  --gh-fg: #f0f6fc;
-  --gh-fg-default: #c9d1d9;
-  --gh-fg-muted: #8b949e;
-  --gh-fg-placeholder: #484f58;
-  --gh-accent: #1f6feb;
-  --gh-accent-fg: #58a6ff;
-  --gh-success: #238636;
-  --gh-success-fg: #3fb950;
-  --gh-danger: #da3633;
-  --gh-danger-fg: #f85149;
-  --gh-warning: #d29922;
-  --gh-purple: #a371f7;
+  --gh-bg: #191919;
+  --gh-surface: #202020;
+  --gh-overlay: #2c2c2c;
+  --gh-border: #2e2e2e;
+  --gh-border-hover: #3e3e3e;
+  --gh-fg: #ebebea;
+  --gh-fg-default: #d4d4d4;
+  --gh-fg-muted: #9b9a97;
+  --gh-fg-placeholder: #5a5a5a;
+  --gh-accent: #2383e2;
+  --gh-accent-fg: #529cca;
+  --gh-success: #2ea043;
+  --gh-success-fg: #4dab9a;
+  --gh-danger: #cf222e;
+  --gh-danger-fg: #e06c75;
+  --gh-warning: #d4a72c;
+  --gh-purple: #a78bfa;
 }
 
 /* ── Theme tokens: light ── */
@@ -29,22 +29,22 @@
   color-scheme: light;
 
   --gh-bg: #ffffff;
-  --gh-surface: #f6f8fa;
-  --gh-overlay: #eaeef2;
-  --gh-border: #d0d7de;
-  --gh-border-hover: #afb8c1;
-  --gh-fg: #1f2328;
-  --gh-fg-default: #1f2328;
-  --gh-fg-muted: #656d76;
-  --gh-fg-placeholder: #6e7781;
-  --gh-accent: #0969da;
-  --gh-accent-fg: #0969da;
-  --gh-success: #1a7f37;
-  --gh-success-fg: #1a7f37;
-  --gh-danger: #cf222e;
-  --gh-danger-fg: #cf222e;
+  --gh-surface: #fbfbfa;
+  --gh-overlay: #f1f1ef;
+  --gh-border: #e3e2de;
+  --gh-border-hover: #d1d1cc;
+  --gh-fg: #37352f;
+  --gh-fg-default: #37352f;
+  --gh-fg-muted: #787774;
+  --gh-fg-placeholder: #b4b4b0;
+  --gh-accent: #2383e2;
+  --gh-accent-fg: #2383e2;
+  --gh-success: #0f7b0f;
+  --gh-success-fg: #0f7b0f;
+  --gh-danger: #e03e3e;
+  --gh-danger-fg: #e03e3e;
   --gh-warning: #9a6700;
-  --gh-purple: #8250df;
+  --gh-purple: #6940a5;
 }
 
 /* ── Register theme colors for Tailwind v4 utility classes ── */
@@ -74,4 +74,6 @@
 
 body {
   margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
