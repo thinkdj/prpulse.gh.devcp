@@ -242,7 +242,7 @@ describe('GitHub Dev Control Panel', () => {
       })
     })
 
-    it('filters PRs by author using the dropdown', async () => {
+    it('filters PRs by author using the column filter', async () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
@@ -250,8 +250,8 @@ describe('GitHub Dev Control Panel', () => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
 
-      const authorSelect = screen.getByLabelText('Filter by author')
-      fireEvent.change(authorSelect, { target: { value: 'kevin-ops' } })
+      const authorInput = screen.getByLabelText('Filter by Author')
+      fireEvent.change(authorInput, { target: { value: 'kevin-ops' } })
 
       await waitFor(() => {
         expect(screen.getByText('1 PR')).toBeInTheDocument()
@@ -296,7 +296,7 @@ describe('GitHub Dev Control Panel', () => {
       })
     })
 
-    it('filters PRs by label using the dropdown', async () => {
+    it('filters PRs by label using the column filter', async () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
@@ -304,8 +304,8 @@ describe('GitHub Dev Control Panel', () => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
 
-      const labelSelect = screen.getByLabelText('Filter by label')
-      fireEvent.change(labelSelect, { target: { value: 'bug' } })
+      const prColumnFilter = screen.getByLabelText('Filter by PR')
+      fireEvent.change(prColumnFilter, { target: { value: 'bug' } })
 
       await waitFor(() => {
         expect(screen.getByText('1 PR')).toBeInTheDocument()
