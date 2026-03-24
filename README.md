@@ -65,6 +65,12 @@ npm run dev
 
 Open http://localhost:5173, click **Set token**, and paste a GitHub Personal Access Token with `repo` scope.
 
+> **Security note:** The token is stored in your browser's `localStorage` so it persists between sessions.
+> For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
+> (read-only access to pull requests, checks, and repository metadata). Avoid classic tokens with broad
+> scopes. If you suspect your browser environment may be compromised, use a short-lived token or clear
+> it after each session via the settings panel.
+
 ## Scripts
 
 - `npm run dev` — start development server

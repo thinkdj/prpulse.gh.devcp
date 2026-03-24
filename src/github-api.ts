@@ -11,6 +11,7 @@ type GitHubPR = {
   draft: boolean
   labels: { name: string }[]
   commits: number
+  requested_reviewers: { login: string }[]
 }
 
 type GitHubReview = {
@@ -42,7 +43,18 @@ async function githubFetch<T>(path: string, token: string): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401) throw new Error('Invalid GitHub token. Check your PAT.')
-    if (response.status === 403) throw new Error('API rate limit exceeded. Try again later.')
+    if (response.status === 403) {
+      const remaining = response.headers.get('x-ratelimit-remaining')
+      if (remaining === '0') {
+        throw new Error('API rate limit exceeded. Try again later.')
+      }
+      let detail = ''
+      try {
+        const body = await response.json() as { message?: string }
+        detail = body.message ?? ''
+      } catch { /* ignore parse errors */ }
+      throw new Error(detail ? `Forbidden: ${detail}` : 'Forbidden. Check token scopes and org access.')
+    }
     if (response.status === 404) throw new Error(`Repository not found or inaccessible.`)
     throw new Error(`GitHub API error: ${response.status}`)
   }
@@ -52,7 +64,7 @@ async function githubFetch<T>(path: string, token: string): Promise<T> {
 
 function deriveCopilotReview(reviews: GitHubReview[]): CopilotReview {
   const copilotReviews = reviews.filter(
-    (r) => r.user && (COPILOT_BOT_LOGINS.includes(r.user.login) || r.user.type === 'Bot'),
+    (r) => r.user && COPILOT_BOT_LOGINS.includes(r.user.login),
   )
 
   if (copilotReviews.length === 0) return 'not_run'
@@ -94,12 +106,9 @@ function deriveMergeSafety(
   return 'pending'
 }
 
-function needsReview(reviews: GitHubReview[], currentUser: string): boolean {
-  const reviewerLogins = reviews
-    .filter((r) => r.user)
-    .map((r) => r.user!.login)
-
-  return !reviewerLogins.includes(currentUser)
+function needsReview(requestedReviewers: { login: string }[], currentUser: string): boolean {
+  if (!currentUser) return false
+  return requestedReviewers.some((r) => r.login === currentUser)
 }
 
 async function fetchPRDetails(
@@ -149,7 +158,7 @@ async function fetchPRDetails(
     checksStatus,
     copilotReview,
     mergeSafety,
-    needsYourReview: needsReview(reviews, currentUser),
+    needsYourReview: needsReview(pr.requested_reviewers ?? [], currentUser),
     isDraft: pr.draft,
     labels: pr.labels.map((l) => l.name),
   }

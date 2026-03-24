@@ -32,18 +32,29 @@ function App() {
   })
 
   const fetchAllPRs = useCallback(async (): Promise<PullRequest[]> => {
-    if (!token || repos.length === 0) return seedPullRequests
+    if (!token || selectedRepos.length === 0) return seedPullRequests
 
     const results = await Promise.allSettled(
-      repos.map((repo) => fetchRepoPullRequests(repo, token, currentUser)),
+      selectedRepos.map((repo) => fetchRepoPullRequests(repo, token, currentUser)),
     )
 
     const allPrs = results
       .filter((r): r is PromiseFulfilledResult<PullRequest[]> => r.status === 'fulfilled')
       .flatMap((r) => r.value)
 
-    return allPrs.length > 0 ? allPrs : seedPullRequests
-  }, [token, repos, currentUser])
+    if (allPrs.length === 0) {
+      const firstError = results.find(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      )
+      if (firstError) {
+        throw firstError.reason instanceof Error
+          ? firstError.reason
+          : new Error('Failed to fetch pull requests.')
+      }
+    }
+
+    return allPrs
+  }, [token, selectedRepos, currentUser])
 
   const {
     data: pullRequests = [],
@@ -51,11 +62,12 @@ function App() {
     error,
     dataUpdatedAt,
   } = useQuery({
-    queryKey: ['pull-requests', token, repos, currentUser],
+    queryKey: ['pull-requests', token, selectedRepos, currentUser],
     queryFn: fetchAllPRs,
     staleTime: 2 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     retry: 1,
+    enabled: !token || !!currentUser,
   })
 
   useEffect(() => {
@@ -97,7 +109,8 @@ function App() {
       setRepoError('')
       return
     }
-    if (!normalized.includes('/')) {
+    const parts = normalized.split('/')
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
       setRepoError('Use owner/repo format')
       return
     }
