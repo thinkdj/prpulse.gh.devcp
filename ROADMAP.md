@@ -20,7 +20,7 @@ Six-month plan for making gh.devcp the single pane of glass for repo owners.
 - [ ] **Saved filter presets** — save author/label/status combos, switch between them
 - [ ] **Export to CSV** — download filtered PR list for reporting
 
-## Q4 2026 (Jul – Sep) — Collaboration & Sync
+## Q4 2026 (Oct – Dec) — Collaboration & Sync
 
 - [ ] **Team views** — define team members, see "team needs review" vs "my review"
 - [ ] **Multi-account support** — switch between personal / org tokens

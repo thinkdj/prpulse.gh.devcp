@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { GitHubRepo } from '../github-api'
 
 type RepoPickerModalProps = {
@@ -46,13 +46,17 @@ export default function RepoPickerModal({
     onClose()
   }
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') onClose()
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Browse repositories">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Browse repositories" onKeyDown={handleKeyDown}>
       <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-gh-border bg-gh-surface shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gh-border px-4 py-3">
           <h2 className="text-sm font-semibold text-gh-fg">Select Repositories</h2>
-          <button type="button" onClick={onClose} className="text-gh-fg-muted hover:text-gh-fg-default">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-gh-fg-muted hover:text-gh-fg-default">
             ✕
           </button>
         </div>

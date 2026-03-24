@@ -3,7 +3,7 @@ import type { PullRequest, DashboardFilter } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
 
-type SortField = 'opened' | 'updated' | 'author' | 'pushes' | 'title'
+type SortField = 'opened' | 'author' | 'pushes' | 'title'
 type SortDirection = 'asc' | 'desc'
 
 type PullRequestTableProps = {
@@ -120,9 +120,6 @@ export default function PullRequestTable({
       switch (sortField) {
         case 'opened':
           cmp = new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime()
-          break
-        case 'updated':
-          cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
           break
         case 'author':
           cmp = a.author.localeCompare(b.author)
@@ -272,32 +269,28 @@ export default function PullRequestTable({
           <table className="w-full border-collapse text-left text-sm" data-testid="pr-table">
             <thead className="bg-gh-bg text-xs uppercase tracking-wide text-gh-fg-muted">
               <tr>
-                <th
-                  className="cursor-pointer px-3 py-2 select-none hover:text-gh-fg-default"
-                  onClick={() => handleSort('title')}
-                >
-                  PR <span className="text-[10px] opacity-60">{sortIcon('title')}</span>
+                <th className="px-3 py-2">
+                  <button type="button" onClick={() => handleSort('title')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
+                    PR <span className="text-[10px] opacity-60">{sortIcon('title')}</span>
+                  </button>
                 </th>
-                <th
-                  className="cursor-pointer px-3 py-2 select-none hover:text-gh-fg-default"
-                  onClick={() => handleSort('author')}
-                >
-                  Author <span className="text-[10px] opacity-60">{sortIcon('author')}</span>
+                <th className="px-3 py-2">
+                  <button type="button" onClick={() => handleSort('author')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
+                    Author <span className="text-[10px] opacity-60">{sortIcon('author')}</span>
+                  </button>
                 </th>
-                <th
-                  className="cursor-pointer px-3 py-2 select-none hover:text-gh-fg-default"
-                  onClick={() => handleSort('opened')}
-                >
-                  Opened <span className="text-[10px] opacity-60">{sortIcon('opened')}</span>
+                <th className="px-3 py-2">
+                  <button type="button" onClick={() => handleSort('opened')} className="inline-flex w-full items-center gap-1 text-inherit hover:text-gh-fg-default">
+                    Opened <span className="text-[10px] opacity-60">{sortIcon('opened')}</span>
+                  </button>
                 </th>
                 <th className="px-3 py-2">Checks</th>
                 <th className="px-3 py-2">Copilot</th>
                 <th className="px-3 py-2">Merge</th>
-                <th
-                  className="cursor-pointer px-3 py-2 text-right select-none hover:text-gh-fg-default"
-                  onClick={() => handleSort('pushes')}
-                >
-                  Pushes <span className="text-[10px] opacity-60">{sortIcon('pushes')}</span>
+                <th className="px-3 py-2 text-right">
+                  <button type="button" onClick={() => handleSort('pushes')} className="inline-flex w-full items-center justify-end gap-1 text-inherit hover:text-gh-fg-default">
+                    Pushes <span className="text-[10px] opacity-60">{sortIcon('pushes')}</span>
+                  </button>
                 </th>
               </tr>
             </thead>
@@ -342,7 +335,10 @@ export default function PullRequestTable({
                               role="button"
                               tabIndex={0}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') setLabelFilter(label)
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setLabelFilter(label)
+                                }
                               }}
                             >
                               {label}
@@ -368,7 +364,10 @@ export default function PullRequestTable({
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') setAuthorFilter(pr.author)
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setAuthorFilter(pr.author)
+                          }
                         }}
                       >
                         {pr.author}
