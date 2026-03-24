@@ -21,6 +21,7 @@ function App() {
   const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
   const [selectedRepos, setSelectedRepos] = useState<string[]>(initialRepoState.selectedRepos)
   const [newRepo, setNewRepo] = useState('')
+  const [repoError, setRepoError] = useState('')
 
   const { data: currentUser = '' } = useQuery({
     queryKey: ['current-user', token],
@@ -92,9 +93,16 @@ function App() {
   const addRepo = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalized = newRepo.trim()
-    if (!normalized || repos.includes(normalized)) return
-    if (!normalized.includes('/')) return
+    if (!normalized || repos.includes(normalized)) {
+      setRepoError('')
+      return
+    }
+    if (!normalized.includes('/')) {
+      setRepoError('Use owner/repo format')
+      return
+    }
 
+    setRepoError('')
     setRepos((current) => [...current, normalized])
     setSelectedRepos((current) => [...current, normalized])
     setNewRepo('')
@@ -175,7 +183,8 @@ function App() {
           repos={repos}
           selectedRepos={selectedRepos}
           newRepo={newRepo}
-          onNewRepoChange={setNewRepo}
+          repoError={repoError}
+          onNewRepoChange={(v) => { setNewRepo(v); setRepoError('') }}
           onAddRepo={addRepo}
           onToggleRepo={toggleRepo}
           onRemoveRepo={removeRepo}

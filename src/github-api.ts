@@ -145,7 +145,7 @@ async function fetchPRDetails(
     url: pr.html_url,
     openedAt: pr.created_at,
     updatedAt: pr.updated_at,
-    pushesAfterOpen: Math.max(0, (pr.commits ?? 1) - 1),
+    pushesAfterOpen: pr.commits != null ? Math.max(0, pr.commits - 1) : 0,
     checksStatus,
     copilotReview,
     mergeSafety,
