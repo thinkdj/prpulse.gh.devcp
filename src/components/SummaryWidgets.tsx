@@ -18,10 +18,10 @@ export default function SummaryWidgets({
   onFilterClick,
 }: SummaryWidgetsProps) {
   const cards: { filter: DashboardFilter; label: string; count: number; color: string; testId: string }[] = [
-    { filter: 'all', label: 'Open PRs', count: total, color: 'text-[#f0f6fc]', testId: 'summary-total' },
-    { filter: 'needs_review', label: 'Need your review', count: needsReview, color: 'text-[#d29922]', testId: 'summary-needs-review' },
-    { filter: 'safe', label: 'Safe to merge', count: safeToMerge, color: 'text-[#3fb950]', testId: 'summary-safe' },
-    { filter: 'blocked', label: 'Blocked', count: blocked, color: 'text-[#f85149]', testId: 'summary-blocked' },
+    { filter: 'all', label: 'Open PRs', count: total, color: 'text-gh-fg', testId: 'summary-total' },
+    { filter: 'needs_review', label: 'Need your review', count: needsReview, color: 'text-gh-warning', testId: 'summary-needs-review' },
+    { filter: 'safe', label: 'Safe to merge', count: safeToMerge, color: 'text-gh-success-fg', testId: 'summary-safe' },
+    { filter: 'blocked', label: 'Blocked', count: blocked, color: 'text-gh-danger-fg', testId: 'summary-blocked' },
   ]
 
   return (
@@ -31,13 +31,13 @@ export default function SummaryWidgets({
           key={filter}
           type="button"
           onClick={() => onFilterClick(filter)}
-          className={`rounded-md border bg-[#161b22] p-4 text-left transition-colors ${
+          className={`rounded-md border bg-gh-surface p-4 text-left transition-colors ${
             activeFilter === filter
-              ? 'border-[#1f6feb] ring-1 ring-[#1f6feb]/30'
-              : 'border-[#30363d] hover:border-[#484f58]'
+              ? 'border-gh-accent ring-1 ring-gh-accent/30'
+              : 'border-gh-border hover:border-gh-border-hover'
           }`}
         >
-          <p className="text-xs text-[#8b949e]">{label}</p>
+          <p className="text-xs text-gh-fg-muted">{label}</p>
           <p className={`mt-2 text-2xl font-semibold ${color}`} data-testid={testId}>
             {count}
           </p>
