@@ -47,7 +47,7 @@ function TokenSettingsForm({
   }
 
   return (
-    <div className="mb-6 rounded-md border border-gh-border bg-gh-surface p-4">
+    <div className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-medium text-gh-fg">Settings</h2>
         <button
