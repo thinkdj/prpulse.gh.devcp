@@ -162,11 +162,7 @@ function App() {
   }, [])
 
   const handleRepoPickerSave = (selected: string[]) => {
-    const newRepoSet = new Set([...repos, ...selected])
-    const removedRepos = repos.filter((r) => !selected.includes(r))
-    removedRepos.forEach((r) => newRepoSet.delete(r))
-    const finalRepos = Array.from(newRepoSet)
-    setRepos(finalRepos)
+    setRepos(selected)
     setSelectedRepos(selected)
   }
 
