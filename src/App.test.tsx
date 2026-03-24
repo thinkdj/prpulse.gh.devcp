@@ -6,12 +6,15 @@ import { seedPullRequests } from './seed-data'
 
 /* ── Mock the GitHub API module ── */
 vi.mock('./github-api', () => ({
+  clearApiCache: vi.fn(),
   fetchCurrentUser: vi.fn().mockResolvedValue('test-user'),
   fetchRepoPullRequests: vi.fn().mockImplementation((repoFullName: string) =>
     Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
   ),
   fetchUserRepos: vi.fn().mockResolvedValue([]),
 }))
+
+import { clearApiCache, fetchRepoPullRequests } from './github-api'
 
 const TOKEN_KEY = 'gh.devcp.dashboard.token'
 const REPOS_KEY = 'gh.devcp.dashboard.repositories'
@@ -341,6 +344,26 @@ describe('GitHub Dev Control Panel', () => {
       expect(screen.getByTitle('Filter by label: bug')).toBeInTheDocument()
       expect(screen.getByTitle('Filter by label: urgent')).toBeInTheDocument()
       expect(screen.getByTitle('Filter by label: chore')).toBeInTheDocument()
+    })
+
+    it('clears API cache and re-fetches PRs when refresh button is clicked', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      vi.mocked(clearApiCache).mockClear()
+      vi.mocked(fetchRepoPullRequests).mockClear()
+
+      fireEvent.click(screen.getByTitle('Refresh data'))
+
+      expect(clearApiCache).toHaveBeenCalledTimes(1)
+
+      await waitFor(() => {
+        expect(fetchRepoPullRequests).toHaveBeenCalled()
+      })
     })
   })
 
