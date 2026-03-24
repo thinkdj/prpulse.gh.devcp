@@ -81,8 +81,7 @@ export default function PullRequestTable({
     return result
   }, [pullRequests, filter, hideDrafts])
 
-  const columns = useMemo<ColumnDef<PullRequest, unknown>[]>(
-    () => [
+  const columns: ColumnDef<PullRequest, unknown>[] = [
       {
         id: 'title',
         accessorFn: (row) => `#${row.id} ${row.title} ${row.repo} ${row.labels.join(' ')}`,
@@ -240,10 +239,7 @@ export default function PullRequestTable({
           )
         },
       },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
+  ]
 
   const table = useReactTable({
     data: dashboardFiltered,

@@ -73,26 +73,20 @@ function App() {
   const error = repoQueries.find((q) => q.error)?.error ?? null
   const dataUpdatedAt = Math.max(0, ...repoQueries.map((q) => q.dataUpdatedAt))
 
-  const pullRequests = useMemo(
-    () => repoQueries.flatMap((q) => q.data ?? []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [repoQueries.map((q) => q.dataUpdatedAt).join(',')],
-  )
+  const pullRequests = repoQueries.flatMap((q) => q.data ?? [])
 
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
 
-  const visiblePrs = pullRequests
-
   const summary = useMemo(
     () => ({
-      total: visiblePrs.length,
-      needsReview: visiblePrs.filter((pr) => pr.needsYourReview).length,
-      safeToMerge: visiblePrs.filter((pr) => pr.mergeSafety === 'safe').length,
-      blocked: visiblePrs.filter((pr) => pr.mergeSafety === 'blocked').length,
+      total: pullRequests.length,
+      needsReview: pullRequests.filter((pr) => pr.needsYourReview).length,
+      safeToMerge: pullRequests.filter((pr) => pr.mergeSafety === 'safe').length,
+      blocked: pullRequests.filter((pr) => pr.mergeSafety === 'blocked').length,
     }),
-    [visiblePrs],
+    [pullRequests],
   )
 
   const toggleRepo = (repo: string) => {
@@ -268,7 +262,7 @@ function App() {
             />
 
             <PullRequestTable
-              pullRequests={visiblePrs}
+              pullRequests={pullRequests}
               filter={filter}
               onFilterChange={setFilter}
               isLoading={isLoading}
