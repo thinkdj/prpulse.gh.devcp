@@ -31,7 +31,7 @@ export default function SummaryWidgets({
           key={filter}
           type="button"
           onClick={() => onFilterClick(filter)}
-          className={`rounded-md border bg-gh-surface p-4 text-left transition-colors ${
+          className={`rounded-lg border bg-gh-surface p-4 text-left transition-colors ${
             activeFilter === filter
               ? 'border-gh-accent ring-1 ring-gh-accent/30'
               : 'border-gh-border hover:border-gh-border-hover'

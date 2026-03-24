@@ -267,9 +267,9 @@ export default function PullRequestTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-md border border-gh-border bg-gh-surface">
+    <section className="overflow-hidden rounded-lg border border-gh-border bg-gh-surface">
       {/* Toolbar: search, facets, refresh */}
-      <div className="space-y-2 border-b border-gh-border bg-gh-bg px-3 py-2.5">
+      <div className="space-y-2 border-b border-gh-border px-3 py-2.5">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -360,7 +360,7 @@ export default function PullRequestTable({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm" data-testid="pr-table">
-            <thead className="bg-gh-bg text-xs uppercase tracking-wide text-gh-fg-muted">
+            <thead className="bg-gh-surface text-xs uppercase tracking-wide text-gh-fg-muted">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
