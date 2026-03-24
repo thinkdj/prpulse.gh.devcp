@@ -126,13 +126,14 @@ const formatChecks = (value: PullRequest['checksStatus']) =>
 
 const loadRepoState = (): RepoState => {
   const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
-  const raw = localStorage.getItem(STORAGE_KEY)
-
-  if (!raw) {
-    return { repos: defaultRepos, selectedRepos: defaultRepos }
-  }
 
   try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+
+    if (!raw) {
+      return { repos: defaultRepos, selectedRepos: defaultRepos }
+    }
+
     const parsed = JSON.parse(raw) as RepoState
     if (
       Array.isArray(parsed.repos) &&
@@ -152,7 +153,11 @@ const loadRepoState = (): RepoState => {
 }
 
 const saveRepoState = (state: RepoState) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // no-op: localStorage can be unavailable in restricted browser contexts
+  }
 }
 
 const fetchDashboardPullRequests = async (): Promise<PullRequest[]> => seedPullRequests
