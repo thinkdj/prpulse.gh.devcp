@@ -35,10 +35,12 @@ export default function RepoSelector({
               value={newRepo}
               onChange={(event) => onNewRepoChange(event.target.value)}
               placeholder="owner/repo"
+              aria-invalid={!!repoError}
+              aria-describedby={repoError ? 'add-repo-error' : undefined}
               className="rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#c9d1d9] outline-none focus:border-[#1f6feb]"
             />
             {repoError && (
-              <span className="mt-1 text-xs text-[#f85149]">{repoError}</span>
+              <span id="add-repo-error" className="mt-1 text-xs text-[#f85149]">{repoError}</span>
             )}
           </div>
           <button

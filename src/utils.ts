@@ -24,6 +24,9 @@ export const formatChecks = (value: ChecksStatus) =>
 export const relativeTime = (dateString: string): string => {
   const now = Date.now()
   const then = new Date(dateString).getTime()
+
+  if (!Number.isFinite(then)) return '—'
+
   const diffMs = now - then
 
   if (diffMs < 0) return 'just now'

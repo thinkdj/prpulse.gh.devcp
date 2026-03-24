@@ -155,4 +155,33 @@ describe('GitHub Dev Control Panel', () => {
     })
     expect(screen.queryByRole('button', { name: 'thinkdj/website' })).not.toBeInTheDocument()
   })
+
+  it('shows validation error for invalid repo format', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+    const input = screen.getByLabelText('Add repository')
+    fireEvent.change(input, { target: { value: 'invalid-no-slash' } })
+    fireEvent.submit(input.closest('form')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
+    })
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('rejects repo names with more than one slash', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+    const input = screen.getByLabelText('Add repository')
+    fireEvent.change(input, { target: { value: 'a/b/c' } })
+    fireEvent.submit(input.closest('form')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
+    })
+  })
 })

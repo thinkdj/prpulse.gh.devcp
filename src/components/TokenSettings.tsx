@@ -15,9 +15,25 @@ export default function TokenSettings({
   isVisible,
   onClose,
 }: TokenSettingsProps) {
-  const [draft, setDraft] = useState(token)
-
   if (!isVisible) return null
+
+  return (
+    <TokenSettingsForm
+      token={token}
+      onSaveToken={onSaveToken}
+      currentUser={currentUser}
+      onClose={onClose}
+    />
+  )
+}
+
+function TokenSettingsForm({
+  token,
+  onSaveToken,
+  currentUser,
+  onClose,
+}: Omit<TokenSettingsProps, 'isVisible'>) {
+  const [draft, setDraft] = useState(token)
 
   const handleSave = () => {
     onSaveToken(draft.trim())
@@ -49,8 +65,8 @@ export default function TokenSettings({
             GitHub Personal Access Token
           </label>
           <p className="mb-2 text-xs text-[#8b949e]">
-            Required for fetching live PR data. Needs <code className="rounded bg-[#30363d] px-1">repo</code> scope.
-            Token is stored locally in your browser.
+            Required for fetching live PR data. Recommend a <strong>fine-grained PAT</strong> with
+            read-only access to pull requests and checks. Token is stored in your browser&apos;s localStorage.
           </p>
           <input
             id="github-token"

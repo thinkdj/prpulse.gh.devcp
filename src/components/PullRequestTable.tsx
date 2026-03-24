@@ -39,6 +39,7 @@ export default function PullRequestTable({
           <button
             key={value}
             type="button"
+            aria-pressed={filter === value}
             onClick={() => onFilterChange(value)}
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
               filter === value
