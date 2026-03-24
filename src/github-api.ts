@@ -1,5 +1,14 @@
 import type { ChecksStatus, CopilotReview, MergeSafety, PullRequest } from './types'
 
+export type GitHubRepo = {
+  full_name: string
+  description: string | null
+  private: boolean
+  fork: boolean
+  archived: boolean
+  updated_at: string
+}
+
 type GitHubPR = {
   number: number
   title: string
@@ -192,4 +201,24 @@ export async function fetchRepoPullRequests(
   )
 
   return results
+}
+
+export async function fetchUserRepos(token: string): Promise<GitHubRepo[]> {
+  const perPage = 100
+  let page = 1
+  const allRepos: GitHubRepo[] = []
+
+  while (true) {
+    const batch = await githubFetch<GitHubRepo[]>(
+      `/user/repos?type=all&sort=updated&direction=desc&per_page=${perPage}&page=${page}`,
+      token,
+    )
+
+    allRepos.push(...batch)
+
+    if (batch.length < perPage) break
+    page += 1
+  }
+
+  return allRepos.filter((r) => !r.archived)
 }

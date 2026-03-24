@@ -2,6 +2,9 @@ import type { RepoState } from './types'
 
 const REPO_STORAGE_KEY = 'gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'gh.devcp.dashboard.token'
+const THEME_STORAGE_KEY = 'gh.devcp.dashboard.theme'
+
+export type Theme = 'dark' | 'light'
 
 export const loadRepoState = (defaultRepos: string[]): RepoState => {
   try {
@@ -52,6 +55,24 @@ export const saveToken = (token: string) => {
     } else {
       localStorage.removeItem(TOKEN_STORAGE_KEY)
     }
+  } catch {
+    // no-op
+  }
+}
+
+export const loadTheme = (): Theme => {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY)
+    if (raw === 'light' || raw === 'dark') return raw
+  } catch {
+    // fall through
+  }
+  return 'dark'
+}
+
+export const saveTheme = (theme: Theme) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme)
   } catch {
     // no-op
   }
