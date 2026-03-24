@@ -10,7 +10,6 @@ type RepoSelectorProps = {
   onToggleRepo: (repo: string) => void
   onRemoveRepo: (repo: string) => void
   onBrowseRepos?: () => void
-  hasToken: boolean
 }
 
 export default function RepoSelector({
@@ -23,14 +22,13 @@ export default function RepoSelector({
   onToggleRepo,
   onRemoveRepo,
   onBrowseRepos,
-  hasToken,
 }: RepoSelectorProps) {
   return (
     <section className="mb-6 rounded-md border border-gh-border bg-gh-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-sm font-medium text-gh-fg">Repositories</h2>
         <div className="flex items-center gap-2">
-          {hasToken && onBrowseRepos && (
+          {onBrowseRepos && (
             <button
               type="button"
               onClick={onBrowseRepos}
@@ -69,9 +67,7 @@ export default function RepoSelector({
 
       {repos.length === 0 ? (
         <p className="py-2 text-center text-sm text-gh-fg-muted">
-          {hasToken
-            ? 'No repositories added yet. Click "Browse repos" or add one manually.'
-            : 'Connect a GitHub token to browse and add repositories.'}
+          No repositories added yet. Click &quot;Browse repos&quot; or add one manually.
         </p>
       ) : (
         <ul className="flex flex-wrap gap-2">

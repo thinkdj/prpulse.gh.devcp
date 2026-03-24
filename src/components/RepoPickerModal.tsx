@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import type { GitHubRepo } from '../github-api'
 
 type RepoPickerModalProps = {
@@ -46,7 +47,7 @@ export default function RepoPickerModal({
     onClose()
   }
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose()
   }, [onClose])
 

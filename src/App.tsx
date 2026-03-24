@@ -22,11 +22,11 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [filter, setFilter] = useState<DashboardFilter>('all')
-  const [theme, setTheme] = useState<Theme>(() => {
-    const t = loadTheme()
-    applyTheme(t)
-    return t
-  })
+  const [theme, setTheme] = useState<Theme>(() => loadTheme())
+
+  useEffect(() => {
+    applyTheme(theme)
+  }, [theme])
 
   const [initialRepoState] = useState<RepoState>(() => loadRepoState([]))
   const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
@@ -38,7 +38,6 @@ function App() {
     const next: Theme = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     saveTheme(next)
-    applyTheme(next)
   }
 
   const { data: currentUser = '' } = useQuery({
@@ -283,7 +282,6 @@ function App() {
               onToggleRepo={toggleRepo}
               onRemoveRepo={removeRepo}
               onBrowseRepos={() => setShowRepoPicker(true)}
-              hasToken={!!token}
             />
 
             <PullRequestTable
