@@ -184,4 +184,121 @@ describe('GitHub Dev Control Panel', () => {
       expect(screen.getByText('Use owner/repo format')).toBeInTheDocument()
     })
   })
+
+  it('filters PRs by search query on title', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByLabelText('Search pull requests')
+    fireEvent.change(searchInput, { target: { value: 'audit' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 PR')).toBeInTheDocument()
+    })
+  })
+
+  it('filters PRs by author using the dropdown', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+
+    const authorSelect = screen.getByLabelText('Filter by author')
+    fireEvent.change(authorSelect, { target: { value: 'kevin-ops' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 PR')).toBeInTheDocument()
+    })
+  })
+
+  it('hides draft PRs when hide drafts checkbox is checked', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+
+    const checkbox = screen.getByLabelText('Hide drafts')
+    fireEvent.click(checkbox)
+
+    await waitFor(() => {
+      expect(screen.getByText('4 PRs')).toBeInTheDocument()
+    })
+  })
+
+  it('clears all filters when clear button is clicked', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByLabelText('Search pull requests')
+    fireEvent.change(searchInput, { target: { value: 'audit' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 PR')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('✕ Clear filters'))
+
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+  })
+
+  it('filters PRs by label using the dropdown', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+
+    const labelSelect = screen.getByLabelText('Filter by label')
+    fireEvent.change(labelSelect, { target: { value: 'bug' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 PR')).toBeInTheDocument()
+    })
+  })
+
+  it('applies filter when clicking a summary widget', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+    })
+
+    const blockedWidget = screen.getByTestId('summary-blocked').closest('button')!
+    fireEvent.click(blockedWidget)
+
+    await waitFor(() => {
+      expect(screen.getByText('1 PR')).toBeInTheDocument()
+    })
+  })
+
+  it('displays labels on PR rows', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+    })
+
+    const table = screen.getByTestId('pr-table')
+    expect(table.querySelectorAll('[title^="Filter by label:"]').length).toBeGreaterThan(0)
+    expect(screen.getByTitle('Filter by label: bug')).toBeInTheDocument()
+    expect(screen.getByTitle('Filter by label: urgent')).toBeInTheDocument()
+    expect(screen.getByTitle('Filter by label: chore')).toBeInTheDocument()
+  })
 })
