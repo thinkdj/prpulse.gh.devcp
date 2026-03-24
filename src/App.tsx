@@ -71,9 +71,7 @@ function App() {
   })
 
   useEffect(() => {
-    if (repos.length > 0) {
-      saveRepoState({ repos, selectedRepos })
-    }
+    saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
 
   const visiblePrs = useMemo(
@@ -214,6 +212,7 @@ function App() {
           onFilterChange={setFilter}
           isLoading={isLoading}
           hasToken={!!token}
+          hasSelectedRepos={selectedRepos.length > 0}
         />
 
         {!token && (
