@@ -6,12 +6,15 @@ import { seedPullRequests } from './seed-data'
 
 /* ── Mock the GitHub API module ── */
 vi.mock('./github-api', () => ({
+  clearApiCache: vi.fn(),
   fetchCurrentUser: vi.fn().mockResolvedValue('test-user'),
   fetchRepoPullRequests: vi.fn().mockImplementation((repoFullName: string) =>
     Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
   ),
   fetchUserRepos: vi.fn().mockResolvedValue([]),
 }))
+
+import { clearApiCache, fetchRepoPullRequests } from './github-api'
 
 const TOKEN_KEY = 'gh.devcp.dashboard.token'
 const REPOS_KEY = 'gh.devcp.dashboard.repositories'
@@ -242,7 +245,7 @@ describe('GitHub Dev Control Panel', () => {
       })
     })
 
-    it('filters PRs by author using the dropdown', async () => {
+    it('filters PRs by author using the column filter', async () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
@@ -250,8 +253,8 @@ describe('GitHub Dev Control Panel', () => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
 
-      const authorSelect = screen.getByLabelText('Filter by author')
-      fireEvent.change(authorSelect, { target: { value: 'kevin-ops' } })
+      const authorInput = screen.getByLabelText('Filter by Author')
+      fireEvent.change(authorInput, { target: { value: 'kevin-ops' } })
 
       await waitFor(() => {
         expect(screen.getByText('1 PR')).toBeInTheDocument()
@@ -296,7 +299,7 @@ describe('GitHub Dev Control Panel', () => {
       })
     })
 
-    it('filters PRs by label using the dropdown', async () => {
+    it('filters PRs by label using the column filter', async () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
@@ -304,8 +307,8 @@ describe('GitHub Dev Control Panel', () => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
 
-      const labelSelect = screen.getByLabelText('Filter by label')
-      fireEvent.change(labelSelect, { target: { value: 'bug' } })
+      const prColumnFilter = screen.getByLabelText('Filter by PR')
+      fireEvent.change(prColumnFilter, { target: { value: 'bug' } })
 
       await waitFor(() => {
         expect(screen.getByText('1 PR')).toBeInTheDocument()
@@ -341,6 +344,26 @@ describe('GitHub Dev Control Panel', () => {
       expect(screen.getByTitle('Filter by label: bug')).toBeInTheDocument()
       expect(screen.getByTitle('Filter by label: urgent')).toBeInTheDocument()
       expect(screen.getByTitle('Filter by label: chore')).toBeInTheDocument()
+    })
+
+    it('clears API cache and re-fetches PRs when refresh button is clicked', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      vi.mocked(clearApiCache).mockClear()
+      vi.mocked(fetchRepoPullRequests).mockClear()
+
+      fireEvent.click(screen.getByTitle('Refresh data'))
+
+      expect(clearApiCache).toHaveBeenCalledTimes(1)
+
+      await waitFor(() => {
+        expect(fetchRepoPullRequests).toHaveBeenCalled()
+      })
     })
   })
 
