@@ -131,6 +131,11 @@ function App() {
     void queryClient.invalidateQueries({ queryKey: ['pull-requests'] })
   }
 
+  const handleNewRepoChange = useCallback((v: string) => {
+    setNewRepo(v)
+    setRepoError('')
+  }, [])
+
   return (
     <main className="min-h-screen bg-[#0d1117] text-[#c9d1d9]">
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
@@ -197,7 +202,7 @@ function App() {
           selectedRepos={selectedRepos}
           newRepo={newRepo}
           repoError={repoError}
-          onNewRepoChange={(v) => { setNewRepo(v); setRepoError('') }}
+          onNewRepoChange={handleNewRepoChange}
           onAddRepo={addRepo}
           onToggleRepo={toggleRepo}
           onRemoveRepo={removeRepo}
