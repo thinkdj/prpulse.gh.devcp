@@ -24,7 +24,7 @@ export default function RepoSelector({
   onBrowseRepos,
 }: RepoSelectorProps) {
   return (
-    <section className="mb-6 rounded-md border border-gh-border bg-gh-surface p-4">
+    <section className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-sm font-medium text-gh-fg">Repositories</h2>
         <div className="flex items-center gap-2">

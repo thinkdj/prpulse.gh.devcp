@@ -53,7 +53,7 @@ export default function RepoPickerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Browse repositories" onKeyDown={handleKeyDown}>
-      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-gh-border bg-gh-surface shadow-xl">
+      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl border border-gh-border bg-gh-surface shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gh-border px-4 py-3">
           <h2 className="text-sm font-semibold text-gh-fg">Select Repositories</h2>

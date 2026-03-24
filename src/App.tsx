@@ -150,10 +150,10 @@ function App() {
   return (
     <main className="min-h-screen bg-gh-bg text-gh-fg-default">
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-        <header className="mb-6 rounded-md border border-gh-border bg-gh-surface p-5">
+        <header className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold text-gh-fg">GitHub Dev Control Panel</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
               <p className="mt-1 text-sm text-gh-fg-muted">
                 Bird&apos;s-eye view of pull requests across your repositories.
               </p>
@@ -212,10 +212,10 @@ function App() {
 
         {!token ? (
           /* ── Empty state: no token configured ── */
-          <section className="rounded-md border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
+          <section className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
             <div className="mx-auto max-w-md">
               <div className="mb-4 text-5xl">📋</div>
-              <h2 className="text-xl font-semibold text-gh-fg">Welcome to GitHub Dev CP</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-gh-fg">Welcome to GitHub Dev CP</h2>
               <p className="mt-2 text-sm text-gh-fg-muted">
                 Monitor pull requests across all your repositories at a glance.
               </p>
