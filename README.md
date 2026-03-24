@@ -52,6 +52,14 @@ Open http://localhost:5173
 - `npm run build` - type-check and build
 - `npm run preview` - preview production build
 
+## GitHub Pages CI/CD
+
+- Workflow file: `.github/workflows/deploy-gh-pages.yml`
+- Deploys automatically on pushes to `main` and supports manual dispatch.
+- CI/CD pipeline runs `npm ci`, `npm run lint`, `npm run test`, and then builds with:
+  - `npm run build -- --base=/<repo-name>/`
+- Build output from `dist/` is published via GitHub Pages actions.
+
 ## Testing
 
 Focused tests validate:
