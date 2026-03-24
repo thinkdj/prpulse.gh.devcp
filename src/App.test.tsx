@@ -6,6 +6,7 @@ import App from './App'
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  vi.restoreAllMocks()
 })
 
 const renderApp = () => {
@@ -25,7 +26,6 @@ describe('GitHub Dev Control Panel', () => {
     renderApp()
 
     expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
-    expect(screen.getByText('Practical requirements checklist')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
@@ -101,5 +101,58 @@ describe('GitHub Dev Control Panel', () => {
     }
     expect(payload.repos).toContain('thinkdj/website')
     expect(payload.selectedRepos).not.toContain('thinkdj/website')
+  })
+
+  it('shows demo data notice when no token is configured', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    expect(screen.getByText(/demo data/i)).toBeInTheDocument()
+  })
+
+  it('shows settings panel when "Set token" button is clicked', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    fireEvent.click(screen.getByRole('button', { name: /Set token/i }))
+
+    expect(screen.getByLabelText(/GitHub Personal Access Token/i)).toBeInTheDocument()
+  })
+
+  it('filters visible PRs using the filter buttons', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Needs review' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('3 PRs')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('5 PRs')).toBeInTheDocument()
+    })
+  })
+
+  it('removes a repository when the remove button is clicked', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
+    })
+    expect(screen.queryByRole('button', { name: 'thinkdj/website' })).not.toBeInTheDocument()
   })
 })
