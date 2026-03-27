@@ -4,12 +4,13 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { DashboardFilter, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, saveRepoState, saveToken, saveTheme } from './storage'
 import type { Theme } from './storage'
-import { clearApiCache, fetchCurrentUser, fetchRepoPullRequests, fetchUserRepos } from './github-api'
+import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserRepos } from './github-api'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
 import PullRequestTable from './components/PullRequestTable'
 import TokenSettings from './components/TokenSettings'
 import RepoPickerModal from './components/RepoPickerModal'
+import BranchAnalysisPanel from './components/BranchAnalysisPanel'
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('light', theme === 'light')
@@ -21,6 +22,7 @@ function App() {
   const [token, setToken] = useState(() => loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
+  const [activeView, setActiveView] = useState<'pull_requests' | 'branches'>('pull_requests')
   const [filter, setFilter] = useState<DashboardFilter>('all')
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
 
@@ -69,11 +71,29 @@ function App() {
     })),
   })
 
-  const isLoading = repoQueries.some((q) => q.isLoading)
-  const error = repoQueries.find((q) => q.error)?.error ?? null
-  const dataUpdatedAt = Math.max(0, ...repoQueries.map((q) => q.dataUpdatedAt))
+  const branchQueries = useQueries({
+    queries: selectedRepos.map((repo) => ({
+      queryKey: ['repo-branches', token, repo],
+      queryFn: () => fetchRepoBranches(repo, token),
+      staleTime: STALE_TIME,
+      refetchInterval: 10 * 60 * 1000,
+      retry: 1,
+      enabled: !!token && activeView === 'branches',
+    })),
+  })
+
+  const prIsLoading = repoQueries.some((q) => q.isLoading)
+  const prError = repoQueries.find((q) => q.error)?.error ?? null
+  const prDataUpdatedAt = Math.max(0, ...repoQueries.map((q) => q.dataUpdatedAt))
 
   const pullRequests = repoQueries.flatMap((q) => q.data ?? [])
+  const branches = branchQueries.flatMap((q) => q.data ?? [])
+  const branchIsLoading = branchQueries.some((q) => q.isLoading)
+  const branchError = branchQueries.find((q) => q.error)?.error ?? null
+  const branchDataUpdatedAt = Math.max(0, ...branchQueries.map((q) => q.dataUpdatedAt))
+  const isLoading = activeView === 'pull_requests' ? prIsLoading : branchIsLoading
+  const error = activeView === 'pull_requests' ? prError : branchError
+  const dataUpdatedAt = activeView === 'pull_requests' ? prDataUpdatedAt : branchDataUpdatedAt
 
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
@@ -124,12 +144,14 @@ function App() {
     setToken(newToken)
     clearApiCache()
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+    void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
   }
 
   const handleRefresh = () => {
     clearApiCache()
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+    void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
   }
 
   const handleNewRepoChange = useCallback((v: string) => {
@@ -155,7 +177,7 @@ function App() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
               <p className="mt-1 text-sm text-gh-fg-muted">
-                Bird&apos;s-eye view of pull requests across your repositories.
+                Bird&apos;s-eye view of pull requests and branches across your repositories.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -206,7 +228,11 @@ function App() {
 
         {error && (
           <div className="mb-6 rounded-md border border-gh-danger/40 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
-            {error instanceof Error ? error.message : 'Failed to fetch pull requests.'}
+            {error instanceof Error
+              ? error.message
+              : activeView === 'pull_requests'
+                ? 'Failed to fetch pull requests.'
+                : 'Failed to fetch branch analysis.'}
           </div>
         )}
 
@@ -221,6 +247,7 @@ function App() {
               </p>
               <ul className="mx-auto mt-4 max-w-xs space-y-1.5 text-left text-sm text-gh-fg-muted">
                 <li>✓ See PR status, reviews &amp; CI checks</li>
+                <li>✓ Spot stale or fully merged branches</li>
                 <li>✓ Filter by author, label, status</li>
                 <li>✓ Track draft PRs and push counts</li>
                 <li>✓ Auto-refreshes every 5 minutes</li>
@@ -240,14 +267,41 @@ function App() {
         ) : (
           /* ── Authenticated dashboard ── */
           <>
-            <SummaryWidgets
-              total={summary.total}
-              needsReview={summary.needsReview}
-              safeToMerge={summary.safeToMerge}
-              blocked={summary.blocked}
-              activeFilter={filter}
-              onFilterClick={setFilter}
-            />
+            <section className="mb-6 flex flex-wrap gap-2" aria-label="dashboard views">
+              <button
+                type="button"
+                onClick={() => setActiveView('pull_requests')}
+                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'pull_requests'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                Pull requests
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('branches')}
+                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'branches'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                Branch analysis
+              </button>
+            </section>
+
+            {activeView === 'pull_requests' && (
+              <SummaryWidgets
+                total={summary.total}
+                needsReview={summary.needsReview}
+                safeToMerge={summary.safeToMerge}
+                blocked={summary.blocked}
+                activeFilter={filter}
+                onFilterClick={setFilter}
+              />
+            )}
 
             <RepoSelector
               repos={repos}
@@ -261,16 +315,24 @@ function App() {
               onBrowseRepos={() => setShowRepoPicker(true)}
             />
 
-            <PullRequestTable
-              pullRequests={pullRequests}
-              filter={filter}
-              onFilterChange={setFilter}
-              isLoading={isLoading}
-              hasToken={!!token}
-              hasSelectedRepos={selectedRepos.length > 0}
-              onRefresh={handleRefresh}
-              dataUpdatedAt={dataUpdatedAt}
-            />
+            {activeView === 'pull_requests' ? (
+              <PullRequestTable
+                pullRequests={pullRequests}
+                filter={filter}
+                onFilterChange={setFilter}
+                isLoading={isLoading}
+                hasToken={!!token}
+                hasSelectedRepos={selectedRepos.length > 0}
+                onRefresh={handleRefresh}
+                dataUpdatedAt={dataUpdatedAt}
+              />
+            ) : (
+              <BranchAnalysisPanel
+                branches={branches}
+                isLoading={isLoading}
+                hasSelectedRepos={selectedRepos.length > 0}
+              />
+            )}
 
             {showRepoPicker && (
               <RepoPickerModal

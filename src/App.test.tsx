@@ -2,19 +2,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { seedPullRequests } from './seed-data'
+import { seedBranchAnalysis, seedPullRequests } from './seed-data'
 
 /* ── Mock the GitHub API module ── */
 vi.mock('./github-api', () => ({
   clearApiCache: vi.fn(),
   fetchCurrentUser: vi.fn().mockResolvedValue('test-user'),
+  fetchRepoBranches: vi.fn().mockImplementation((repoFullName: string) =>
+    Promise.resolve(seedBranchAnalysis.filter((branch) => branch.repo === repoFullName)),
+  ),
   fetchRepoPullRequests: vi.fn().mockImplementation((repoFullName: string) =>
     Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
   ),
   fetchUserRepos: vi.fn().mockResolvedValue([]),
 }))
 
-import { clearApiCache, fetchRepoPullRequests } from './github-api'
+import { clearApiCache, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
 
 const TOKEN_KEY = 'gh.devcp.dashboard.token'
 const REPOS_KEY = 'gh.devcp.dashboard.repositories'
@@ -364,6 +367,39 @@ describe('GitHub Dev Control Panel', () => {
       await waitFor(() => {
         expect(fetchRepoPullRequests).toHaveBeenCalled()
       })
+    })
+
+    it('shows branch analysis with stale and merged counts', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      fireEvent.click(screen.getByRole('button', { name: 'Branch analysis' }))
+
+      await waitFor(() => {
+        expect(fetchRepoBranches).toHaveBeenCalledTimes(defaultRepos.length)
+      })
+
+      expect(screen.getByTestId('branch-analysis-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('branch-summary-stale')).toHaveTextContent('1')
+      expect(screen.getByTestId('branch-summary-merged')).toHaveTextContent('2')
+      expect(screen.getByText('fix/audit-export')).toBeInTheDocument()
+    })
+
+    it('filters branch analysis to stale branches', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      fireEvent.click(screen.getByRole('button', { name: 'Branch analysis' }))
+
+      await screen.findByTestId('branch-analysis-panel')
+      fireEvent.click(screen.getByRole('button', { name: 'Stale' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('branch-summary-total')).toHaveTextContent('1 of 7 branches shown')
+      })
+
+      expect(screen.getByText('fix/audit-export')).toBeInTheDocument()
+      expect(screen.queryByText('feat/branch-analysis')).not.toBeInTheDocument()
     })
   })
 
