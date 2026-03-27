@@ -1,4 +1,4 @@
-import type { PullRequest } from './types'
+import type { BranchAnalysis, PullRequest } from './types'
 
 export const seedPullRequests: PullRequest[] = [
   {
@@ -89,3 +89,90 @@ export const seedPullRequests: PullRequest[] = [
 ]
 
 export const defaultRepoNames = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
+
+export const seedBranchAnalysis: BranchAnalysis[] = [
+  {
+    repo: 'thinkdj/gh.devcp',
+    name: 'main',
+    url: '#',
+    isDefault: true,
+    isProtected: true,
+    lastCommitAt: '2026-03-22T09:55:00Z',
+    aheadBy: 0,
+    behindBy: 0,
+    comparisonKnown: true,
+    status: 'default',
+  },
+  {
+    repo: 'thinkdj/gh.devcp',
+    name: 'feat/branch-analysis',
+    url: '#',
+    isDefault: false,
+    isProtected: false,
+    lastCommitAt: '2026-03-24T14:00:00Z',
+    aheadBy: 4,
+    behindBy: 1,
+    comparisonKnown: true,
+    status: 'active',
+  },
+  {
+    repo: 'thinkdj/gh.devcp',
+    name: 'chore/repo-cleanup',
+    url: '#',
+    isDefault: false,
+    isProtected: false,
+    lastCommitAt: '2026-02-05T12:00:00Z',
+    aheadBy: 0,
+    behindBy: 18,
+    comparisonKnown: true,
+    status: 'merged',
+  },
+  {
+    repo: 'thinkdj/internal-tools',
+    name: 'main',
+    url: '#',
+    isDefault: true,
+    isProtected: true,
+    lastCommitAt: '2026-03-21T12:00:00Z',
+    aheadBy: 0,
+    behindBy: 0,
+    comparisonKnown: true,
+    status: 'default',
+  },
+  {
+    repo: 'thinkdj/internal-tools',
+    name: 'fix/audit-export',
+    url: '#',
+    isDefault: false,
+    isProtected: false,
+    lastCommitAt: '2026-02-03T09:00:00Z',
+    aheadBy: 2,
+    behindBy: 7,
+    comparisonKnown: true,
+    status: 'stale',
+  },
+  {
+    repo: 'thinkdj/internal-tools',
+    name: 'feat/retry-policy',
+    url: '#',
+    isDefault: false,
+    isProtected: false,
+    lastCommitAt: '2026-02-28T11:00:00Z',
+    aheadBy: 0,
+    behindBy: 10,
+    comparisonKnown: true,
+    status: 'merged',
+  },
+  {
+    repo: 'thinkdj/website',
+    name: 'main',
+    url: '#',
+    isDefault: true,
+    isProtected: true,
+    lastCommitAt: '2026-03-17T15:00:00Z',
+    aheadBy: 0,
+    behindBy: 0,
+    comparisonKnown: true,
+    status: 'default',
+  },
+]

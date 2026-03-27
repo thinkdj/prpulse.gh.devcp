@@ -1,6 +1,7 @@
 export type CopilotReview = 'approved' | 'changes_requested' | 'not_run'
 export type MergeSafety = 'safe' | 'blocked' | 'pending'
 export type ChecksStatus = 'passing' | 'failing' | 'pending'
+export type BranchStatus = 'default' | 'active' | 'stale' | 'merged'
 
 export type PullRequest = {
   id: number
@@ -18,6 +19,19 @@ export type PullRequest = {
   needsYourReview: boolean
   isDraft: boolean
   labels: string[]
+}
+
+export type BranchAnalysis = {
+  repo: string
+  name: string
+  url: string
+  isDefault: boolean
+  isProtected: boolean
+  lastCommitAt: string
+  aheadBy: number
+  behindBy: number
+  comparisonKnown: boolean
+  status: BranchStatus
 }
 
 export type RepoState = {
