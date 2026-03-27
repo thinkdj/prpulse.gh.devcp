@@ -1,4 +1,4 @@
-import type { ChecksStatus, CopilotReview, MergeSafety } from './types'
+import type { BranchStatus, ChecksStatus, CopilotReview, MergeSafety } from './types'
 
 export const formatReview = (value: CopilotReview) =>
   ({
@@ -19,6 +19,14 @@ export const formatChecks = (value: ChecksStatus) =>
     passing: 'Passing',
     failing: 'Failing',
     pending: 'Pending',
+  })[value]
+
+export const formatBranchStatus = (value: BranchStatus) =>
+  ({
+    default: 'Default',
+    active: 'Active',
+    stale: 'Stale',
+    merged: 'Merged',
   })[value]
 
 export const relativeTime = (dateString: string): string => {

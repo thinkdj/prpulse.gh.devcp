@@ -1,10 +1,11 @@
-import type { ChecksStatus, CopilotReview, MergeSafety } from '../types'
-import { formatChecks, formatReview, formatSafety } from '../utils'
+import type { BranchStatus, ChecksStatus, CopilotReview, MergeSafety } from '../types'
+import { formatBranchStatus, formatChecks, formatReview, formatSafety } from '../utils'
 
 type StatusBadgeProps =
   | { kind: 'copilotReview'; value: CopilotReview }
   | { kind: 'mergeSafety'; value: MergeSafety }
   | { kind: 'checksStatus'; value: ChecksStatus }
+  | { kind: 'branchStatus'; value: BranchStatus }
 
 const badgeStyles: Record<string, string> = {
   // Copilot review
@@ -19,6 +20,11 @@ const badgeStyles: Record<string, string> = {
   'checksStatus:passing': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
   'checksStatus:failing': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
   'checksStatus:pending': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
+  // Branch status
+  'branchStatus:default': 'bg-gh-accent/15 text-gh-accent-fg border-gh-accent/40',
+  'branchStatus:active': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
+  'branchStatus:stale': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
+  'branchStatus:merged': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
 }
 
 const statusIcons: Record<string, string> = {
@@ -31,12 +37,17 @@ const statusIcons: Record<string, string> = {
   'checksStatus:passing': '✓',
   'checksStatus:failing': '✕',
   'checksStatus:pending': '◷',
+  'branchStatus:default': '◆',
+  'branchStatus:active': '●',
+  'branchStatus:stale': '◷',
+  'branchStatus:merged': '↳',
 }
 
 const formatters: Record<string, (v: string) => string> = {
   copilotReview: (v) => formatReview(v as CopilotReview),
   mergeSafety: (v) => formatSafety(v as MergeSafety),
   checksStatus: (v) => formatChecks(v as ChecksStatus),
+  branchStatus: (v) => formatBranchStatus(v as BranchStatus),
 }
 
 export default function StatusBadge(props: StatusBadgeProps) {
