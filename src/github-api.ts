@@ -1,4 +1,4 @@
-import type { ChecksStatus, CopilotReview, MergeSafety, PullRequest } from './types'
+import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotReview, MergeSafety, PullRequest } from './types'
 
 export type GitHubRepo = {
   full_name: string
@@ -31,6 +31,29 @@ type GitHubReview = {
 type GitHubCheckRun = {
   status: string
   conclusion: string | null
+}
+
+type GitHubBranch = {
+  name: string
+  protected: boolean
+  commit: { sha: string }
+}
+
+type GitHubCommit = {
+  commit: {
+    author: { date: string | null } | null
+    committer: { date: string | null } | null
+  }
+}
+
+type GitHubCompare = {
+  status: 'ahead' | 'behind' | 'diverged' | 'identical'
+  ahead_by: number
+  behind_by: number
+}
+
+type GitHubRepoMetadata = {
+  default_branch: string
 }
 
 const GITHUB_API = 'https://api.github.com'
@@ -158,6 +181,23 @@ function needsReview(requestedReviewers: { login: string }[], currentUser: strin
   return requestedReviewers.some((r) => r.login === currentUser)
 }
 
+function deriveBranchStatus(
+  branchName: string,
+  defaultBranch: string,
+  aheadBy: number,
+  comparisonKnown: boolean,
+  lastCommitAt: string,
+): BranchStatus {
+  if (branchName === defaultBranch) return 'default'
+  if (comparisonKnown && aheadBy === 0) return 'merged'
+
+  const ageMs = Date.now() - new Date(lastCommitAt).getTime()
+  const staleThresholdMs = 30 * 24 * 60 * 60 * 1000
+
+  if (Number.isFinite(ageMs) && ageMs >= staleThresholdMs) return 'stale'
+  return 'active'
+}
+
 async function fetchPRDetails(
   owner: string,
   repo: string,
@@ -254,4 +294,82 @@ export async function fetchUserRepos(token: string): Promise<GitHubRepo[]> {
   }
 
   return allRepos.filter((r) => !r.archived)
+}
+
+export async function fetchRepoBranches(
+  repoFullName: string,
+  token: string,
+): Promise<BranchAnalysis[]> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) return []
+
+  const metadata = await githubFetch<GitHubRepoMetadata>(`/repos/${owner}/${repo}`, token)
+  const branches: GitHubBranch[] = []
+  const perPage = 100
+
+  for (let page = 1; ; page += 1) {
+    const batch = await githubFetch<GitHubBranch[]>(
+      `/repos/${owner}/${repo}/branches?per_page=${perPage}&page=${page}`,
+      token,
+    )
+    branches.push(...batch)
+    if (batch.length < perPage) break
+  }
+
+  const branchResults = await Promise.all(
+    branches.map(async (branch): Promise<BranchAnalysis> => {
+      const encodedBranch = encodeURIComponent(branch.name)
+      const encodedDefaultBranch = encodeURIComponent(metadata.default_branch)
+
+      let lastCommitAt = ''
+      let aheadBy = 0
+      let behindBy = 0
+      let comparisonKnown = branch.name === metadata.default_branch
+
+      try {
+        const commit = await githubFetch<GitHubCommit>(
+          `/repos/${owner}/${repo}/commits/${branch.commit.sha}`,
+          token,
+        )
+        lastCommitAt = commit.commit.committer?.date ?? commit.commit.author?.date ?? ''
+      } catch {
+        // fall back to unknown commit timing
+      }
+
+      if (branch.name !== metadata.default_branch) {
+        try {
+          const comparison = await githubFetch<GitHubCompare>(
+            `/repos/${owner}/${repo}/compare/${encodedDefaultBranch}...${encodedBranch}`,
+            token,
+          )
+          aheadBy = comparison.ahead_by
+          behindBy = comparison.behind_by
+          comparisonKnown = true
+        } catch {
+          // fall back to unknown divergence if comparison is unavailable
+        }
+      }
+
+      return {
+        repo: repoFullName,
+        name: branch.name,
+        url: `https://github.com/${repoFullName}/tree/${encodeURIComponent(branch.name)}`,
+        isDefault: branch.name === metadata.default_branch,
+        isProtected: branch.protected,
+        lastCommitAt,
+        aheadBy,
+        behindBy,
+        comparisonKnown,
+        status: deriveBranchStatus(
+          branch.name,
+          metadata.default_branch,
+          aheadBy,
+          comparisonKnown,
+          lastCommitAt,
+        ),
+      }
+    }),
+  )
+
+  return branchResults
 }
