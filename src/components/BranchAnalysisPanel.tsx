@@ -30,6 +30,13 @@ function branchAgeColor(dateString: string): string {
   return 'text-gh-fg-muted'
 }
 
+function branchSortTime(dateString: string): number {
+  if (!dateString) return 0
+
+  const timestamp = new Date(dateString).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
 function divergenceLabel(branch: BranchAnalysis): string {
   if (branch.isDefault) return 'Default branch'
   if (!branch.comparisonKnown) return 'Comparison unavailable'
@@ -76,7 +83,7 @@ export default function BranchAnalysisPanel({
         const rankDelta = rank[a.status] - rank[b.status]
         if (rankDelta !== 0) return rankDelta
 
-        return new Date(a.lastCommitAt).getTime() - new Date(b.lastCommitAt).getTime()
+        return branchSortTime(b.lastCommitAt) - branchSortTime(a.lastCommitAt)
       })
   }, [branches, filter, search])
 
