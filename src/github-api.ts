@@ -69,6 +69,7 @@ const COPILOT_BOT_LOGINS = [
 type CacheEntry<T = unknown> = { data: T; timestamp: number }
 
 const DEFAULT_CACHE_TTL = 3 * 60 * 1000 // 3 minutes
+const BRANCH_DETAIL_CONCURRENCY = 8
 
 const apiCache = new Map<string, CacheEntry>()
 
@@ -84,6 +85,29 @@ function getCached<T>(key: string): T | undefined {
 
 function setCache<T>(key: string, data: T): void {
   apiCache.set(key, { data, timestamp: Date.now() })
+}
+
+async function mapWithConcurrencyLimit<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+      results[currentIndex] = await mapper(items[currentIndex])
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+  )
+
+  return results
 }
 
 /** Clear all cached API responses. Call on manual refresh. */
@@ -191,7 +215,8 @@ function deriveBranchStatus(
   if (branchName === defaultBranch) return 'default'
   if (comparisonKnown && aheadBy === 0) return 'merged'
 
-  const ageMs = Date.now() - new Date(lastCommitAt).getTime()
+  const lastCommitTime = lastCommitAt ? new Date(lastCommitAt).getTime() : Number.NaN
+  const ageMs = Date.now() - lastCommitTime
   const staleThresholdMs = 30 * 24 * 60 * 60 * 1000
 
   if (Number.isFinite(ageMs) && ageMs >= staleThresholdMs) return 'stale'
@@ -316,8 +341,10 @@ export async function fetchRepoBranches(
     if (batch.length < perPage) break
   }
 
-  const branchResults = await Promise.all(
-    branches.map(async (branch): Promise<BranchAnalysis> => {
+  const branchResults = await mapWithConcurrencyLimit(
+    branches,
+    BRANCH_DETAIL_CONCURRENCY,
+    async (branch): Promise<BranchAnalysis> => {
       const encodedBranch = encodeURIComponent(branch.name)
       const encodedDefaultBranch = encodeURIComponent(metadata.default_branch)
 
@@ -368,7 +395,7 @@ export async function fetchRepoBranches(
           lastCommitAt,
         ),
       }
-    }),
+    },
   )
 
   return branchResults
