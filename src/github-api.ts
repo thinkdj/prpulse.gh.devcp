@@ -161,6 +161,7 @@ function deriveCopilotReview(reviews: GitHubReview[]): CopilotReview {
   const lastCopilotReview = copilotReviews[copilotReviews.length - 1]
   if (lastCopilotReview.state === 'APPROVED') return 'approved'
   if (lastCopilotReview.state === 'CHANGES_REQUESTED') return 'changes_requested'
+  if (lastCopilotReview.state === 'COMMENTED') return 'commented'
   return 'not_run'
 }
 

@@ -323,6 +323,7 @@ function App() {
                 isLoading={isLoading}
                 hasToken={!!token}
                 hasSelectedRepos={selectedRepos.length > 0}
+                currentUser={currentUser}
                 onRefresh={handleRefresh}
                 dataUpdatedAt={dataUpdatedAt}
               />
