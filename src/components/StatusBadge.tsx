@@ -11,6 +11,7 @@ const badgeStyles: Record<string, string> = {
   // Copilot review
   'copilotReview:approved': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
   'copilotReview:changes_requested': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
+  'copilotReview:commented': 'bg-gh-accent/15 text-gh-accent-fg border-gh-accent/40',
   'copilotReview:not_run': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
   // Merge safety
   'mergeSafety:safe': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
@@ -30,6 +31,7 @@ const badgeStyles: Record<string, string> = {
 const statusIcons: Record<string, string> = {
   'copilotReview:approved': '✓',
   'copilotReview:changes_requested': '✕',
+  'copilotReview:commented': '💬',
   'copilotReview:not_run': '—',
   'mergeSafety:safe': '✓',
   'mergeSafety:blocked': '✕',

@@ -1,4 +1,4 @@
-export type CopilotReview = 'approved' | 'changes_requested' | 'not_run'
+export type CopilotReview = 'approved' | 'changes_requested' | 'commented' | 'not_run'
 export type MergeSafety = 'safe' | 'blocked' | 'pending'
 export type ChecksStatus = 'passing' | 'failing' | 'pending'
 export type BranchStatus = 'default' | 'active' | 'stale' | 'merged'
