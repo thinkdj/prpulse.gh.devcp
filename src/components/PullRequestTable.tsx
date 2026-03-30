@@ -18,6 +18,7 @@ type PullRequestTableProps = {
   isLoading: boolean
   hasToken: boolean
   hasSelectedRepos: boolean
+  currentUser?: string
   onRefresh?: () => void
   dataUpdatedAt?: number
 }
@@ -63,11 +64,14 @@ export default function PullRequestTable({
   isLoading,
   hasToken,
   hasSelectedRepos,
+  currentUser = '',
   onRefresh,
   dataUpdatedAt,
 }: PullRequestTableProps) {
   const [globalFilter, setGlobalFilter] = useState('')
   const [hideDrafts, setHideDrafts] = useState(false)
+  const [hideCopilot, setHideCopilot] = useState(false)
+  const [hideMine, setHideMine] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([{ id: 'openedAt', desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
@@ -78,8 +82,13 @@ export default function PullRequestTable({
     else if (filter === 'safe') result = result.filter((pr) => pr.mergeSafety === 'safe')
     else if (filter === 'blocked') result = result.filter((pr) => pr.mergeSafety === 'blocked')
     if (hideDrafts) result = result.filter((pr) => !pr.isDraft)
+    if (hideCopilot) result = result.filter((pr) => {
+      const a = pr.author.toLowerCase()
+      return !a.includes('copilot') && !a.endsWith('[bot]')
+    })
+    if (hideMine && currentUser) result = result.filter((pr) => pr.author !== currentUser)
     return result
-  }, [pullRequests, filter, hideDrafts])
+  }, [pullRequests, filter, hideDrafts, hideCopilot, hideMine, currentUser])
 
   const columns: ColumnDef<PullRequest, unknown>[] = [
       {
@@ -257,12 +266,14 @@ export default function PullRequestTable({
 
   const rows = table.getRowModel().rows
   const hasActiveColumnFilters = columnFilters.length > 0
-  const hasActiveFilters = !!(globalFilter || hasActiveColumnFilters || hideDrafts)
+  const hasActiveFilters = !!(globalFilter || hasActiveColumnFilters || hideDrafts || hideCopilot || hideMine)
 
   const clearAllFilters = () => {
     setGlobalFilter('')
     setColumnFilters([])
     setHideDrafts(false)
+    setHideCopilot(false)
+    setHideMine(false)
     onFilterChange('all')
   }
 
@@ -301,6 +312,28 @@ export default function PullRequestTable({
             />
             Hide drafts
           </label>
+
+          <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+            <input
+              type="checkbox"
+              checked={hideCopilot}
+              onChange={() => setHideCopilot(!hideCopilot)}
+              className="accent-gh-accent"
+            />
+            Hide Copilot
+          </label>
+
+          {currentUser && (
+            <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+              <input
+                type="checkbox"
+                checked={hideMine}
+                onChange={() => setHideMine(!hideMine)}
+                className="accent-gh-accent"
+              />
+              Hide mine
+            </label>
+          )}
 
           {dataUpdatedAt != null && dataUpdatedAt > 0 && (
             <span className="text-xs text-gh-fg-muted">
@@ -343,19 +376,17 @@ export default function PullRequestTable({
         </span>
       </div>
 
-      {isLoading ? (
+      {isLoading && rows.length === 0 ? (
         <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
           Loading pull requests…
         </div>
-      ) : rows.length === 0 ? (
+      ) : !hasToken ? (
         <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
-          {!hasToken
-            ? 'Add a GitHub token in settings to fetch live data.'
-            : !hasSelectedRepos
-              ? 'Select a repository above to view pull requests.'
-              : dashboardFiltered.length === 0 && pullRequests.length === 0
-                ? 'No open pull requests found.'
-                : 'No PRs match the current filters.'}
+          Add a GitHub token in settings to fetch live data.
+        </div>
+      ) : !hasSelectedRepos ? (
+        <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
+          Select a repository above to view pull requests.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -403,29 +434,39 @@ export default function PullRequestTable({
               ))}
             </thead>
             <tbody>
-              {rows.map((row) => {
-                const pr = row.original
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-t border-gh-border ${
-                      pr.needsYourReview ? 'bg-gh-warning/5' : ''
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const isLast = cell.column.id === 'pushesAfterOpen'
-                      return (
-                        <td
-                          key={cell.id}
-                          className={`px-3 py-3 ${isLast ? 'text-right' : ''}`}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-gh-fg-muted">
+                    {pullRequests.length === 0
+                      ? 'No open pull requests found.'
+                      : 'No PRs match the current filters.'}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => {
+                  const pr = row.original
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-t border-gh-border ${
+                        pr.needsYourReview ? 'bg-gh-warning/5' : ''
+                      }`}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const isLast = cell.column.id === 'pushesAfterOpen'
+                        return (
+                          <td
+                            key={cell.id}
+                            className={`px-3 py-3 ${isLast ? 'text-right' : ''}`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
