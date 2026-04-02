@@ -149,6 +149,7 @@ export default function PullRequestTable({
                 <button
                   type="button"
                   onClick={() => onPRSelect?.(pr)}
+                  aria-label={`View details for PR #${pr.id}: ${pr.title}`}
                   className="text-left font-medium text-gh-accent-fg hover:underline"
                 >
                   #{pr.id} {pr.title}

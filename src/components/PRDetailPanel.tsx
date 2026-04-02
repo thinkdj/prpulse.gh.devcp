@@ -240,7 +240,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
                 {activity.map((comment) => (
                   <li key={`${comment.isReview ? 'r' : 'c'}-${comment.id}`} className="rounded-lg border border-gh-border bg-gh-overlay p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
                         {comment.authorAvatar ? (
                           <img src={comment.authorAvatar} alt="" className="h-5 w-5 shrink-0 rounded-full" />
                         ) : (
