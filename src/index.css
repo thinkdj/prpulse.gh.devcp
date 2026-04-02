@@ -47,7 +47,30 @@
   --gh-purple: #6940a5;
 }
 
-/* ── Register theme colors for Tailwind v4 utility classes ── */
+/* ── Theme tokens: GitHub (github.com official palette) ── */
+.github {
+  color-scheme: light;
+
+  --gh-bg: #f6f8fa;
+  --gh-surface: #ffffff;
+  --gh-overlay: #f6f8fa;
+  --gh-border: #d0d7de;
+  --gh-border-hover: #bfc3c9;
+  --gh-fg: #24292f;
+  --gh-fg-default: #24292f;
+  --gh-fg-muted: #57606a;
+  --gh-fg-placeholder: #8c959f;
+  --gh-accent: #0969da;
+  --gh-accent-fg: #0969da;
+  --gh-success: #1a7f37;
+  --gh-success-fg: #1a7f37;
+  --gh-danger: #cf222e;
+  --gh-danger-fg: #cf222e;
+  --gh-warning: #9a6700;
+  --gh-purple: #8250df;
+}
+
+
 @theme inline {
   --color-gh-bg: var(--gh-bg);
   --color-gh-surface: var(--gh-surface);

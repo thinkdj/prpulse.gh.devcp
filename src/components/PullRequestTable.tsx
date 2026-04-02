@@ -21,6 +21,7 @@ type PullRequestTableProps = {
   currentUser?: string
   onRefresh?: () => void
   dataUpdatedAt?: number
+  onPRSelect?: (pr: PullRequest) => void
 }
 
 const filterLabels: { value: DashboardFilter; label: string }[] = [
@@ -67,6 +68,7 @@ export default function PullRequestTable({
   currentUser = '',
   onRefresh,
   dataUpdatedAt,
+  onPRSelect,
 }: PullRequestTableProps) {
   const [globalFilter, setGlobalFilter] = useState('')
   const [hideDrafts, setHideDrafts] = useState(false)
@@ -92,6 +94,42 @@ export default function PullRequestTable({
 
   const columns: ColumnDef<PullRequest, unknown>[] = [
       {
+        id: 'repo',
+        accessorKey: 'repo',
+        header: 'Repo',
+        filterFn: 'includesString',
+        enableColumnFilter: true,
+        cell: ({ row }) => {
+          const pr = row.original
+          const [owner, repoName] = pr.repo.split('/')
+          return (
+            <div className="whitespace-nowrap">
+              <span
+                className="cursor-pointer text-gh-fg-muted hover:text-gh-accent-fg"
+                title={`Filter by repo: ${pr.repo}`}
+                aria-label={`Filter by repo: ${pr.repo}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  const col = table.getColumn('repo')
+                  col?.setFilterValue(pr.repo)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    const col = table.getColumn('repo')
+                    col?.setFilterValue(pr.repo)
+                  }
+                }}
+              >
+                <span className="text-xs text-gh-fg-placeholder">{owner}/</span>
+                <span className="text-xs font-medium">{repoName}</span>
+              </span>
+            </div>
+          )
+        },
+      },
+      {
         id: 'title',
         accessorFn: (row) => `#${row.id} ${row.title} ${row.repo} ${row.labels.join(' ')}`,
         header: 'PR',
@@ -108,16 +146,14 @@ export default function PullRequestTable({
                 />
               )}
               <div className="min-w-0">
-                <a
-                  href={pr.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-gh-accent-fg hover:underline"
+                <button
+                  type="button"
+                  onClick={() => onPRSelect?.(pr)}
+                  className="text-left font-medium text-gh-accent-fg hover:underline"
                 >
                   #{pr.id} {pr.title}
-                </a>
+                </button>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs text-gh-fg-muted">{pr.repo}</span>
                   {pr.isDraft && (
                     <span className="rounded-full border border-gh-border bg-gh-border/50 px-1.5 py-0 text-[10px] text-gh-fg-muted">
                       Draft
@@ -160,29 +196,51 @@ export default function PullRequestTable({
         cell: ({ row }) => {
           const pr = row.original
           return (
-            <div className="flex items-center gap-2">
-              {pr.authorAvatar && (
-                <img src={pr.authorAvatar} alt="" className="h-5 w-5 rounded-full" />
-              )}
-              <span
-                className="cursor-pointer text-gh-fg-default hover:text-gh-accent-fg"
-                title={`Filter by author: ${pr.author}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  const col = table.getColumn('author')
-                  col?.setFilterValue(pr.author)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                {pr.authorAvatar && (
+                  <img src={pr.authorAvatar} alt="" className="h-5 w-5 rounded-full" />
+                )}
+                <span
+                  className="cursor-pointer text-gh-fg-default hover:text-gh-accent-fg"
+                  title={`Filter by author: ${pr.author}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
                     const col = table.getColumn('author')
                     col?.setFilterValue(pr.author)
-                  }
-                }}
-              >
-                {pr.author}
-              </span>
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      const col = table.getColumn('author')
+                      col?.setFilterValue(pr.author)
+                    }
+                  }}
+                >
+                  {pr.author}
+                </span>
+              </div>
+              {pr.reviewers.length > 0 && (
+                <div className="flex flex-wrap gap-1 pl-7">
+                  {pr.reviewers.slice(0, 3).map((r) => (
+                    <span
+                      key={r}
+                      className={`rounded-full border px-1.5 py-0 text-[9px] ${
+                        r === currentUser
+                          ? 'border-gh-warning/60 text-gh-warning'
+                          : 'border-gh-border/60 text-gh-fg-placeholder'
+                      }`}
+                      title={`Reviewer: ${r}`}
+                    >
+                      {r}
+                    </span>
+                  ))}
+                  {pr.reviewers.length > 3 && (
+                    <span className="text-[9px] text-gh-fg-placeholder">+{pr.reviewers.length - 3}</span>
+                  )}
+                </div>
+              )}
             </div>
           )
         },
@@ -247,6 +305,15 @@ export default function PullRequestTable({
             </span>
           )
         },
+      },
+      {
+        id: 'commentCount',
+        accessorKey: 'commentCount',
+        header: '💬',
+        enableColumnFilter: false,
+        cell: ({ row }) => (
+          <span className="text-xs text-gh-fg-muted">{row.original.commentCount}</span>
+        ),
       },
   ]
 
@@ -398,7 +465,7 @@ export default function PullRequestTable({
                     const canSort = header.column.getCanSort()
                     const sorted = header.column.getIsSorted()
                     const sortIcon = sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'
-                    const isLast = header.column.id === 'pushesAfterOpen'
+                    const isLast = header.column.id === 'commentCount'
                     return (
                       <th
                         key={header.id}
@@ -448,12 +515,13 @@ export default function PullRequestTable({
                   return (
                     <tr
                       key={row.id}
-                      className={`border-t border-gh-border ${
+                      className={`cursor-pointer border-t border-gh-border transition-colors hover:bg-gh-overlay ${
                         pr.needsYourReview ? 'bg-gh-warning/5' : ''
                       }`}
+                      onClick={() => onPRSelect?.(pr)}
                     >
                       {row.getVisibleCells().map((cell) => {
-                        const isLast = cell.column.id === 'pushesAfterOpen'
+                        const isLast = cell.column.id === 'commentCount'
                         return (
                           <td
                             key={cell.id}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { DashboardFilter, RepoState } from './types'
+import type { DashboardFilter, PullRequest, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, saveRepoState, saveToken, saveTheme } from './storage'
 import type { Theme } from './storage'
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserRepos } from './github-api'
@@ -11,9 +11,12 @@ import PullRequestTable from './components/PullRequestTable'
 import TokenSettings from './components/TokenSettings'
 import RepoPickerModal from './components/RepoPickerModal'
 import BranchAnalysisPanel from './components/BranchAnalysisPanel'
+import PRDetailPanel from './components/PRDetailPanel'
+import ActionRequiredPanel from './components/ActionRequiredPanel'
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('light', theme === 'light')
+  document.documentElement.classList.toggle('github', theme === 'github')
 }
 
 function App() {
@@ -22,9 +25,10 @@ function App() {
   const [token, setToken] = useState(() => loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [activeView, setActiveView] = useState<'pull_requests' | 'branches'>('pull_requests')
+  const [activeView, setActiveView] = useState<'pull_requests' | 'branches' | 'my_actions'>('pull_requests')
   const [filter, setFilter] = useState<DashboardFilter>('all')
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
+  const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null)
 
   useEffect(() => {
     applyTheme(theme)
@@ -36,8 +40,7 @@ function App() {
   const [newRepo, setNewRepo] = useState('')
   const [repoError, setRepoError] = useState('')
 
-  const toggleTheme = () => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+  const toggleTheme = (next: Theme) => {
     setTheme(next)
     saveTheme(next)
   }
@@ -181,15 +184,18 @@ function App() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
-                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                aria-label="Toggle theme"
+              <label htmlFor="theme-select" className="sr-only">Theme</label>
+              <select
+                id="theme-select"
+                value={theme}
+                onChange={(e) => toggleTheme(e.target.value as Theme)}
+                aria-label="Theme"
+                className="rounded-md border border-gh-border bg-gh-overlay px-2 py-1.5 text-xs text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
               >
-                {theme === 'dark' ? '☀️' : '🌙'}
-              </button>
+                <option value="dark">🌙 Dark</option>
+                <option value="light">☀️ Light</option>
+                <option value="github">🐙 GitHub</option>
+              </select>
               {dataUpdatedAt > 0 && (
                 <span className="text-xs text-gh-fg-muted">
                   Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
@@ -290,6 +296,22 @@ function App() {
               >
                 Branch analysis
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('my_actions')}
+                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'my_actions'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                My actions
+                {summary.needsReview > 0 && (
+                  <span className="ml-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gh-warning px-1 text-[10px] font-semibold text-white">
+                    {summary.needsReview}
+                  </span>
+                )}
+              </button>
             </section>
 
             {activeView === 'pull_requests' && (
@@ -326,12 +348,29 @@ function App() {
                 currentUser={currentUser}
                 onRefresh={handleRefresh}
                 dataUpdatedAt={dataUpdatedAt}
+                onPRSelect={setSelectedPR}
               />
-            ) : (
+            ) : activeView === 'branches' ? (
               <BranchAnalysisPanel
                 branches={branches}
                 isLoading={isLoading}
                 hasSelectedRepos={selectedRepos.length > 0}
+              />
+            ) : (
+              <ActionRequiredPanel
+                pullRequests={pullRequests}
+                currentUser={currentUser}
+                hasSelectedRepos={selectedRepos.length > 0}
+                onPRSelect={setSelectedPR}
+              />
+            )}
+
+            {selectedPR && (
+              <PRDetailPanel
+                pr={selectedPR}
+                token={token}
+                currentUser={currentUser}
+                onClose={() => setSelectedPR(null)}
               />
             )}
 

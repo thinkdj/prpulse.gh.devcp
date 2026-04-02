@@ -4,7 +4,7 @@ const REPO_STORAGE_KEY = 'gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'gh.devcp.dashboard.token'
 const THEME_STORAGE_KEY = 'gh.devcp.dashboard.theme'
 
-export type Theme = 'dark' | 'light'
+export type Theme = 'dark' | 'light' | 'github'
 
 export const loadRepoState = (defaultRepos: string[]): RepoState => {
   try {
@@ -63,7 +63,7 @@ export const saveToken = (token: string) => {
 export const loadTheme = (): Theme => {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
-    if (raw === 'light' || raw === 'dark') return raw
+    if (raw === 'light' || raw === 'dark' || raw === 'github') return raw
   } catch {
     // fall through
   }
