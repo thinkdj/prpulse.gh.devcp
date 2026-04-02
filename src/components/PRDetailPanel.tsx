@@ -1,0 +1,304 @@
+import { useEffect, useRef, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { PRComment, PullRequest } from '../types'
+import { fetchPRActivity, postPRComment } from '../github-api'
+import { relativeTime } from '../utils'
+import StatusBadge from './StatusBadge'
+
+type PRDetailPanelProps = {
+  pr: PullRequest
+  token: string
+  currentUser: string
+  onClose: () => void
+}
+
+const labelColorMap: Record<string, string> = {
+  bug: 'border-gh-danger-fg/60 text-gh-danger-fg bg-gh-danger/10',
+  urgent: 'border-gh-warning/60 text-gh-warning bg-gh-warning/10',
+  critical: 'border-gh-danger-fg/60 text-gh-danger-fg bg-gh-danger/10',
+  enhancement: 'border-gh-accent/60 text-gh-accent-fg bg-gh-accent/10',
+  feature: 'border-gh-accent/60 text-gh-accent-fg bg-gh-accent/10',
+  documentation: 'border-gh-purple/60 text-gh-purple bg-gh-purple/10',
+  docs: 'border-gh-purple/60 text-gh-purple bg-gh-purple/10',
+  chore: 'border-gh-fg-muted/40 text-gh-fg-muted',
+  dependencies: 'border-gh-success-fg/60 text-gh-success-fg bg-gh-success/10',
+}
+
+function getLabelStyle(label: string): string {
+  return labelColorMap[label.toLowerCase()] ?? 'border-gh-border text-gh-fg-muted'
+}
+
+function reviewStateIcon(state?: string): string {
+  if (state === 'APPROVED') return '✓'
+  if (state === 'CHANGES_REQUESTED') return '✕'
+  return '💬'
+}
+
+function reviewStateBadge(state?: string): string {
+  if (state === 'APPROVED') return 'text-gh-success-fg'
+  if (state === 'CHANGES_REQUESTED') return 'text-gh-danger-fg'
+  return 'text-gh-fg-muted'
+}
+
+export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDetailPanelProps) {
+  const queryClient = useQueryClient()
+  const [commentBody, setCommentBody] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const { data: activity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ['pr-activity', pr.repo, pr.id, token],
+    queryFn: () => fetchPRActivity(pr.repo, pr.id, token),
+    enabled: !!token,
+    staleTime: 60 * 1000,
+  })
+
+  const mutation = useMutation({
+    mutationFn: (body: string) => postPRComment(pr.repo, pr.id, token, body),
+    onSuccess: (newComment: PRComment) => {
+      queryClient.setQueryData<PRComment[]>(
+        ['pr-activity', pr.repo, pr.id, token],
+        (prev = []) => [...prev, newComment],
+      )
+      setCommentBody('')
+    },
+  })
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  // Trap focus inside panel (accessibility)
+  useEffect(() => {
+    panelRef.current?.focus()
+  }, [])
+
+  const handleSubmitComment = () => {
+    const trimmed = commentBody.trim()
+    if (!trimmed || mutation.isPending) return
+    mutation.mutate(trimmed)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      handleSubmitComment()
+    }
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40"
+        aria-hidden="true"
+        onClick={onClose}
+      />
+
+      {/* Slide-in panel */}
+      <aside
+        ref={panelRef}
+        tabIndex={-1}
+        aria-label="Pull request details"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col bg-gh-surface shadow-2xl outline-none ring-1 ring-gh-border"
+      >
+        {/* Header */}
+        <div className="flex items-start gap-3 border-b border-gh-border px-5 py-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-gh-fg-muted">{pr.repo}</span>
+              <span className="text-xs text-gh-fg-muted">#{pr.id}</span>
+              {pr.isDraft && (
+                <span className="rounded-full border border-gh-border bg-gh-border/50 px-2 py-0.5 text-[10px] text-gh-fg-muted">
+                  Draft
+                </span>
+              )}
+            </div>
+            <h2 className="mt-1 text-base font-semibold leading-snug text-gh-fg">
+              <a href={pr.url} target="_blank" rel="noopener noreferrer" className="hover:text-gh-accent-fg hover:underline">
+                {pr.title}
+              </a>
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close PR detail panel"
+            className="shrink-0 rounded-md p-1.5 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Status strip */}
+          <div className="flex flex-wrap gap-2 border-b border-gh-border px-5 py-3">
+            <StatusBadge kind="checksStatus" value={pr.checksStatus} />
+            <StatusBadge kind="copilotReview" value={pr.copilotReview} />
+            <StatusBadge kind="mergeSafety" value={pr.mergeSafety} />
+          </div>
+
+          {/* Meta grid */}
+          <div className="border-b border-gh-border px-5 py-4">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Author</dt>
+                <dd className="mt-1 flex items-center gap-1.5 text-gh-fg-default">
+                  {pr.authorAvatar && (
+                    <img src={pr.authorAvatar} alt="" className="h-5 w-5 rounded-full" />
+                  )}
+                  {pr.author}
+                  {pr.author === currentUser && (
+                    <span className="text-xs text-gh-fg-muted">(you)</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Opened</dt>
+                <dd className="mt-1 text-gh-fg-default" title={new Date(pr.openedAt).toLocaleString()}>
+                  {relativeTime(pr.openedAt)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Branch</dt>
+                <dd className="mt-1 font-mono text-xs text-gh-fg-default">
+                  {pr.baseRef && pr.headRef ? (
+                    <span>
+                      <span className="text-gh-fg-muted">{pr.baseRef}</span>
+                      <span className="mx-1 text-gh-fg-placeholder">←</span>
+                      <span>{pr.headRef}</span>
+                    </span>
+                  ) : (
+                    <span className="text-gh-fg-muted">—</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Updated</dt>
+                <dd className="mt-1 text-gh-fg-default" title={new Date(pr.updatedAt).toLocaleString()}>
+                  {relativeTime(pr.updatedAt)}
+                </dd>
+              </div>
+              {pr.reviewers.length > 0 && (
+                <div className="col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Requested reviewers</dt>
+                  <dd className="mt-1 flex flex-wrap gap-1.5">
+                    {pr.reviewers.map((r) => (
+                      <span
+                        key={r}
+                        className={`rounded-full border px-2 py-0.5 text-xs ${
+                          r === currentUser
+                            ? 'border-gh-warning/60 bg-gh-warning/10 text-gh-warning'
+                            : 'border-gh-border text-gh-fg-muted'
+                        }`}
+                      >
+                        {r === currentUser ? `⚑ ${r}` : r}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+              {pr.labels.length > 0 && (
+                <div className="col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Labels</dt>
+                  <dd className="mt-1 flex flex-wrap gap-1.5">
+                    {pr.labels.map((label) => (
+                      <span
+                        key={label}
+                        className={`rounded-full border px-2 py-0.5 text-xs ${getLabelStyle(label)}`}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+              <div className="col-span-2 flex gap-4 text-xs text-gh-fg-muted">
+                <span>{pr.pushesAfterOpen} push{pr.pushesAfterOpen !== 1 ? 'es' : ''} after open</span>
+                <span>{pr.commentCount} comment{pr.commentCount !== 1 ? 's' : ''}</span>
+              </div>
+            </dl>
+          </div>
+
+          {/* Comment thread */}
+          <div className="px-5 py-4">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
+              Activity
+            </h3>
+            {activityLoading ? (
+              <p className="text-sm text-gh-fg-muted">Loading activity…</p>
+            ) : activity.length === 0 ? (
+              <p className="text-sm text-gh-fg-muted">No comments yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {activity.map((comment) => (
+                  <li key={`${comment.isReview ? 'r' : 'c'}-${comment.id}`} className="rounded-lg border border-gh-border bg-gh-overlay p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {comment.authorAvatar ? (
+                          <img src={comment.authorAvatar} alt="" className="h-5 w-5 shrink-0 rounded-full" />
+                        ) : (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gh-border text-[9px] uppercase text-gh-fg-muted">
+                            {comment.author[0]}
+                          </span>
+                        )}
+                        <span className="text-xs font-medium text-gh-fg-default truncate">{comment.author}</span>
+                        {comment.isReview && (
+                          <span className={`text-xs font-medium ${reviewStateBadge(comment.reviewState)}`}>
+                            {reviewStateIcon(comment.reviewState)} Review
+                          </span>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-[10px] text-gh-fg-placeholder" title={new Date(comment.createdAt).toLocaleString()}>
+                        {relativeTime(comment.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-gh-fg-default">
+                      {comment.body}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* Comment composer */}
+        <div className="border-t border-gh-border bg-gh-surface px-5 py-4">
+          {mutation.isError && (
+            <p className="mb-2 text-xs text-gh-danger-fg">
+              {mutation.error instanceof Error ? mutation.error.message : 'Failed to post comment.'}
+            </p>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={commentBody}
+            onChange={(e) => setCommentBody(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Leave a comment… (Ctrl+Enter to submit)"
+            aria-label="Comment body"
+            rows={3}
+            className="w-full resize-none rounded-md border border-gh-border bg-gh-bg px-3 py-2 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none"
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[10px] text-gh-fg-placeholder">Ctrl+Enter to submit</span>
+            <button
+              type="button"
+              onClick={handleSubmitComment}
+              disabled={!commentBody.trim() || mutation.isPending}
+              className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {mutation.isPending ? 'Posting…' : 'Comment'}
+            </button>
+          </div>
+        </div>
+      </aside>
+    </>
+  )
+}

@@ -405,18 +405,24 @@ describe('GitHub Dev Control Panel', () => {
 
   /* ── Theme toggle ── */
 
-  it('toggles theme when theme button is clicked', async () => {
+  it('changes theme when theme selector is changed', async () => {
     renderApp()
 
     await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    const themeBtn = screen.getByRole('button', { name: /Toggle theme/i })
+    const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
-    // Default is dark → click toggles to light
-    fireEvent.click(themeBtn)
+    // Default is dark → change to light
+    fireEvent.change(themeSelect, { target: { value: 'light' } })
     expect(document.documentElement.classList.contains('light')).toBe(true)
 
-    // Click again → toggles back to dark
-    fireEvent.click(themeBtn)
+    // Change to github theme
+    fireEvent.change(themeSelect, { target: { value: 'github' } })
+    expect(document.documentElement.classList.contains('github')).toBe(true)
     expect(document.documentElement.classList.contains('light')).toBe(false)
+
+    // Change back to dark
+    fireEvent.change(themeSelect, { target: { value: 'dark' } })
+    expect(document.documentElement.classList.contains('light')).toBe(false)
+    expect(document.documentElement.classList.contains('github')).toBe(false)
   })
 })
