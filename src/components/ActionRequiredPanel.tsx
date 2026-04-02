@@ -77,7 +77,7 @@ export default function ActionRequiredPanel({
   if (!currentUser) {
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
-        <p className="text-sm text-gh-fg-muted">Set up a GitHub token to see personalised action items.</p>
+        <p className="text-sm text-gh-fg-muted">Set up a GitHub token to see personalized action items.</p>
       </section>
     )
   }
