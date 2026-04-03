@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { DashboardFilter, RepoState } from './types'
-import { loadRepoState, loadToken, loadTheme, saveRepoState, saveToken, saveTheme } from './storage'
-import type { Theme } from './storage'
+import {
+  Settings,
+  RefreshCw,
+  Sun,
+  Moon,
+  Key,
+  Clipboard,
+  CheckCircle,
+  GitBranch,
+  Tag,
+  GitPullRequest,
+  Zap,
+} from 'lucide-react'
+import type { DashboardFilter, PullRequest, RepoState } from './types'
+import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
+import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserRepos } from './github-api'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
@@ -11,9 +24,14 @@ import PullRequestTable from './components/PullRequestTable'
 import TokenSettings from './components/TokenSettings'
 import RepoPickerModal from './components/RepoPickerModal'
 import BranchAnalysisPanel from './components/BranchAnalysisPanel'
+import PRDetailPanel from './components/PRDetailPanel'
+import ActionRequiredPanel from './components/ActionRequiredPanel'
 
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle('light', theme === 'light')
+function applyTheme(theme: Theme, mode: Mode) {
+  document.documentElement.classList.remove('light', 'slate', 'ocean')
+  if (mode === 'light') document.documentElement.classList.add('light')
+  if (theme === 'slate') document.documentElement.classList.add('slate')
+  if (theme === 'ocean') document.documentElement.classList.add('ocean')
 }
 
 function App() {
@@ -22,13 +40,15 @@ function App() {
   const [token, setToken] = useState(() => loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [activeView, setActiveView] = useState<'pull_requests' | 'branches'>('pull_requests')
+  const [activeView, setActiveView] = useState<'pull_requests' | 'branches' | 'my_actions'>('pull_requests')
   const [filter, setFilter] = useState<DashboardFilter>('all')
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
+  const [mode, setMode] = useState<Mode>(() => loadMode())
+  const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null)
 
   useEffect(() => {
-    applyTheme(theme)
-  }, [theme])
+    applyTheme(theme, mode)
+  }, [theme, mode])
 
   const [initialRepoState] = useState<RepoState>(() => loadRepoState([]))
   const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
@@ -36,10 +56,15 @@ function App() {
   const [newRepo, setNewRepo] = useState('')
   const [repoError, setRepoError] = useState('')
 
-  const toggleTheme = () => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+  const changeTheme = (next: Theme) => {
     setTheme(next)
     saveTheme(next)
+  }
+
+  const toggleMode = () => {
+    const next: Mode = mode === 'dark' ? 'light' : 'dark'
+    setMode(next)
+    saveMode(next)
   }
 
   const { data: currentUser = '' } = useQuery({
@@ -181,14 +206,28 @@ function App() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Theme palette selector */}
+              <label htmlFor="theme-select" className="sr-only">Theme</label>
+              <select
+                id="theme-select"
+                value={theme}
+                onChange={(e) => changeTheme(e.target.value as Theme)}
+                aria-label="Theme"
+                className="rounded-md border border-gh-border bg-gh-overlay px-2 py-1.5 text-xs text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
+              >
+                <option value="notion">Notion</option>
+                <option value="slate">Slate</option>
+                <option value="ocean">Ocean</option>
+              </select>
+              {/* Light/dark mode toggle */}
               <button
                 type="button"
-                onClick={toggleTheme}
-                className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
-                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                aria-label="Toggle theme"
+                onClick={toggleMode}
+                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="rounded-md border border-gh-border bg-gh-overlay p-1.5 text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
               >
-                {theme === 'dark' ? '☀️' : '🌙'}
+                {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
               {dataUpdatedAt > 0 && (
                 <span className="text-xs text-gh-fg-muted">
@@ -198,21 +237,23 @@ function App() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                className="rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
+                className="rounded-md border border-gh-border bg-gh-overlay p-1.5 text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
                 title="Refresh data"
+                aria-label="Refresh data"
               >
-                ↻ Refresh
+                <RefreshCw className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowSettings(!showSettings)}
-                className={`rounded-md border px-3 py-1.5 text-sm ${
+                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
                   token
                     ? 'border-gh-success/40 bg-gh-success/10 text-gh-success-fg'
                     : 'border-gh-warning/40 bg-gh-warning/10 text-gh-warning'
                 }`}
               >
-                {token ? '⚙ Connected' : '⚙ Set token'}
+                <Settings className="h-3.5 w-3.5" />
+                {token ? 'Connected' : 'Set token'}
               </button>
             </div>
           </div>
@@ -240,24 +281,26 @@ function App() {
           /* ── Empty state: no token configured ── */
           <section className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
             <div className="mx-auto max-w-md">
-              <div className="mb-4 text-5xl">📋</div>
+              <div className="mb-4 flex justify-center">
+                <Clipboard className="h-14 w-14 text-gh-accent-fg opacity-60" />
+              </div>
               <h2 className="text-xl font-semibold tracking-tight text-gh-fg">Welcome to GitHub Dev CP</h2>
               <p className="mt-2 text-sm text-gh-fg-muted">
                 Monitor pull requests across all your repositories at a glance.
               </p>
               <ul className="mx-auto mt-4 max-w-xs space-y-1.5 text-left text-sm text-gh-fg-muted">
-                <li>✓ See PR status, reviews &amp; CI checks</li>
-                <li>✓ Spot stale or fully merged branches</li>
-                <li>✓ Filter by author, label, status</li>
-                <li>✓ Track draft PRs and push counts</li>
-                <li>✓ Auto-refreshes every 5 minutes</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gh-success-fg shrink-0" /> See PR status, reviews &amp; CI checks</li>
+                <li className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-gh-fg-muted shrink-0" /> Spot stale or fully merged branches</li>
+                <li className="flex items-center gap-2"><Tag className="h-4 w-4 text-gh-fg-muted shrink-0" /> Filter by author, label, status</li>
+                <li className="flex items-center gap-2"><GitPullRequest className="h-4 w-4 text-gh-fg-muted shrink-0" /> Track draft PRs and push counts</li>
+                <li className="flex items-center gap-2"><Zap className="h-4 w-4 text-gh-fg-muted shrink-0" /> Auto-refreshes every 5 minutes</li>
               </ul>
               <button
                 type="button"
                 onClick={() => setShowSettings(true)}
-                className="mt-6 rounded-md border border-gh-accent bg-gh-accent px-5 py-2 text-sm font-medium text-white"
+                className="mt-6 inline-flex items-center gap-2 rounded-md border border-gh-accent bg-gh-accent px-5 py-2 text-sm font-medium text-white"
               >
-                🔑 Connect GitHub Token
+                <Key className="h-4 w-4" /> Connect GitHub Token
               </button>
               <p className="mt-3 text-xs text-gh-fg-muted">
                 Use a fine-grained PAT with read-only pull request access.
@@ -271,24 +314,40 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('pull_requests')}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
                   activeView === 'pull_requests'
                     ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
                     : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
                 }`}
               >
-                Pull requests
+                <GitPullRequest className="h-3.5 w-3.5" /> Pull requests
               </button>
               <button
                 type="button"
                 onClick={() => setActiveView('branches')}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
                   activeView === 'branches'
                     ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
                     : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
                 }`}
               >
-                Branch analysis
+                <GitBranch className="h-3.5 w-3.5" /> Branch analysis
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('my_actions')}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'my_actions'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" /> My actions
+                {summary.needsReview > 0 && (
+                  <span className="ml-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gh-warning px-1 text-[10px] font-semibold text-white">
+                    {summary.needsReview}
+                  </span>
+                )}
               </button>
             </section>
 
@@ -326,12 +385,30 @@ function App() {
                 currentUser={currentUser}
                 onRefresh={handleRefresh}
                 dataUpdatedAt={dataUpdatedAt}
+                onPRSelect={setSelectedPR}
               />
-            ) : (
+            ) : activeView === 'branches' ? (
               <BranchAnalysisPanel
                 branches={branches}
                 isLoading={isLoading}
                 hasSelectedRepos={selectedRepos.length > 0}
+              />
+            ) : (
+              <ActionRequiredPanel
+                pullRequests={pullRequests}
+                currentUser={currentUser}
+                hasSelectedRepos={selectedRepos.length > 0}
+                isLoading={prIsLoading}
+                onPRSelect={setSelectedPR}
+              />
+            )}
+
+            {selectedPR && (
+              <PRDetailPanel
+                pr={selectedPR}
+                token={token}
+                currentUser={currentUser}
+                onClose={() => setSelectedPR(null)}
               />
             )}
 

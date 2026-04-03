@@ -19,6 +19,20 @@ export type PullRequest = {
   needsYourReview: boolean
   isDraft: boolean
   labels: string[]
+  reviewers: string[]
+  baseRef: string
+  headRef: string
+  commentCount: number
+}
+
+export type PRComment = {
+  id: number
+  author: string
+  authorAvatar: string
+  body: string
+  createdAt: string
+  isReview: boolean
+  reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING'
 }
 
 export type BranchAnalysis = {
