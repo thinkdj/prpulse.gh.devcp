@@ -32,7 +32,7 @@ export type PRComment = {
   body: string
   createdAt: string
   isReview: boolean
-  reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED'
+  reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING'
 }
 
 export type BranchAnalysis = {

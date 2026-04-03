@@ -1,3 +1,4 @@
+import { Flag, XCircle, CheckCircle, CheckCheck } from 'lucide-react'
 import type { PullRequest } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
@@ -54,7 +55,7 @@ function buildActionItems(prs: PullRequest[], currentUser: string): ActionItem[]
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <span className="text-4xl">✓</span>
+      <CheckCheck className="h-12 w-12 text-gh-success-fg" />
       <p className="text-sm text-gh-fg-muted">{message}</p>
     </div>
   )
@@ -105,7 +106,7 @@ export default function ActionRequiredPanel({
           {reviewRequested.length > 0 && (
             <div className="px-5 py-4">
               <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gh-warning">
-                <span>⚑</span> Review Requested ({reviewRequested.length})
+                <Flag className="h-3.5 w-3.5" /> Review Requested ({reviewRequested.length})
               </h3>
               <ul className="space-y-2">
                 {reviewRequested.map(({ pr, actionLabel, actionColor }) => (
@@ -119,7 +120,7 @@ export default function ActionRequiredPanel({
           {needsAction.length > 0 && (
             <div className="px-5 py-4">
               <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gh-danger-fg">
-                <span>✕</span> Your PRs Needing Attention ({needsAction.length})
+                <XCircle className="h-3.5 w-3.5" /> Your PRs Needing Attention ({needsAction.length})
               </h3>
               <ul className="space-y-2">
                 {needsAction.map(({ pr, actionLabel, actionColor }) => (
@@ -133,7 +134,7 @@ export default function ActionRequiredPanel({
           {readyToMerge.length > 0 && (
             <div className="px-5 py-4">
               <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gh-success-fg">
-                <span>✓</span> Ready to Merge ({readyToMerge.length})
+                <CheckCircle className="h-3.5 w-3.5" /> Ready to Merge ({readyToMerge.length})
               </h3>
               <ul className="space-y-2">
                 {readyToMerge.map(({ pr, actionLabel, actionColor }) => (

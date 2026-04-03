@@ -1,3 +1,4 @@
+import { X, Plus, FolderGit2 } from 'lucide-react'
 import type { FormEvent } from 'react'
 
 type RepoSelectorProps = {
@@ -40,9 +41,9 @@ export default function RepoSelector({
             <button
               type="button"
               onClick={onBrowseRepos}
-              className="rounded-md border border-gh-accent bg-gh-accent/10 px-3 py-1.5 text-xs font-medium text-gh-accent-fg hover:bg-gh-accent/20 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent/10 px-3 py-1.5 text-xs font-medium text-gh-accent-fg hover:bg-gh-accent/20 transition-colors"
             >
-              + Browse repos
+              <Plus className="h-3.5 w-3.5" /> Browse repos
             </button>
           )}
           <form onSubmit={onAddRepo} className="flex items-center gap-2">
@@ -76,8 +77,9 @@ export default function RepoSelector({
       {/* Repo grid */}
       {repos.length === 0 ? (
         <div className="px-4 py-6 text-center">
+          <FolderGit2 className="mx-auto mb-2 h-8 w-8 text-gh-fg-placeholder" />
           <p className="text-sm text-gh-fg-muted">No repositories added yet.</p>
-          <p className="mt-1 text-xs text-gh-fg-placeholder">Click &quot;+ Browse repos&quot; or type <code className="rounded bg-gh-overlay px-1 py-0.5 font-mono text-gh-fg-muted">owner/repo</code> above.</p>
+          <p className="mt-1 text-xs text-gh-fg-placeholder">Click &quot;Browse repos&quot; or type <code className="rounded bg-gh-overlay px-1 py-0.5 font-mono text-gh-fg-muted">owner/repo</code> above.</p>
         </div>
       ) : (
         <ul className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -116,14 +118,14 @@ export default function RepoSelector({
                     {repoName}
                   </p>
                 </button>
-                {/* Remove button */}
+                {/* Remove button — visible on hover AND on keyboard focus */}
                 <button
                   type="button"
                   onClick={() => onRemoveRepo(repo)}
                   aria-label={`Remove ${repo}`}
-                  className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gh-surface text-[9px] text-gh-fg-muted opacity-0 transition-opacity hover:bg-gh-danger/20 hover:text-gh-danger-fg group-hover:opacity-100"
+                  className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gh-surface text-gh-fg-muted opacity-0 transition-opacity hover:bg-gh-danger/20 hover:text-gh-danger-fg focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-gh-accent focus-visible:ring-offset-1 focus-visible:ring-offset-gh-surface group-hover:opacity-100"
                 >
-                  ✕
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </li>
             )
