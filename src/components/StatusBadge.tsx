@@ -1,4 +1,5 @@
 import { Check, X, MessageSquare, Minus, Clock, Circle, Diamond, GitMerge } from 'lucide-react'
+import type { ComponentType } from 'react'
 import type { BranchStatus, ChecksStatus, CopilotReview, MergeSafety } from '../types'
 import { formatBranchStatus, formatChecks, formatReview, formatSafety } from '../utils'
 
@@ -29,7 +30,7 @@ const badgeStyles: Record<string, string> = {
   'branchStatus:merged': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
 }
 
-type IconComponent = React.ComponentType<{ className?: string }>
+type IconComponent = ComponentType<{ className?: string }>
 
 const statusIcons: Record<string, IconComponent> = {
   'copilotReview:approved': Check,
