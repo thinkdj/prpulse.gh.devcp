@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 
 type TokenSettingsProps = {
   token: string
@@ -53,9 +54,10 @@ function TokenSettingsForm({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-gh-fg-muted hover:text-gh-fg-default"
+          aria-label="Close settings"
+          className="rounded-md p-1 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
         >
-          Close
+          <X className="h-4 w-4" />
         </button>
       </div>
 

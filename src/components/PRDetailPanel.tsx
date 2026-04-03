@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  X,
+  GitBranch,
+  Clock,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Flag,
+  ExternalLink,
+  AlertCircle,
+  Send,
+} from 'lucide-react'
 import type { PRComment, PullRequest } from '../types'
 import { fetchPRActivity, postPRComment } from '../github-api'
 import { relativeTime } from '../utils'
@@ -28,10 +41,10 @@ function getLabelStyle(label: string): string {
   return labelColorMap[label.toLowerCase()] ?? 'border-gh-border text-gh-fg-muted'
 }
 
-function reviewStateIcon(state?: string): string {
-  if (state === 'APPROVED') return '✓'
-  if (state === 'CHANGES_REQUESTED') return '✕'
-  return '💬'
+function ReviewIcon({ state }: { state?: string }) {
+  if (state === 'APPROVED') return <CheckCircle className="h-3 w-3 text-gh-success-fg" />
+  if (state === 'CHANGES_REQUESTED') return <XCircle className="h-3 w-3 text-gh-danger-fg" />
+  return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
 }
 
 function reviewStateBadge(state?: string): string {
@@ -40,13 +53,20 @@ function reviewStateBadge(state?: string): string {
   return 'text-gh-fg-muted'
 }
 
+function reviewStateLabel(state?: string): string {
+  if (state === 'APPROVED') return 'Approved'
+  if (state === 'CHANGES_REQUESTED') return 'Changes requested'
+  if (state === 'DISMISSED') return 'Dismissed'
+  return 'Review'
+}
+
 export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDetailPanelProps) {
   const queryClient = useQueryClient()
   const [commentBody, setCommentBody] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
 
-  const { data: activity = [], isLoading: activityLoading } = useQuery({
+  const { data: activity = [], isLoading: activityLoading, isError: activityError } = useQuery({
     queryKey: ['pr-activity', pr.repo, pr.id, token],
     queryFn: () => fetchPRActivity(pr.repo, pr.id, token),
     enabled: !!token,
@@ -66,14 +86,14 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
 
   // Close on Escape key
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
+    const handleKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  // Trap focus inside panel (accessibility)
+  // Move initial focus into the panel when it opens
   useEffect(() => {
     panelRef.current?.focus()
   }, [])
@@ -84,12 +104,15 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
     mutation.mutate(trimmed)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault()
       handleSubmitComment()
     }
   }
+
+  // Derive displayed comment count: prefer live activity count once loaded
+  const displayedCommentCount = activityLoading ? pr.commentCount : activity.length
 
   return (
     <>
@@ -104,6 +127,8 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
       <aside
         ref={panelRef}
         tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
         aria-label="Pull request details"
         className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col bg-gh-surface shadow-2xl outline-none ring-1 ring-gh-border"
       >
@@ -120,8 +145,9 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
               )}
             </div>
             <h2 className="mt-1 text-base font-semibold leading-snug text-gh-fg">
-              <a href={pr.url} target="_blank" rel="noopener noreferrer" className="hover:text-gh-accent-fg hover:underline">
+              <a href={pr.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-gh-accent-fg hover:underline">
                 {pr.title}
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" />
               </a>
             </h2>
           </div>
@@ -131,7 +157,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
             aria-label="Close PR detail panel"
             className="shrink-0 rounded-md p-1.5 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -161,13 +187,15 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Opened</dt>
-                <dd className="mt-1 text-gh-fg-default" title={new Date(pr.openedAt).toLocaleString()}>
+                <dd className="mt-1 flex items-center gap-1.5 text-gh-fg-default" title={new Date(pr.openedAt).toLocaleString()}>
+                  <Clock className="h-3.5 w-3.5 text-gh-fg-muted" />
                   {relativeTime(pr.openedAt)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Branch</dt>
-                <dd className="mt-1 font-mono text-xs text-gh-fg-default">
+                <dd className="mt-1 flex items-center gap-1 font-mono text-xs text-gh-fg-default">
+                  <GitBranch className="h-3.5 w-3.5 shrink-0 text-gh-fg-muted" />
                   {pr.baseRef && pr.headRef ? (
                     <span>
                       <span className="text-gh-fg-muted">{pr.baseRef}</span>
@@ -181,7 +209,8 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Updated</dt>
-                <dd className="mt-1 text-gh-fg-default" title={new Date(pr.updatedAt).toLocaleString()}>
+                <dd className="mt-1 flex items-center gap-1.5 text-gh-fg-default" title={new Date(pr.updatedAt).toLocaleString()}>
+                  <Clock className="h-3.5 w-3.5 text-gh-fg-muted" />
                   {relativeTime(pr.updatedAt)}
                 </dd>
               </div>
@@ -192,13 +221,14 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
                     {pr.reviewers.map((r) => (
                       <span
                         key={r}
-                        className={`rounded-full border px-2 py-0.5 text-xs ${
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
                           r === currentUser
                             ? 'border-gh-warning/60 bg-gh-warning/10 text-gh-warning'
                             : 'border-gh-border text-gh-fg-muted'
                         }`}
                       >
-                        {r === currentUser ? `⚑ ${r}` : r}
+                        {r === currentUser && <Flag className="h-3 w-3" />}
+                        {r}
                       </span>
                     ))}
                   </dd>
@@ -221,18 +251,27 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
               )}
               <div className="col-span-2 flex gap-4 text-xs text-gh-fg-muted">
                 <span>{pr.pushesAfterOpen} push{pr.pushesAfterOpen !== 1 ? 'es' : ''} after open</span>
-                <span>{pr.commentCount} comment{pr.commentCount !== 1 ? 's' : ''}</span>
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {displayedCommentCount} comment{displayedCommentCount !== 1 ? 's' : ''}
+                </span>
               </div>
             </dl>
           </div>
 
           {/* Comment thread */}
           <div className="px-5 py-4">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
+            <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
+              <MessageSquare className="h-3.5 w-3.5" />
               Activity
             </h3>
             {activityLoading ? (
               <p className="text-sm text-gh-fg-muted">Loading activity…</p>
+            ) : activityError ? (
+              <div className="flex items-center gap-2 rounded-lg border border-gh-danger/30 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                Failed to load activity. Check your token permissions.
+              </div>
             ) : activity.length === 0 ? (
               <p className="text-sm text-gh-fg-muted">No comments yet.</p>
             ) : (
@@ -248,10 +287,11 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
                             {comment.author[0]}
                           </span>
                         )}
-                        <span className="text-xs font-medium text-gh-fg-default truncate">{comment.author}</span>
+                        <span className="truncate text-xs font-medium text-gh-fg-default">{comment.author}</span>
                         {comment.isReview && (
-                          <span className={`text-xs font-medium ${reviewStateBadge(comment.reviewState)}`}>
-                            {reviewStateIcon(comment.reviewState)} Review
+                          <span className={`flex items-center gap-1 text-xs font-medium ${reviewStateBadge(comment.reviewState)}`}>
+                            <ReviewIcon state={comment.reviewState} />
+                            {reviewStateLabel(comment.reviewState)}
                           </span>
                         )}
                       </div>
@@ -272,9 +312,10 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
         {/* Comment composer */}
         <div className="border-t border-gh-border bg-gh-surface px-5 py-4">
           {mutation.isError && (
-            <p className="mb-2 text-xs text-gh-danger-fg">
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-gh-danger-fg">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
               {mutation.error instanceof Error ? mutation.error.message : 'Failed to post comment.'}
-            </p>
+            </div>
           )}
           <textarea
             ref={textareaRef}
@@ -292,8 +333,9 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
               type="button"
               onClick={handleSubmitComment}
               disabled={!commentBody.trim() || mutation.isPending}
-              className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <Send className="h-3.5 w-3.5" />
               {mutation.isPending ? 'Posting…' : 'Comment'}
             </button>
           </div>

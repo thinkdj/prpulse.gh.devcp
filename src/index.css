@@ -1,6 +1,23 @@
 @import 'tailwindcss';
 
-/* ── Theme tokens: dark (default) ── */
+/*
+ * Theme architecture:
+ *   • :root          → Notion theme, dark mode (default)
+ *   • .light         → bright-mode override for the active theme
+ *   • .slate         → Slate/GitHub theme variables (dark mode)
+ *   • .ocean         → Ocean theme variables (dark mode)
+ *   • .slate.light / .ocean.light override light values for each theme
+ *
+ * Applied classes on <html>:  [theme?] [light?]
+ *   dark Notion   → (no extra classes)
+ *   light Notion  → .light
+ *   dark Slate    → .slate
+ *   light Slate   → .slate .light
+ *   dark Ocean    → .ocean
+ *   light Ocean   → .ocean .light
+ */
+
+/* ── Notion theme: dark mode (default) ── */
 :root {
   color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -24,7 +41,7 @@
   --gh-purple: #a78bfa;
 }
 
-/* ── Theme tokens: light ── */
+/* ── Notion theme: light mode ── */
 .light {
   color-scheme: light;
 
@@ -47,8 +64,31 @@
   --gh-purple: #6940a5;
 }
 
-/* ── Theme tokens: GitHub (github.com official palette) ── */
-.github {
+/* ── Slate theme: dark mode (GitHub-like dark) ── */
+.slate {
+  color-scheme: dark;
+
+  --gh-bg: #0d1117;
+  --gh-surface: #161b22;
+  --gh-overlay: #1c2128;
+  --gh-border: #30363d;
+  --gh-border-hover: #444c56;
+  --gh-fg: #e6edf3;
+  --gh-fg-default: #c9d1d9;
+  --gh-fg-muted: #8b949e;
+  --gh-fg-placeholder: #484f58;
+  --gh-accent: #1f6feb;
+  --gh-accent-fg: #58a6ff;
+  --gh-success: #238636;
+  --gh-success-fg: #3fb950;
+  --gh-danger: #da3633;
+  --gh-danger-fg: #f85149;
+  --gh-warning: #d29922;
+  --gh-purple: #bc8cff;
+}
+
+/* ── Slate theme: light mode (GitHub.com) ── */
+.slate.light {
   color-scheme: light;
 
   --gh-bg: #f6f8fa;
@@ -70,7 +110,53 @@
   --gh-purple: #8250df;
 }
 
+/* ── Ocean theme: dark mode ── */
+.ocean {
+  color-scheme: dark;
 
+  --gh-bg: #0f1923;
+  --gh-surface: #162230;
+  --gh-overlay: #1d2f40;
+  --gh-border: #253545;
+  --gh-border-hover: #2e4560;
+  --gh-fg: #cce3f5;
+  --gh-fg-default: #a8d0e8;
+  --gh-fg-muted: #6294b0;
+  --gh-fg-placeholder: #37566e;
+  --gh-accent: #0ea5e9;
+  --gh-accent-fg: #38bdf8;
+  --gh-success: #10b981;
+  --gh-success-fg: #34d399;
+  --gh-danger: #ef4444;
+  --gh-danger-fg: #f87171;
+  --gh-warning: #f59e0b;
+  --gh-purple: #a78bfa;
+}
+
+/* ── Ocean theme: light mode ── */
+.ocean.light {
+  color-scheme: light;
+
+  --gh-bg: #f0f7ff;
+  --gh-surface: #ffffff;
+  --gh-overlay: #e1eefa;
+  --gh-border: #b8d4ec;
+  --gh-border-hover: #93bde0;
+  --gh-fg: #0c2d4a;
+  --gh-fg-default: #1a3f5c;
+  --gh-fg-muted: #4a7a9b;
+  --gh-fg-placeholder: #8db5cf;
+  --gh-accent: #0284c7;
+  --gh-accent-fg: #0284c7;
+  --gh-success: #059669;
+  --gh-success-fg: #059669;
+  --gh-danger: #dc2626;
+  --gh-danger-fg: #dc2626;
+  --gh-warning: #d97706;
+  --gh-purple: #7c3aed;
+}
+
+/* ── Register theme colors for Tailwind v4 utility classes ── */
 @theme inline {
   --color-gh-bg: var(--gh-bg);
   --color-gh-surface: var(--gh-surface);

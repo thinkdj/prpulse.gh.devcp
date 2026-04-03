@@ -7,6 +7,7 @@ import {
   flexRender,
 } from '@tanstack/react-table'
 import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table'
+import { RefreshCw, X, MessageSquare } from 'lucide-react'
 import type { PullRequest, DashboardFilter } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
@@ -310,7 +311,7 @@ export default function PullRequestTable({
       {
         id: 'commentCount',
         accessorKey: 'commentCount',
-        header: '💬',
+        header: () => <MessageSquare className="h-3.5 w-3.5 text-gh-fg-muted" />,
         enableColumnFilter: false,
         cell: ({ row }) => (
           <span className="text-xs text-gh-fg-muted">{row.original.commentCount}</span>
@@ -365,7 +366,7 @@ export default function PullRequestTable({
               className="shrink-0 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
               title="Refresh data (clears cache)"
             >
-              ↻ Refresh
+              <RefreshCw className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -413,9 +414,9 @@ export default function PullRequestTable({
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-auto rounded-md border border-gh-border px-2 py-1 text-xs text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-gh-border px-2 py-1 text-xs text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
             >
-              ✕ Clear filters
+              <X className="h-3 w-3" /> Clear filters
             </button>
           )}
         </div>
@@ -519,7 +520,16 @@ export default function PullRequestTable({
                       className={`cursor-pointer border-t border-gh-border transition-colors hover:bg-gh-overlay ${
                         pr.needsYourReview ? 'bg-gh-warning/5' : ''
                       }`}
-                      onClick={() => onPRSelect?.(pr)}
+                      onClick={(event) => {
+                        // Don't open panel if click landed on an interactive element inside a cell
+                        const target = event.target as HTMLElement
+                        if (
+                          target.closest(
+                            'button, a, input, select, textarea, [role="button"], [role="link"]',
+                          )
+                        ) return
+                        onPRSelect?.(pr)
+                      }}
                     >
                       {row.getVisibleCells().map((cell) => {
                         const isLast = cell.column.id === 'commentCount'

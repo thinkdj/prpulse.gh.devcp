@@ -3,8 +3,13 @@ import type { RepoState } from './types'
 const REPO_STORAGE_KEY = 'gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'gh.devcp.dashboard.token'
 const THEME_STORAGE_KEY = 'gh.devcp.dashboard.theme'
+const MODE_STORAGE_KEY = 'gh.devcp.dashboard.mode'
 
-export type Theme = 'dark' | 'light' | 'github'
+/** Visual palette theme (accent colours, surface tones). */
+export type Theme = 'notion' | 'slate' | 'ocean'
+
+/** Brightness mode — applied on top of the active theme. */
+export type Mode = 'dark' | 'light'
 
 export const loadRepoState = (defaultRepos: string[]): RepoState => {
   try {
@@ -63,16 +68,41 @@ export const saveToken = (token: string) => {
 export const loadTheme = (): Theme => {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
-    if (raw === 'light' || raw === 'dark' || raw === 'github') return raw
+    if (raw === 'notion' || raw === 'slate' || raw === 'ocean') return raw
+    // Migrate legacy combined theme values
+    if (raw === 'dark' || raw === 'light') return 'notion'
+    if (raw === 'github') return 'slate'
+  } catch {
+    // fall through
+  }
+  return 'notion'
+}
+
+export const saveTheme = (theme: Theme) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme)
+  } catch {
+    // no-op
+  }
+}
+
+export const loadMode = (): Mode => {
+  try {
+    const themeRaw = localStorage.getItem(THEME_STORAGE_KEY)
+    // Migrate legacy combined theme values
+    if (themeRaw === 'light' || themeRaw === 'github') return 'light'
+
+    const raw = localStorage.getItem(MODE_STORAGE_KEY)
+    if (raw === 'light' || raw === 'dark') return raw
   } catch {
     // fall through
   }
   return 'dark'
 }
 
-export const saveTheme = (theme: Theme) => {
+export const saveMode = (mode: Mode) => {
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme)
+    localStorage.setItem(MODE_STORAGE_KEY, mode)
   } catch {
     // no-op
   }

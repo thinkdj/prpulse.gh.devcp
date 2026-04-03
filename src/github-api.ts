@@ -439,11 +439,11 @@ export async function fetchPRActivity(
     githubFetch<GitHubIssueComment[]>(
       `/repos/${owner}/${repo}/issues/${prNumber}/comments?per_page=100`,
       token,
-    ).catch(() => [] as GitHubIssueComment[]),
+    ),
     githubFetch<GitHubPRReview[]>(
       `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`,
       token,
-    ).catch(() => [] as GitHubPRReview[]),
+    ),
   ])
 
   const comments: PRComment[] = [
