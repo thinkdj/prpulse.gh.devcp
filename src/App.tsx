@@ -398,6 +398,7 @@ function App() {
                 pullRequests={pullRequests}
                 currentUser={currentUser}
                 hasSelectedRepos={selectedRepos.length > 0}
+                isLoading={prIsLoading}
                 onPRSelect={setSelectedPR}
               />
             )}

@@ -311,7 +311,12 @@ export default function PullRequestTable({
       {
         id: 'commentCount',
         accessorKey: 'commentCount',
-        header: () => <MessageSquare className="h-3.5 w-3.5 text-gh-fg-muted" />,
+        header: () => (
+          <span className="inline-flex items-center">
+            <span className="sr-only">Comments</span>
+            <MessageSquare className="h-3.5 w-3.5 text-gh-fg-muted" aria-hidden="true" />
+          </span>
+        ),
         enableColumnFilter: false,
         cell: ({ row }) => (
           <span className="text-xs text-gh-fg-muted">{row.original.commentCount}</span>
@@ -365,6 +370,7 @@ export default function PullRequestTable({
               onClick={onRefresh}
               className="shrink-0 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
               title="Refresh data (clears cache)"
+              aria-label="Refresh data"
             >
               <RefreshCw className="h-4 w-4" />
             </button>

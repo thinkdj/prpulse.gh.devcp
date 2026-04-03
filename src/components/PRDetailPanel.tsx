@@ -111,8 +111,9 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
     }
   }
 
-  // Derive displayed comment count: prefer live activity count once loaded
-  const displayedCommentCount = activityLoading ? pr.commentCount : activity.length
+  // Derive displayed comment count: prefer live activity count once loaded successfully
+  const displayedCommentCount =
+    activityLoading || activityError ? pr.commentCount : activity.length
 
   return (
     <>

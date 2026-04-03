@@ -7,6 +7,7 @@ type ActionRequiredPanelProps = {
   pullRequests: PullRequest[]
   currentUser: string
   hasSelectedRepos: boolean
+  isLoading?: boolean
   onPRSelect: (pr: PullRequest) => void
 }
 
@@ -65,6 +66,7 @@ export default function ActionRequiredPanel({
   pullRequests,
   currentUser,
   hasSelectedRepos,
+  isLoading = false,
   onPRSelect,
 }: ActionRequiredPanelProps) {
   if (!hasSelectedRepos) {
@@ -79,6 +81,14 @@ export default function ActionRequiredPanel({
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
         <p className="text-sm text-gh-fg-muted">Set up a GitHub token to see personalized action items.</p>
+      </section>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
+        <p className="text-sm text-gh-fg-muted">Loading action items…</p>
       </section>
     )
   }
