@@ -47,6 +47,10 @@ function ReviewIcon({ state }: { state?: string }) {
   if (state === 'COMMENTED') return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
   if (state === 'PENDING') return <Clock className="h-3 w-3 text-gh-warning" />
   return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
+  if (state === 'CHANGES_REQUESTED') return <XCircle className="h-3 w-3 text-gh-danger-fg" />
+  if (state === 'COMMENTED') return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
+  if (state === 'PENDING') return <Clock className="h-3 w-3 text-gh-warning" />
+  return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
 }
 
 function reviewStateBadge(state?: string): string {
@@ -60,6 +64,8 @@ function reviewStateBadge(state?: string): string {
 function reviewStateLabel(state?: string): string {
   if (state === 'APPROVED') return 'Approved'
   if (state === 'CHANGES_REQUESTED') return 'Changes requested'
+  if (state === 'COMMENTED') return 'Commented'
+  if (state === 'PENDING') return 'Pending'
   if (state === 'COMMENTED') return 'Commented'
   if (state === 'PENDING') return 'Pending'
   if (state === 'DISMISSED') return 'Dismissed'
