@@ -101,13 +101,22 @@ function App() {
     })),
   })
 
+  // Derive effective branchAnalysisRepos by filtering out repos that no longer exist
+  const effectiveBranchAnalysisRepos = useMemo(() => {
+    const repoSet = new Set(repos)
+    return branchAnalysisRepos.filter((r) => repoSet.has(r))
+  }, [repos, branchAnalysisRepos])
+
+  const effectiveBranchAnalysisTriggered =
+    branchAnalysisTriggered && effectiveBranchAnalysisRepos.length > 0
+
   const branchQueries = useQueries({
-    queries: branchAnalysisRepos.map((repo) => ({
+    queries: effectiveBranchAnalysisRepos.map((repo) => ({
       queryKey: ['repo-branches', token, repo],
       queryFn: () => fetchRepoBranches(repo, token),
       staleTime: STALE_TIME,
       retry: 1,
-      enabled: !!token && branchAnalysisTriggered,
+      enabled: !!token && effectiveBranchAnalysisTriggered,
     })),
   })
 
@@ -127,18 +136,6 @@ function App() {
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
-
-  // Keep branchAnalysisRepos in sync when repos are removed
-  useEffect(() => {
-    const repoSet = new Set(repos)
-    setBranchAnalysisRepos((prev) => {
-      const next = prev.filter((r) => repoSet.has(r))
-      if (next.length === 0 && prev.length > 0) {
-        setBranchAnalysisTriggered(false)
-      }
-      return next
-    })
-  }, [repos])
 
   const summary = useMemo(
     () => ({
@@ -445,8 +442,8 @@ function App() {
                 isLoading={branchIsLoading}
                 hasSelectedRepos={selectedRepos.length > 0}
                 repos={repos}
-                analysisRepos={branchAnalysisRepos}
-                analysisTriggered={branchAnalysisTriggered}
+                analysisRepos={effectiveBranchAnalysisRepos}
+                analysisTriggered={effectiveBranchAnalysisTriggered}
                 onRunAnalysis={handleRunBranchAnalysis}
               />
             ) : (
