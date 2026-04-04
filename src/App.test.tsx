@@ -198,6 +198,12 @@ describe('GitHub Dev Control Panel', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
 
+      // Confirm the removal in the custom dialog
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
       })
@@ -363,6 +369,12 @@ describe('GitHub Dev Control Panel', () => {
 
       fireEvent.click(screen.getByTitle('Refresh data'))
 
+      // Confirm the refresh in the dialog
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+
       expect(clearApiCache).toHaveBeenCalledTimes(1)
 
       await waitFor(() => {
@@ -375,6 +387,9 @@ describe('GitHub Dev Control Panel', () => {
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
+
+      await screen.findByTestId('branch-analysis-panel')
+      fireEvent.click(screen.getByRole('button', { name: /Run analysis/i }))
 
       await waitFor(() => {
         expect(fetchRepoBranches).toHaveBeenCalledTimes(defaultRepos.length)
@@ -393,6 +408,12 @@ describe('GitHub Dev Control Panel', () => {
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       await screen.findByTestId('branch-analysis-panel')
+      fireEvent.click(screen.getByRole('button', { name: /Run analysis/i }))
+
+      await waitFor(() => {
+        expect(fetchRepoBranches).toHaveBeenCalled()
+      })
+
       fireEvent.click(screen.getByRole('button', { name: 'Stale' }))
 
       await waitFor(() => {
