@@ -129,9 +129,9 @@ function App() {
   const branchIsLoading = branchQueries.some((q) => q.isLoading)
   const branchError = branchQueries.find((q) => q.error)?.error ?? null
   const branchDataUpdatedAt = Math.max(0, ...branchQueries.map((q) => q.dataUpdatedAt))
-  const isLoading = activeView === 'pull_requests' ? prIsLoading : branchIsLoading
-  const error = activeView === 'pull_requests' ? prError : branchError
-  const dataUpdatedAt = activeView === 'pull_requests' ? prDataUpdatedAt : branchDataUpdatedAt
+  const isLoading = activeView === 'branches' ? branchIsLoading : prIsLoading
+  const error = activeView === 'branches' ? branchError : prError
+  const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : prDataUpdatedAt
 
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })

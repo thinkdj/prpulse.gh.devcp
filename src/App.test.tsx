@@ -16,6 +16,7 @@ vi.mock('./github-api', () => ({
   ),
   fetchUserRepos: vi.fn().mockResolvedValue([]),
   fetchPRActivity: vi.fn().mockResolvedValue([]),
+  postPRComment: vi.fn().mockResolvedValue({ id: 1, author: 'test-user', authorAvatar: '', body: 'ok', createdAt: '', isReview: false }),
 }))
 
 import { clearApiCache, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
@@ -28,6 +29,7 @@ const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  vi.clearAllMocks()
   vi.restoreAllMocks()
 })
 
