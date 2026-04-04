@@ -4,6 +4,7 @@ export const formatReview = (value: CopilotReview) =>
   ({
     approved: 'Approved',
     changes_requested: 'Changes requested',
+    commented: 'Commented',
     not_run: 'Not run',
   })[value]
 

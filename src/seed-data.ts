@@ -17,6 +17,10 @@ export const seedPullRequests: PullRequest[] = [
     needsYourReview: false,
     isDraft: false,
     labels: ['enhancement'],
+    reviewers: ['lee-ui'],
+    baseRef: 'main',
+    headRef: 'feat/dashboard-widgets',
+    commentCount: 3,
   },
   {
     id: 1015,
@@ -34,6 +38,10 @@ export const seedPullRequests: PullRequest[] = [
     needsYourReview: true,
     isDraft: false,
     labels: ['bug', 'urgent'],
+    reviewers: ['test-user', 'anil-backend'],
+    baseRef: 'main',
+    headRef: 'fix/audit-export',
+    commentCount: 5,
   },
   {
     id: 998,
@@ -51,6 +59,10 @@ export const seedPullRequests: PullRequest[] = [
     needsYourReview: true,
     isDraft: false,
     labels: ['chore'],
+    reviewers: ['test-user'],
+    baseRef: 'main',
+    headRef: 'chore/issue-templates',
+    commentCount: 0,
   },
   {
     id: 1004,
@@ -68,6 +80,10 @@ export const seedPullRequests: PullRequest[] = [
     needsYourReview: false,
     isDraft: false,
     labels: ['enhancement'],
+    reviewers: [],
+    baseRef: 'main',
+    headRef: 'feat/retry-policy',
+    commentCount: 2,
   },
   {
     id: 1028,
@@ -85,6 +101,10 @@ export const seedPullRequests: PullRequest[] = [
     needsYourReview: true,
     isDraft: true,
     labels: [],
+    reviewers: ['test-user'],
+    baseRef: 'main',
+    headRef: 'refactor/repo-selector',
+    commentCount: 0,
   },
 ]
 
