@@ -126,6 +126,11 @@ export default function PullRequestTable({
                 <span className="text-xs text-gh-fg-placeholder">{owner}/</span>
                 <span className="text-xs font-medium">{repoName}</span>
               </span>
+              {pr.headRef && (
+                <p className="mt-0.5 truncate text-[10px] text-gh-fg-placeholder" title={pr.headRef}>
+                  {pr.headRef}
+                </p>
+              )}
             </div>
           )
         },
