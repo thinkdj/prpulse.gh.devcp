@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { BranchAnalysis, BranchStatus } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
@@ -64,15 +64,13 @@ export default function BranchAnalysisPanel({
     analysisRepos.length > 0 ? analysisRepos : repos,
   )
 
-  // Sync localRepos when the repo list changes (repos added/removed)
-  useEffect(() => {
-    setLocalRepos((prev) => {
-      const repoSet = new Set(repos)
-      const filtered = prev.filter((r) => repoSet.has(r))
-      const newRepos = repos.filter((r) => !prev.includes(r))
-      return [...filtered, ...newRepos]
-    })
-  }, [repos])
+  // Derive effective localRepos by filtering out removed repos and adding new ones
+  const effectiveLocalRepos = useMemo(() => {
+    const repoSet = new Set(repos)
+    const filtered = localRepos.filter((r) => repoSet.has(r))
+    const newRepos = repos.filter((r) => !localRepos.includes(r))
+    return [...filtered, ...newRepos]
+  }, [repos, localRepos])
 
   const toggleLocalRepo = (repo: string) => {
     setLocalRepos((prev) =>
@@ -152,7 +150,7 @@ export default function BranchAnalysisPanel({
         ) : (
           <ul className="mb-3 flex flex-wrap gap-2">
             {repos.map((repo) => {
-              const checked = localRepos.includes(repo)
+              const checked = effectiveLocalRepos.includes(repo)
               return (
                 <li key={repo}>
                   <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
@@ -175,8 +173,8 @@ export default function BranchAnalysisPanel({
         )}
         <button
           type="button"
-          onClick={() => onRunAnalysis(localRepos)}
-          disabled={localRepos.length === 0 || isLoading}
+          onClick={() => onRunAnalysis(effectiveLocalRepos)}
+          disabled={effectiveLocalRepos.length === 0 || isLoading}
           className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5" />
