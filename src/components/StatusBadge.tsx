@@ -1,3 +1,5 @@
+import { Check, X, MessageSquare, Minus, Clock, Circle, Diamond, GitMerge } from 'lucide-react'
+import type { ComponentType } from 'react'
 import type { BranchStatus, ChecksStatus, CopilotReview, MergeSafety } from '../types'
 import { formatBranchStatus, formatChecks, formatReview, formatSafety } from '../utils'
 
@@ -11,6 +13,7 @@ const badgeStyles: Record<string, string> = {
   // Copilot review
   'copilotReview:approved': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
   'copilotReview:changes_requested': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
+  'copilotReview:commented': 'bg-gh-accent/15 text-gh-accent-fg border-gh-accent/40',
   'copilotReview:not_run': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
   // Merge safety
   'mergeSafety:safe': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
@@ -27,20 +30,23 @@ const badgeStyles: Record<string, string> = {
   'branchStatus:merged': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
 }
 
-const statusIcons: Record<string, string> = {
-  'copilotReview:approved': '✓',
-  'copilotReview:changes_requested': '✕',
-  'copilotReview:not_run': '—',
-  'mergeSafety:safe': '✓',
-  'mergeSafety:blocked': '✕',
-  'mergeSafety:pending': '◷',
-  'checksStatus:passing': '✓',
-  'checksStatus:failing': '✕',
-  'checksStatus:pending': '◷',
-  'branchStatus:default': '◆',
-  'branchStatus:active': '●',
-  'branchStatus:stale': '◷',
-  'branchStatus:merged': '↳',
+type IconComponent = ComponentType<{ className?: string }>
+
+const statusIcons: Record<string, IconComponent> = {
+  'copilotReview:approved': Check,
+  'copilotReview:changes_requested': X,
+  'copilotReview:commented': MessageSquare,
+  'copilotReview:not_run': Minus,
+  'mergeSafety:safe': Check,
+  'mergeSafety:blocked': X,
+  'mergeSafety:pending': Clock,
+  'checksStatus:passing': Check,
+  'checksStatus:failing': X,
+  'checksStatus:pending': Clock,
+  'branchStatus:default': Diamond,
+  'branchStatus:active': Circle,
+  'branchStatus:stale': Clock,
+  'branchStatus:merged': GitMerge,
 }
 
 const formatters: Record<string, (v: string) => string> = {
@@ -53,14 +59,14 @@ const formatters: Record<string, (v: string) => string> = {
 export default function StatusBadge(props: StatusBadgeProps) {
   const key = `${props.kind}:${props.value}`
   const style = badgeStyles[key] ?? 'bg-gh-border/50 text-gh-fg-muted border-gh-border'
-  const icon = statusIcons[key] ?? ''
+  const Icon = statusIcons[key]
   const label = formatters[props.kind]?.(props.value) ?? props.value
 
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${style}`}
     >
-      <span aria-hidden="true">{icon}</span>
+      {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
       {label}
     </span>
   )

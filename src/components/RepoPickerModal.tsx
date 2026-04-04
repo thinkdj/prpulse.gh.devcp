@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { X, Lock, GitFork } from 'lucide-react'
 import type { GitHubRepo } from '../github-api'
 
 type RepoPickerModalProps = {
@@ -57,8 +58,8 @@ export default function RepoPickerModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gh-border px-4 py-3">
           <h2 className="text-sm font-semibold text-gh-fg">Select Repositories</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-gh-fg-muted hover:text-gh-fg-default">
-            ✕
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default">
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -106,8 +107,8 @@ export default function RepoPickerModal({
                           <p className="mt-0.5 truncate text-xs text-gh-fg-muted">{repo.description}</p>
                         )}
                         <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gh-fg-muted">
-                          {repo.private && <span>🔒 Private</span>}
-                          {repo.fork && <span>🍴 Fork</span>}
+                          {repo.private && <span className="flex items-center gap-0.5"><Lock className="h-2.5 w-2.5" /> Private</span>}
+                          {repo.fork && <span className="flex items-center gap-0.5"><GitFork className="h-2.5 w-2.5" /> Fork</span>}
                         </div>
                       </div>
                     </label>

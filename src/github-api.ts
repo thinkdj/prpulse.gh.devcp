@@ -1,4 +1,4 @@
-import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotReview, MergeSafety, PullRequest } from './types'
+import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotReview, MergeSafety, PRComment, PullRequest } from './types'
 
 export type GitHubRepo = {
   full_name: string
@@ -16,11 +16,13 @@ type GitHubPR = {
   html_url: string
   created_at: string
   updated_at: string
-  head: { sha: string }
+  head: { sha: string; ref: string }
+  base: { ref: string }
   draft: boolean
   labels: { name: string }[]
   commits: number
   requested_reviewers: { login: string }[]
+  comments: number
 }
 
 type GitHubReview = {
@@ -87,14 +89,6 @@ function setCache<T>(key: string, data: T): void {
   apiCache.set(key, { data, timestamp: Date.now() })
 }
 
-/** Number of days a branch must be inactive before it is classified as stale. */
-export const STALE_BRANCH_DAYS = 30
-
-/** Clear all cached API responses. Call on manual refresh. */
-export function clearApiCache(): void {
-  apiCache.clear()
-}
-
 async function mapWithConcurrencyLimit<T, R>(
   items: T[],
   limit: number,
@@ -116,6 +110,11 @@ async function mapWithConcurrencyLimit<T, R>(
   )
 
   return results
+}
+
+/** Clear all cached API responses. Call on manual refresh. */
+export function clearApiCache(): void {
+  apiCache.clear()
 }
 
 async function githubFetch<T>(path: string, token: string): Promise<T> {
@@ -164,6 +163,7 @@ function deriveCopilotReview(reviews: GitHubReview[]): CopilotReview {
   const lastCopilotReview = copilotReviews[copilotReviews.length - 1]
   if (lastCopilotReview.state === 'APPROVED') return 'approved'
   if (lastCopilotReview.state === 'CHANGES_REQUESTED') return 'changes_requested'
+  if (lastCopilotReview.state === 'COMMENTED') return 'commented'
   return 'not_run'
 }
 
@@ -220,7 +220,7 @@ function deriveBranchStatus(
 
   const lastCommitTime = lastCommitAt ? new Date(lastCommitAt).getTime() : Number.NaN
   const ageMs = Date.now() - lastCommitTime
-  const staleThresholdMs = STALE_BRANCH_DAYS * 24 * 60 * 60 * 1000
+  const staleThresholdMs = 30 * 24 * 60 * 60 * 1000
 
   if (Number.isFinite(ageMs) && ageMs >= staleThresholdMs) return 'stale'
   return 'active'
@@ -276,6 +276,10 @@ async function fetchPRDetails(
     needsYourReview: needsReview(pr.requested_reviewers ?? [], currentUser),
     isDraft: pr.draft,
     labels: pr.labels.map((l) => l.name),
+    reviewers: (pr.requested_reviewers ?? []).map((r) => r.login),
+    baseRef: pr.base?.ref ?? '',
+    headRef: pr.head?.ref ?? '',
+    commentCount: pr.comments ?? 0,
   }
 }
 
@@ -402,4 +406,108 @@ export async function fetchRepoBranches(
   )
 
   return branchResults
+}
+
+type GitHubIssueComment = {
+  id: number
+  user: { login: string; avatar_url: string } | null
+  body: string
+  created_at: string
+}
+
+type GitHubPRReview = {
+  id: number
+  user: { login: string; avatar_url: string } | null
+  body: string
+  state: string
+  submitted_at: string
+}
+
+/**
+ * Fetch all activity (issue comments + review summaries) for a PR, merged and sorted by date.
+ * Skips empty review bodies (e.g. an implicit review triggered only by inline comments).
+ */
+export async function fetchPRActivity(
+  repoFullName: string,
+  prNumber: number,
+  token: string,
+): Promise<PRComment[]> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) return []
+
+  const [issueComments, reviews] = await Promise.all([
+    githubFetch<GitHubIssueComment[]>(
+      `/repos/${owner}/${repo}/issues/${prNumber}/comments?per_page=100`,
+      token,
+    ),
+    githubFetch<GitHubPRReview[]>(
+      `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`,
+      token,
+    ),
+  ])
+
+  const comments: PRComment[] = [
+    ...issueComments.map((c) => ({
+      id: c.id,
+      author: c.user?.login ?? 'ghost',
+      authorAvatar: c.user?.avatar_url ?? '',
+      body: c.body,
+      createdAt: c.created_at,
+      isReview: false,
+    })),
+    ...reviews
+      .filter((r) => r.body.trim() !== '')
+      .map((r) => ({
+        id: r.id,
+        author: r.user?.login ?? 'ghost',
+        authorAvatar: r.user?.avatar_url ?? '',
+        body: r.body,
+        createdAt: r.submitted_at,
+        isReview: true,
+        reviewState: r.state as PRComment['reviewState'],
+      })),
+  ]
+
+  return comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+}
+
+/**
+ * Post a general comment on a PR (uses the Issues comments endpoint).
+ * Requires the token to have write access (e.g. repo scope or pull_requests:write).
+ */
+export async function postPRComment(
+  repoFullName: string,
+  prNumber: number,
+  token: string,
+  body: string,
+): Promise<PRComment> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) throw new Error('Invalid repository name')
+
+  const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/issues/${prNumber}/comments`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ body }),
+  })
+
+  if (!response.ok) {
+    if (response.status === 403) throw new Error('Forbidden: token may not have write access to this repository.')
+    if (response.status === 401) throw new Error('Invalid GitHub token.')
+    throw new Error(`Failed to post comment: ${response.status}`)
+  }
+
+  const comment = await response.json() as GitHubIssueComment
+  return {
+    id: comment.id,
+    author: comment.user?.login ?? 'ghost',
+    authorAvatar: comment.user?.avatar_url ?? '',
+    body: comment.body,
+    createdAt: comment.created_at,
+    isReview: false,
+  }
 }

@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { BranchAnalysis, BranchStatus } from '../types'
 import { relativeTime } from '../utils'
-import { STALE_BRANCH_DAYS } from '../github-api'
 import StatusBadge from './StatusBadge'
+import { Play } from 'lucide-react'
 
 type BranchAnalysisPanelProps = {
   branches: BranchAnalysis[]
   isLoading: boolean
   hasSelectedRepos: boolean
+  repos: string[]
+  analysisRepos: string[]
+  analysisTriggered: boolean
+  onRunAnalysis: (repos: string[]) => void
 }
 
 type BranchFilter = 'all' | BranchStatus
@@ -26,7 +30,7 @@ function branchAgeColor(dateString: string): string {
   const ageMs = Date.now() - new Date(dateString).getTime()
   const days = ageMs / (1000 * 60 * 60 * 24)
 
-  if (days >= STALE_BRANCH_DAYS) return 'text-gh-danger-fg'
+  if (days >= 30) return 'text-gh-danger-fg'
   if (days >= 14) return 'text-gh-warning'
   return 'text-gh-fg-muted'
 }
@@ -49,9 +53,32 @@ export default function BranchAnalysisPanel({
   branches,
   isLoading,
   hasSelectedRepos,
+  repos,
+  analysisRepos,
+  analysisTriggered,
+  onRunAnalysis,
 }: BranchAnalysisPanelProps) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<BranchFilter>('all')
+  const [localRepos, setLocalRepos] = useState<string[]>(() =>
+    analysisRepos.length > 0 ? analysisRepos : repos,
+  )
+
+  // Sync localRepos when the repo list changes (repos added/removed)
+  useEffect(() => {
+    setLocalRepos((prev) => {
+      const repoSet = new Set(repos)
+      const filtered = prev.filter((r) => repoSet.has(r))
+      const newRepos = repos.filter((r) => !prev.includes(r))
+      return [...filtered, ...newRepos]
+    })
+  }, [repos])
+
+  const toggleLocalRepo = (repo: string) => {
+    setLocalRepos((prev) =>
+      prev.includes(repo) ? prev.filter((r) => r !== repo) : [...prev, repo],
+    )
+  }
 
   const summary = useMemo(
     () => ({
@@ -88,7 +115,7 @@ export default function BranchAnalysisPanel({
       })
   }, [branches, filter, search])
 
-  if (!hasSelectedRepos) {
+  if (!hasSelectedRepos && repos.length === 0) {
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="branch-analysis-panel">
         <p className="text-sm text-gh-fg-muted">Select at least one repository to analyze branches.</p>
@@ -98,6 +125,71 @@ export default function BranchAnalysisPanel({
 
   return (
     <section className="rounded-lg border border-gh-border bg-gh-surface p-5" data-testid="branch-analysis-panel">
+      {/* Repo selection + manual trigger */}
+      <div className="mb-5 rounded-lg border border-gh-border bg-gh-overlay p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-gh-fg">Select repositories to analyze</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setLocalRepos(repos)}
+              className="text-xs text-gh-accent-fg hover:underline"
+            >
+              All
+            </button>
+            <span className="text-xs text-gh-fg-placeholder">·</span>
+            <button
+              type="button"
+              onClick={() => setLocalRepos([])}
+              className="text-xs text-gh-fg-muted hover:underline"
+            >
+              None
+            </button>
+          </div>
+        </div>
+        {repos.length === 0 ? (
+          <p className="text-xs text-gh-fg-muted">No repositories added. Add repositories in the section above.</p>
+        ) : (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {repos.map((repo) => {
+              const checked = localRepos.includes(repo)
+              return (
+                <li key={repo}>
+                  <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
+                    checked
+                      ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                      : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleLocalRepo(repo)}
+                      className="accent-gh-accent"
+                    />
+                    {repo}
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={() => onRunAnalysis(localRepos)}
+          disabled={localRepos.length === 0 || isLoading}
+          className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Play className="h-3.5 w-3.5" />
+          {isLoading ? 'Analyzing…' : 'Run analysis'}
+        </button>
+      </div>
+
+      {!analysisTriggered ? (
+        <div className="rounded-md border border-gh-border bg-gh-overlay px-4 py-8 text-center text-sm text-gh-fg-muted">
+          Select repositories above and click <span className="font-medium text-gh-fg">Run analysis</span> to fetch branch data.
+        </div>
+      ) : (
+        <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gh-fg">Branch analysis</h2>
@@ -214,6 +306,8 @@ export default function BranchAnalysisPanel({
       <p className="mt-4 text-xs text-gh-fg-muted" data-testid="branch-summary-total">
         {filteredBranches.length} of {summary.total} branches shown
       </p>
+        </>
+      )}
     </section>
   )
 }

@@ -6,7 +6,6 @@ import { seedBranchAnalysis, seedPullRequests } from './seed-data'
 
 /* ── Mock the GitHub API module ── */
 vi.mock('./github-api', () => ({
-  STALE_BRANCH_DAYS: 30,
   clearApiCache: vi.fn(),
   fetchCurrentUser: vi.fn().mockResolvedValue('test-user'),
   fetchRepoBranches: vi.fn().mockImplementation((repoFullName: string) =>
@@ -16,6 +15,7 @@ vi.mock('./github-api', () => ({
     Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
   ),
   fetchUserRepos: vi.fn().mockResolvedValue([]),
+  fetchPRActivity: vi.fn().mockResolvedValue([]),
 }))
 
 import { clearApiCache, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
@@ -199,6 +199,12 @@ describe('GitHub Dev Control Panel', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
 
+      // Confirm the removal in the custom dialog
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
       })
@@ -297,7 +303,7 @@ describe('GitHub Dev Control Panel', () => {
         expect(screen.getByText('1 PR')).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByText('✕ Clear filters'))
+      fireEvent.click(screen.getByRole('button', { name: /Clear filters/i }))
 
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
@@ -364,6 +370,12 @@ describe('GitHub Dev Control Panel', () => {
 
       fireEvent.click(screen.getByTitle('Refresh data'))
 
+      // Confirm the refresh in the dialog
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+
       expect(clearApiCache).toHaveBeenCalledTimes(1)
 
       await waitFor(() => {
@@ -375,7 +387,10 @@ describe('GitHub Dev Control Panel', () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-      fireEvent.click(screen.getByRole('button', { name: 'Branch analysis' }))
+      fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
+
+      await screen.findByTestId('branch-analysis-panel')
+      fireEvent.click(screen.getByRole('button', { name: /Run analysis/i }))
 
       await waitFor(() => {
         expect(fetchRepoBranches).toHaveBeenCalledTimes(defaultRepos.length)
@@ -391,9 +406,15 @@ describe('GitHub Dev Control Panel', () => {
       renderApp()
 
       await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-      fireEvent.click(screen.getByRole('button', { name: 'Branch analysis' }))
+      fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       await screen.findByTestId('branch-analysis-panel')
+      fireEvent.click(screen.getByRole('button', { name: /Run analysis/i }))
+
+      await waitFor(() => {
+        expect(fetchRepoBranches).toHaveBeenCalled()
+      })
+
       fireEvent.click(screen.getByRole('button', { name: 'Stale' }))
 
       await waitFor(() => {
@@ -403,22 +424,131 @@ describe('GitHub Dev Control Panel', () => {
       expect(screen.getByText('fix/audit-export')).toBeInTheDocument()
       expect(screen.queryByText('feat/branch-analysis')).not.toBeInTheDocument()
     })
+
+    it('shows the My Actions tab with prioritised action items', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /My actions/i }))
+
+      // The "Review Requested" section heading should appear (non-draft PRs with needsYourReview)
+      await waitFor(() => {
+        expect(screen.getByText(/Review Requested \(2\)/i)).toBeInTheDocument()
+      })
+
+      // Two non-draft PRs have needsYourReview=true in seed data (#1015, #998)
+      expect(screen.getAllByText('Review requested').length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('opens PR detail panel when clicking on a PR row', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      // Click on the <tr> element (not on an interactive child)
+      const table = screen.getByTestId('pr-table')
+      const firstRow = table.querySelector('tbody tr')
+      expect(firstRow).not.toBeNull()
+      fireEvent.click(firstRow!)
+
+      expect(await screen.findByRole('dialog', { name: 'Pull request details' })).toBeInTheDocument()
+    })
+
+    it('closes PR detail panel with the close button', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const table = screen.getByTestId('pr-table')
+      const firstRow = table.querySelector('tbody tr')
+      fireEvent.click(firstRow!)
+
+      await screen.findByRole('dialog', { name: 'Pull request details' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close PR detail panel' }))
+
+      expect(screen.queryByRole('dialog', { name: 'Pull request details' })).not.toBeInTheDocument()
+    })
+
+    it('closes PR detail panel with the Escape key', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+
+      const table = screen.getByTestId('pr-table')
+      const firstRow = table.querySelector('tbody tr')
+      fireEvent.click(firstRow!)
+
+      await screen.findByRole('dialog', { name: 'Pull request details' })
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+
+      expect(screen.queryByRole('dialog', { name: 'Pull request details' })).not.toBeInTheDocument()
+    })
   })
 
-  /* ── Theme toggle ── */
+  /* ── Theme / mode controls ── */
 
-  it('toggles theme when theme button is clicked', async () => {
+  it('changes theme palette when theme selector is changed', async () => {
     renderApp()
 
     await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
-    const themeBtn = screen.getByRole('button', { name: /Toggle theme/i })
+    const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
-    // Default is dark → click toggles to light
-    fireEvent.click(themeBtn)
-    expect(document.documentElement.classList.contains('light')).toBe(true)
+    // Default is warm → no extra theme classes
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+    expect(document.documentElement.classList.contains('ember')).toBe(false)
 
-    // Click again → toggles back to dark
-    fireEvent.click(themeBtn)
+    // Change to slate
+    fireEvent.change(themeSelect, { target: { value: 'slate' } })
+    expect(document.documentElement.classList.contains('slate')).toBe(true)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+
+    // Change to ocean
+    fireEvent.change(themeSelect, { target: { value: 'ocean' } })
+    expect(document.documentElement.classList.contains('ocean')).toBe(true)
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+
+    // Change back to warm
+    fireEvent.change(themeSelect, { target: { value: 'warm' } })
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+    expect(document.documentElement.classList.contains('ember')).toBe(false)
+
+    // Change to ember
+    fireEvent.change(themeSelect, { target: { value: 'ember' } })
+    expect(document.documentElement.classList.contains('ember')).toBe(true)
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+  })
+
+  it('toggles between dark and light mode when mode button is clicked', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+    // Default is dark mode → button says "Switch to light mode"
+    const modeButton = screen.getByRole('button', { name: /Switch to light mode/i })
     expect(document.documentElement.classList.contains('light')).toBe(false)
+
+    fireEvent.click(modeButton)
+
+    // Now in light mode
+    expect(document.documentElement.classList.contains('light')).toBe(true)
+    expect(screen.getByRole('button', { name: /Switch to dark mode/i })).toBeInTheDocument()
   })
 })
