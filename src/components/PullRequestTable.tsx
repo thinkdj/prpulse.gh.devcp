@@ -329,6 +329,7 @@ export default function PullRequestTable({
       },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: dashboardFiltered,
     columns,
