@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { X, Plus, FolderGit2 } from 'lucide-react'
 import type { FormEvent } from 'react'
+import ConfirmDialog from './ConfirmDialog'
 
 type RepoSelectorProps = {
   repos: string[]
@@ -10,6 +12,8 @@ type RepoSelectorProps = {
   onAddRepo: (event: FormEvent<HTMLFormElement>) => void
   onToggleRepo: (repo: string) => void
   onRemoveRepo: (repo: string) => void
+  onSelectAll: () => void
+  onDeselectAll: () => void
   onBrowseRepos?: () => void
 }
 
@@ -22,8 +26,13 @@ export default function RepoSelector({
   onAddRepo,
   onToggleRepo,
   onRemoveRepo,
+  onSelectAll,
+  onDeselectAll,
   onBrowseRepos,
 }: RepoSelectorProps) {
+  const [repoToRemove, setRepoToRemove] = useState<string | null>(null)
+
+  const allSelected = repos.length > 0 && selectedRepos.length === repos.length
   return (
     <section className="mb-6 rounded-lg border border-gh-border bg-gh-surface">
       {/* Header row */}
@@ -37,6 +46,17 @@ export default function RepoSelector({
           )}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
+          {repos.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={allSelected ? onDeselectAll : onSelectAll}
+                className="inline-flex items-center gap-1 rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default transition-colors"
+              >
+                {allSelected ? 'Deselect all' : 'Select all'}
+              </button>
+            </>
+          )}
           {onBrowseRepos && (
             <button
               type="button"
@@ -121,7 +141,7 @@ export default function RepoSelector({
                 {/* Remove button — visible on hover AND on keyboard focus */}
                 <button
                   type="button"
-                  onClick={() => onRemoveRepo(repo)}
+                  onClick={() => setRepoToRemove(repo)}
                   aria-label={`Remove ${repo}`}
                   className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gh-surface text-gh-fg-muted opacity-0 transition-opacity hover:bg-gh-danger/20 hover:text-gh-danger-fg focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-gh-accent focus-visible:ring-offset-1 focus-visible:ring-offset-gh-surface group-hover:opacity-100"
                 >
@@ -132,6 +152,19 @@ export default function RepoSelector({
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        isOpen={repoToRemove !== null}
+        title="Remove repository?"
+        message={repoToRemove ? `Remove "${repoToRemove}" from your tracked repositories? This won't affect the repository itself.` : ''}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => {
+          if (repoToRemove) onRemoveRepo(repoToRemove)
+          setRepoToRemove(null)
+        }}
+        onCancel={() => setRepoToRemove(null)}
+      />
     </section>
   )
 }

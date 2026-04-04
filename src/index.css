@@ -2,22 +2,25 @@
 
 /*
  * Theme architecture:
- *   • :root          → Notion theme, dark mode (default)
+ *   • :root          → Warm theme, dark mode (default)
  *   • .light         → bright-mode override for the active theme
  *   • .slate         → Slate/GitHub theme variables (dark mode)
  *   • .ocean         → Ocean theme variables (dark mode)
- *   • .slate.light / .ocean.light override light values for each theme
+ *   • .ember         → Ember theme variables (dark mode)
+ *   • .slate.light / .ocean.light / .ember.light override light values for each theme
  *
  * Applied classes on <html>:  [theme?] [light?]
- *   dark Notion   → (no extra classes)
- *   light Notion  → .light
- *   dark Slate    → .slate
- *   light Slate   → .slate .light
- *   dark Ocean    → .ocean
- *   light Ocean   → .ocean .light
+ *   dark Warm    → (no extra classes)
+ *   light Warm   → .light
+ *   dark Slate   → .slate
+ *   light Slate  → .slate .light
+ *   dark Ocean   → .ocean
+ *   light Ocean  → .ocean .light
+ *   dark Ember   → .ember
+ *   light Ember  → .ember .light
  */
 
-/* ── Notion theme: dark mode (default) ── */
+/* ── Warm theme: dark mode (default) ── */
 :root {
   color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -41,7 +44,7 @@
   --gh-purple: #a78bfa;
 }
 
-/* ── Notion theme: light mode ── */
+/* ── Warm theme: light mode ── */
 .light {
   color-scheme: light;
 
@@ -156,7 +159,53 @@
   --gh-purple: #7c3aed;
 }
 
-/* ── Register theme colors for Tailwind v4 utility classes ── */
+/* ── Ember theme: dark mode (deep warm maroon with amber accents) ── */
+.ember {
+  color-scheme: dark;
+
+  --gh-bg: #161010;
+  --gh-surface: #1e1515;
+  --gh-overlay: #271c1c;
+  --gh-border: #3a2424;
+  --gh-border-hover: #4d3030;
+  --gh-fg: #f2ddd5;
+  --gh-fg-default: #d9bdb5;
+  --gh-fg-muted: #907268;
+  --gh-fg-placeholder: #4d3530;
+  --gh-accent: #d9623a;
+  --gh-accent-fg: #f07854;
+  --gh-success: #4aaa6a;
+  --gh-success-fg: #6ec88a;
+  --gh-danger: #d04040;
+  --gh-danger-fg: #e87878;
+  --gh-warning: #d4962e;
+  --gh-purple: #a880d8;
+}
+
+/* ── Ember theme: light mode ── */
+.ember.light {
+  color-scheme: light;
+
+  --gh-bg: #fdf7f4;
+  --gh-surface: #ffffff;
+  --gh-overlay: #f7ede8;
+  --gh-border: #e8d0c8;
+  --gh-border-hover: #d4b8ae;
+  --gh-fg: #2e1810;
+  --gh-fg-default: #3d2218;
+  --gh-fg-muted: #7a5a50;
+  --gh-fg-placeholder: #b89088;
+  --gh-accent: #b84820;
+  --gh-accent-fg: #b84820;
+  --gh-success: #2a7a40;
+  --gh-success-fg: #2a7a40;
+  --gh-danger: #b82828;
+  --gh-danger-fg: #b82828;
+  --gh-warning: #8a5a10;
+  --gh-purple: #703898;
+}
+
+
 @theme inline {
   --color-gh-bg: var(--gh-bg);
   --color-gh-surface: var(--gh-surface);

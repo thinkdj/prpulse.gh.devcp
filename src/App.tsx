@@ -26,12 +26,14 @@ import RepoPickerModal from './components/RepoPickerModal'
 import BranchAnalysisPanel from './components/BranchAnalysisPanel'
 import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
+import ConfirmDialog from './components/ConfirmDialog'
 
 function applyTheme(theme: Theme, mode: Mode) {
-  document.documentElement.classList.remove('light', 'slate', 'ocean')
+  document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember')
   if (mode === 'light') document.documentElement.classList.add('light')
   if (theme === 'slate') document.documentElement.classList.add('slate')
   if (theme === 'ocean') document.documentElement.classList.add('ocean')
+  if (theme === 'ember') document.documentElement.classList.add('ember')
 }
 
 function App() {
@@ -40,11 +42,14 @@ function App() {
   const [token, setToken] = useState(() => loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [activeView, setActiveView] = useState<'pull_requests' | 'branches' | 'my_actions'>('pull_requests')
+  const [activeView, setActiveView] = useState<'pull_requests' | 'my_actions' | 'branches'>('pull_requests')
   const [filter, setFilter] = useState<DashboardFilter>('all')
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
   const [mode, setMode] = useState<Mode>(() => loadMode())
   const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null)
+  const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
+  const [branchAnalysisTriggered, setBranchAnalysisTriggered] = useState(false)
+  const [branchAnalysisRepos, setBranchAnalysisRepos] = useState<string[]>([])
 
   useEffect(() => {
     applyTheme(theme, mode)
@@ -97,13 +102,12 @@ function App() {
   })
 
   const branchQueries = useQueries({
-    queries: selectedRepos.map((repo) => ({
+    queries: branchAnalysisRepos.map((repo) => ({
       queryKey: ['repo-branches', token, repo],
       queryFn: () => fetchRepoBranches(repo, token),
       staleTime: STALE_TIME,
-      refetchInterval: 10 * 60 * 1000,
       retry: 1,
-      enabled: !!token && activeView === 'branches',
+      enabled: !!token && branchAnalysisTriggered,
     })),
   })
 
@@ -123,6 +127,18 @@ function App() {
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
+
+  // Keep branchAnalysisRepos in sync when repos are removed
+  useEffect(() => {
+    const repoSet = new Set(repos)
+    setBranchAnalysisRepos((prev) => {
+      const next = prev.filter((r) => repoSet.has(r))
+      if (next.length === 0 && prev.length > 0) {
+        setBranchAnalysisTriggered(false)
+      }
+      return next
+    })
+  }, [repos])
 
   const summary = useMemo(
     () => ({
@@ -168,21 +184,40 @@ function App() {
     saveToken(newToken)
     setToken(newToken)
     clearApiCache()
+    setBranchAnalysisTriggered(false)
+    setBranchAnalysisRepos([])
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
   }
 
   const handleRefresh = () => {
+    setShowRefreshConfirm(true)
+  }
+
+  const doRefresh = () => {
+    setShowRefreshConfirm(false)
     clearApiCache()
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
+    setBranchAnalysisTriggered(false)
   }
 
   const handleNewRepoChange = useCallback((v: string) => {
     setNewRepo(v)
     setRepoError('')
   }, [])
+
+  const handleRunBranchAnalysis = (reposToAnalyze: string[]) => {
+    // Only analyze repos that are still in the tracked list
+    const valid = reposToAnalyze.filter((r) => repos.includes(r))
+    setBranchAnalysisRepos(valid)
+    setBranchAnalysisTriggered(valid.length > 0)
+    // Invalidate stale branch queries for selected repos so fresh data is fetched
+    valid.forEach((repo) => {
+      void queryClient.invalidateQueries({ queryKey: ['repo-branches', token, repo] })
+    })
+  }
 
   const handleRepoPickerSave = (selected: string[]) => {
     const selectedSet = new Set(selected)
@@ -199,11 +234,25 @@ function App() {
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         <header className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
-              <p className="mt-1 text-sm text-gh-fg-muted">
-                Bird&apos;s-eye view of pull requests and branches across your repositories.
-              </p>
+            <div className="flex items-start gap-3">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
+                <p className="mt-1 text-sm text-gh-fg-muted">
+                  Bird&apos;s-eye view of pull requests and branches across your repositories.
+                </p>
+              </div>
+              <a
+                href="https://github.com/thinkdj/gh.devcp"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View source on GitHub"
+                title="View source on GitHub"
+                className="mt-1 shrink-0 text-gh-fg-muted hover:text-gh-fg-default transition-colors"
+              >
+                <svg height="20" width="20" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                </svg>
+              </a>
             </div>
             <div className="flex items-center gap-2">
               {/* Theme palette selector */}
@@ -215,9 +264,10 @@ function App() {
                 aria-label="Theme"
                 className="rounded-md border border-gh-border bg-gh-overlay px-2 py-1.5 text-xs text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
               >
-                <option value="notion">Notion</option>
+                <option value="warm">Warm</option>
                 <option value="slate">Slate</option>
                 <option value="ocean">Ocean</option>
+                <option value="ember">Ember</option>
               </select>
               {/* Light/dark mode toggle */}
               <button
@@ -324,17 +374,6 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveView('branches')}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
-                  activeView === 'branches'
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
-                }`}
-              >
-                <GitBranch className="h-3.5 w-3.5" /> Branch analysis
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveView('my_actions')}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
                   activeView === 'my_actions'
@@ -348,6 +387,17 @@ function App() {
                     {summary.needsReview}
                   </span>
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('branches')}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'branches'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                <GitBranch className="h-3.5 w-3.5" /> Branch analysis
               </button>
             </section>
 
@@ -371,6 +421,8 @@ function App() {
               onAddRepo={addRepo}
               onToggleRepo={toggleRepo}
               onRemoveRepo={removeRepo}
+              onSelectAll={() => setSelectedRepos(repos)}
+              onDeselectAll={() => setSelectedRepos([])}
               onBrowseRepos={() => setShowRepoPicker(true)}
             />
 
@@ -390,8 +442,12 @@ function App() {
             ) : activeView === 'branches' ? (
               <BranchAnalysisPanel
                 branches={branches}
-                isLoading={isLoading}
+                isLoading={branchIsLoading}
                 hasSelectedRepos={selectedRepos.length > 0}
+                repos={repos}
+                analysisRepos={branchAnalysisRepos}
+                analysisTriggered={branchAnalysisTriggered}
+                onRunAnalysis={handleRunBranchAnalysis}
               />
             ) : (
               <ActionRequiredPanel
@@ -424,6 +480,19 @@ function App() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showRefreshConfirm}
+        title="Refresh data?"
+        message={
+          Math.max(prDataUpdatedAt, branchDataUpdatedAt) > 0
+            ? `Data was last refreshed at ${new Date(Math.max(prDataUpdatedAt, branchDataUpdatedAt)).toLocaleTimeString()}. Refreshing will clear the cache and re-fetch all repositories.`
+            : 'Refreshing will clear the cache and re-fetch all repositories.'
+        }
+        confirmLabel="Refresh"
+        onConfirm={doRefresh}
+        onCancel={() => setShowRefreshConfirm(false)}
+      />
     </main>
   )
 }
