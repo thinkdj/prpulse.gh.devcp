@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 type ConfirmDialogProps = {
@@ -21,6 +22,8 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const titleId = useId()
+
   if (!isOpen) return null
 
   return (
@@ -28,7 +31,7 @@ export default function ConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
+      aria-labelledby={titleId}
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel()
       }}
@@ -39,7 +42,7 @@ export default function ConfirmDialog({
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gh-danger-fg" aria-hidden="true" />
           )}
           <div>
-            <h2 id="confirm-dialog-title" className="text-sm font-semibold text-gh-fg">
+            <h2 id={titleId} className="text-sm font-semibold text-gh-fg">
               {title}
             </h2>
             <p className="mt-1 text-sm text-gh-fg-muted">{message}</p>
