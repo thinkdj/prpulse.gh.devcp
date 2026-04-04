@@ -128,6 +128,18 @@ function App() {
     saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
 
+  // Keep branchAnalysisRepos in sync when repos are removed
+  useEffect(() => {
+    const repoSet = new Set(repos)
+    setBranchAnalysisRepos((prev) => {
+      const next = prev.filter((r) => repoSet.has(r))
+      if (next.length === 0 && prev.length > 0) {
+        setBranchAnalysisTriggered(false)
+      }
+      return next
+    })
+  }, [repos])
+
   const summary = useMemo(
     () => ({
       total: pullRequests.length,
@@ -172,6 +184,8 @@ function App() {
     saveToken(newToken)
     setToken(newToken)
     clearApiCache()
+    setBranchAnalysisTriggered(false)
+    setBranchAnalysisRepos([])
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
@@ -195,10 +209,12 @@ function App() {
   }, [])
 
   const handleRunBranchAnalysis = (reposToAnalyze: string[]) => {
-    setBranchAnalysisRepos(reposToAnalyze)
-    setBranchAnalysisTriggered(true)
+    // Only analyze repos that are still in the tracked list
+    const valid = reposToAnalyze.filter((r) => repos.includes(r))
+    setBranchAnalysisRepos(valid)
+    setBranchAnalysisTriggered(valid.length > 0)
     // Invalidate stale branch queries for selected repos so fresh data is fetched
-    reposToAnalyze.forEach((repo) => {
+    valid.forEach((repo) => {
       void queryClient.invalidateQueries({ queryKey: ['repo-branches', token, repo] })
     })
   }
@@ -469,8 +485,8 @@ function App() {
         isOpen={showRefreshConfirm}
         title="Refresh data?"
         message={
-          prDataUpdatedAt > 0
-            ? `Data was last refreshed at ${new Date(prDataUpdatedAt).toLocaleTimeString()}. Refreshing will clear the cache and re-fetch all repositories.`
+          Math.max(prDataUpdatedAt, branchDataUpdatedAt) > 0
+            ? `Data was last refreshed at ${new Date(Math.max(prDataUpdatedAt, branchDataUpdatedAt)).toLocaleTimeString()}. Refreshing will clear the cache and re-fetch all repositories.`
             : 'Refreshing will clear the cache and re-fetch all repositories.'
         }
         confirmLabel="Refresh"

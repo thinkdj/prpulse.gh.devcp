@@ -507,9 +507,10 @@ describe('GitHub Dev Control Panel', () => {
     await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
     const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
-    // Default is notion → no extra theme classes
+    // Default is warm → no extra theme classes
     expect(document.documentElement.classList.contains('slate')).toBe(false)
     expect(document.documentElement.classList.contains('ocean')).toBe(false)
+    expect(document.documentElement.classList.contains('ember')).toBe(false)
 
     // Change to slate
     fireEvent.change(themeSelect, { target: { value: 'slate' } })
@@ -521,8 +522,15 @@ describe('GitHub Dev Control Panel', () => {
     expect(document.documentElement.classList.contains('ocean')).toBe(true)
     expect(document.documentElement.classList.contains('slate')).toBe(false)
 
-    // Change back to notion
-    fireEvent.change(themeSelect, { target: { value: 'notion' } })
+    // Change back to warm
+    fireEvent.change(themeSelect, { target: { value: 'warm' } })
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+    expect(document.documentElement.classList.contains('ember')).toBe(false)
+
+    // Change to ember
+    fireEvent.change(themeSelect, { target: { value: 'ember' } })
+    expect(document.documentElement.classList.contains('ember')).toBe(true)
     expect(document.documentElement.classList.contains('slate')).toBe(false)
     expect(document.documentElement.classList.contains('ocean')).toBe(false)
   })
