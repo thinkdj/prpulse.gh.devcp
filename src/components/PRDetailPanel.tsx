@@ -172,10 +172,25 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto">
           {/* Status strip */}
-          <div className="flex flex-wrap gap-2 border-b border-gh-border px-5 py-3">
-            <StatusBadge kind="checksStatus" value={pr.checksStatus} />
-            <StatusBadge kind="copilotReview" value={pr.copilotReview} />
-            <StatusBadge kind="mergeSafety" value={pr.mergeSafety} />
+          <div className="flex flex-wrap gap-x-4 gap-y-3 border-b border-gh-border px-5 py-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-gh-fg-muted">
+                Checks
+              </span>
+              <StatusBadge kind="checksStatus" value={pr.checksStatus} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-gh-fg-muted">
+                Copilot review
+              </span>
+              <StatusBadge kind="copilotReview" value={pr.copilotReview} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-gh-fg-muted">
+                Merge safety
+              </span>
+              <StatusBadge kind="mergeSafety" value={pr.mergeSafety} />
+            </div>
           </div>
 
           {/* Meta grid */}
