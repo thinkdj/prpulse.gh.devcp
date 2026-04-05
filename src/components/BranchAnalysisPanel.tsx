@@ -62,8 +62,9 @@ export default function BranchAnalysisPanel({
   const [filter, setFilter] = useState<BranchFilter>('all')
   const [copiedBranchKey, setCopiedBranchKey] = useState<string | null>(null)
   const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevReposForSyncRef = useRef<string[] | null>(null)
   const [localRepos, setLocalRepos] = useState<string[]>(() =>
-    analysisRepos.length > 0 ? analysisRepos : repos,
+    analysisRepos.length > 0 ? analysisRepos : [...repos],
   )
 
   useEffect(() => {
@@ -71,6 +72,22 @@ export default function BranchAnalysisPanel({
       if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current)
     }
   }, [])
+
+  // When `repos` changes: prune removed repos; auto-check only repos newly added to tracking.
+  // Skip the first run so initial state (e.g. subset from last analysis) is not expanded to all repos.
+  useEffect(() => {
+    const prevList = prevReposForSyncRef.current
+    prevReposForSyncRef.current = repos
+    if (prevList === null) return
+
+    const prevSet = new Set(prevList)
+    setLocalRepos((selection) => {
+      const repoSet = new Set(repos)
+      const kept = selection.filter((r) => repoSet.has(r))
+      const newlyTracked = repos.filter((r) => !prevSet.has(r))
+      return [...kept, ...newlyTracked]
+    })
+  }, [repos])
 
   const copyBranchName = (branch: BranchAnalysis) => {
     const key = `${branch.repo}:${branch.name}`
@@ -88,14 +105,6 @@ export default function BranchAnalysisPanel({
       },
     )
   }
-
-  // Derive effective localRepos by filtering out removed repos and adding new ones
-  const effectiveLocalRepos = useMemo(() => {
-    const repoSet = new Set(repos)
-    const filtered = localRepos.filter((r) => repoSet.has(r))
-    const newRepos = repos.filter((r) => !localRepos.includes(r))
-    return [...filtered, ...newRepos]
-  }, [repos, localRepos])
 
   const toggleLocalRepo = (repo: string) => {
     setLocalRepos((prev) =>
@@ -175,7 +184,7 @@ export default function BranchAnalysisPanel({
         ) : (
           <ul className="mb-3 flex flex-wrap gap-2">
             {repos.map((repo) => {
-              const checked = effectiveLocalRepos.includes(repo)
+              const checked = localRepos.includes(repo)
               return (
                 <li key={repo}>
                   <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
@@ -198,8 +207,8 @@ export default function BranchAnalysisPanel({
         )}
         <button
           type="button"
-          onClick={() => onRunAnalysis(effectiveLocalRepos)}
-          disabled={effectiveLocalRepos.length === 0 || isLoading}
+          onClick={() => onRunAnalysis(localRepos)}
+          disabled={localRepos.length === 0 || isLoading}
           className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5" />
@@ -295,32 +304,32 @@ export default function BranchAnalysisPanel({
                 <tr key={rowKey} className="align-top">
                   <td className="border-b border-gh-border/80 px-3 py-3">
                     <div className="min-w-[20rem]">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => copyBranchName(branch)}
+                          title={justCopied ? 'Copied' : 'Copy branch name to clipboard'}
+                          aria-label={`Copy branch name ${branch.name}`}
+                          className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border-2 transition-colors shrink-0 ${
+                            justCopied
+                              ? 'border-gh-success bg-gh-success/20 text-gh-success-fg'
+                              : 'border-gh-accent/60 bg-gh-surface text-gh-accent-fg hover:border-gh-accent hover:bg-gh-accent/10'
+                          }`}
+                        >
+                          {justCopied ? (
+                            <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                          ) : (
+                            <Copy className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                          )}
+                        </button>
                         <a
                           href={branch.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-gh-accent-fg hover:underline"
+                          className="min-w-0 font-medium text-gh-accent-fg hover:underline break-all"
                         >
                           {branch.name}
                         </a>
-                        <button
-                          type="button"
-                          onClick={() => copyBranchName(branch)}
-                          title={justCopied ? 'Copied' : 'Copy branch name'}
-                          aria-label={`Copy branch name ${branch.name}`}
-                          className={`rounded-md border p-1 transition-colors shrink-0 ${
-                            justCopied
-                              ? 'border-gh-success/50 bg-gh-success/15 text-gh-success-fg'
-                              : 'border-gh-border bg-gh-overlay text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
-                          }`}
-                        >
-                          {justCopied ? (
-                            <Check className="h-3.5 w-3.5" aria-hidden />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" aria-hidden />
-                          )}
-                        </button>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gh-fg-muted">
                         <span>{branch.repo}</span>
