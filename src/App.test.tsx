@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { seedBranchAnalysis, seedPullRequests } from './seed-data'
@@ -421,6 +421,25 @@ describe('GitHub Dev Control Panel', () => {
       expect(screen.getByText('fix/audit-export')).toBeInTheDocument()
     })
 
+    it('branch analysis repo checkboxes, All, and None change selection', async () => {
+      renderApp()
+
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
+
+      const panel = await screen.findByTestId('branch-analysis-panel')
+      const websiteBox = within(panel).getByRole('checkbox', { name: /thinkdj\/website/i })
+      expect(websiteBox).toBeChecked()
+      fireEvent.click(websiteBox)
+      expect(websiteBox).not.toBeChecked()
+
+      fireEvent.click(within(panel).getByRole('button', { name: 'None' }))
+      expect(within(panel).getByRole('checkbox', { name: /thinkdj\/gh\.devcp/i })).not.toBeChecked()
+
+      fireEvent.click(within(panel).getByRole('button', { name: 'All' }))
+      expect(within(panel).getByRole('checkbox', { name: /thinkdj\/website/i })).toBeChecked()
+    })
+
     it('filters branch analysis to stale branches', async () => {
       renderApp()
 
@@ -527,10 +546,16 @@ describe('GitHub Dev Control Panel', () => {
     await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
     const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
-    // Default is warm → no extra theme classes
-    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    // Default palette is Slate
+    expect(themeSelect).toHaveValue('slate')
+    expect(document.documentElement.classList.contains('slate')).toBe(true)
     expect(document.documentElement.classList.contains('ocean')).toBe(false)
     expect(document.documentElement.classList.contains('ember')).toBe(false)
+
+    // Change to warm (base palette — no slate/ocean/ember class)
+    fireEvent.change(themeSelect, { target: { value: 'warm' } })
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
 
     // Change to slate
     fireEvent.change(themeSelect, { target: { value: 'slate' } })
@@ -541,12 +566,6 @@ describe('GitHub Dev Control Panel', () => {
     fireEvent.change(themeSelect, { target: { value: 'ocean' } })
     expect(document.documentElement.classList.contains('ocean')).toBe(true)
     expect(document.documentElement.classList.contains('slate')).toBe(false)
-
-    // Change back to warm
-    fireEvent.change(themeSelect, { target: { value: 'warm' } })
-    expect(document.documentElement.classList.contains('slate')).toBe(false)
-    expect(document.documentElement.classList.contains('ocean')).toBe(false)
-    expect(document.documentElement.classList.contains('ember')).toBe(false)
 
     // Change to ember
     fireEvent.change(themeSelect, { target: { value: 'ember' } })

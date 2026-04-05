@@ -70,13 +70,13 @@ export const loadTheme = (): Theme => {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
     if (raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember') return raw
     // Migrate legacy values
-    if (raw === 'notion') return 'warm'
-    if (raw === 'dark' || raw === 'light') return 'warm'
+    if (raw === 'notion') return 'slate'
+    if (raw === 'dark' || raw === 'light') return 'slate'
     if (raw === 'github') return 'slate'
   } catch {
     // fall through
   }
-  return 'warm'
+  return 'slate'
 }
 
 export const saveTheme = (theme: Theme) => {

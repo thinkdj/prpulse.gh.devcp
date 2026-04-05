@@ -9,7 +9,7 @@ import {
 import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table'
 import { RefreshCw, X, MessageSquare } from 'lucide-react'
 import type { PullRequest, DashboardFilter } from '../types'
-import { relativeTime } from '../utils'
+import { formatAgeAgoFromMs, relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
 
 type PullRequestTableProps = {
@@ -272,6 +272,25 @@ export default function PullRequestTable({
           new Date(a.original.openedAt).getTime() - new Date(b.original.openedAt).getTime(),
       },
       {
+        id: 'updatedAt',
+        accessorKey: 'updatedAt',
+        header: 'Updated',
+        enableColumnFilter: false,
+        cell: ({ row }) => {
+          const pr = row.original
+          return (
+            <span
+              className={ageColor(pr.updatedAt)}
+              title={new Date(pr.updatedAt).toLocaleString()}
+            >
+              {relativeTime(pr.updatedAt)}
+            </span>
+          )
+        },
+        sortingFn: (a, b) =>
+          new Date(a.original.updatedAt).getTime() - new Date(b.original.updatedAt).getTime(),
+      },
+      {
         id: 'checksStatus',
         accessorKey: 'checksStatus',
         header: 'Checks',
@@ -417,8 +436,11 @@ export default function PullRequestTable({
           )}
 
           {dataUpdatedAt != null && dataUpdatedAt > 0 && (
-            <span className="text-xs text-gh-fg-muted">
-              Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+            <span
+              className="text-xs text-gh-fg-muted"
+              title={new Date(dataUpdatedAt).toLocaleString()}
+            >
+              Data {formatAgeAgoFromMs(dataUpdatedAt)}
             </span>
           )}
 

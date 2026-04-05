@@ -18,6 +18,7 @@ import type { DashboardFilter, PullRequest, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserRepos } from './github-api'
+import { formatAgeAgoFromMs } from './utils'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
 import PullRequestTable from './components/PullRequestTable'
@@ -238,25 +239,25 @@ function App() {
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         <header className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="https://github.com/thinkdj/gh.devcp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="View source on GitHub"
+                  title="View source on GitHub"
+                  className="shrink-0 text-gh-fg-muted hover:text-gh-accent-fg transition-colors"
+                >
+                  <svg height="22" width="22" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                  </svg>
+                </a>
                 <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
-                <p className="mt-1 text-sm text-gh-fg-muted">
-                  Bird&apos;s-eye view of pull requests and branches across your repositories.
-                </p>
               </div>
-              <a
-                href="https://github.com/thinkdj/gh.devcp"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="View source on GitHub"
-                title="View source on GitHub"
-                className="mt-1 shrink-0 text-gh-fg-muted hover:text-gh-fg-default transition-colors"
-              >
-                <svg height="20" width="20" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
-                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                </svg>
-              </a>
+              <p className="mt-1 text-sm text-gh-fg-muted">
+                Bird&apos;s-eye view of pull requests and branches across your repositories.
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {/* Theme palette selector */}
@@ -268,8 +269,8 @@ function App() {
                 aria-label="Theme"
                 className="rounded-md border border-gh-border bg-gh-overlay px-2 py-1.5 text-xs text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
               >
-                <option value="warm">Warm</option>
                 <option value="slate">Slate</option>
+                <option value="warm">Warm</option>
                 <option value="ocean">Ocean</option>
                 <option value="ember">Ember</option>
               </select>
@@ -284,8 +285,11 @@ function App() {
                 {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
               {dataUpdatedAt > 0 && (
-                <span className="text-xs text-gh-fg-muted">
-                  Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+                <span
+                  className="text-xs text-gh-fg-muted"
+                  title={new Date(dataUpdatedAt).toLocaleString()}
+                >
+                  Updated {formatAgeAgoFromMs(dataUpdatedAt)}
                 </span>
               )}
               <button
@@ -490,7 +494,7 @@ function App() {
         title="Refresh data?"
         message={
           Math.max(prDataUpdatedAt, branchDataUpdatedAt) > 0
-            ? `Data was last refreshed at ${new Date(Math.max(prDataUpdatedAt, branchDataUpdatedAt)).toLocaleTimeString()}. Refreshing will clear the cache and re-fetch all repositories.`
+            ? `Data was last refreshed ${formatAgeAgoFromMs(Math.max(prDataUpdatedAt, branchDataUpdatedAt))} (${new Date(Math.max(prDataUpdatedAt, branchDataUpdatedAt)).toLocaleString()}). Refreshing will clear the cache and re-fetch all repositories.`
             : 'Refreshing will clear the cache and re-fetch all repositories.'
         }
         confirmLabel="Refresh"
