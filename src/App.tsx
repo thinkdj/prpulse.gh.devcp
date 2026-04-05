@@ -95,16 +95,22 @@ function App() {
 
   const STALE_TIME = 3 * 60 * 1000 // 3 minutes – matches API cache TTL
 
-  const repoQueries = useQueries({
-    queries: selectedRepos.map((repo) => ({
-      queryKey: ['repo-prs', token, repo, currentUser],
-      queryFn: () => fetchRepoPullRequests(repo, token, currentUser),
-      staleTime: STALE_TIME,
-      refetchInterval: 5 * 60 * 1000,
-      retry: 1,
-      enabled: prQueriesReady,
-    })),
-  })
+  // Stable query option objects: inline .map() each render gives new queryFn refs; useQueries
+  // then runs setQueries every render → setOptions → refetch loop after data updates.
+  const prQueryDefs = useMemo(
+    () =>
+      selectedRepos.map((repo) => ({
+        queryKey: ['repo-prs', token, repo, currentUser] as const,
+        queryFn: () => fetchRepoPullRequests(repo, token, currentUser),
+        staleTime: STALE_TIME,
+        refetchInterval: 5 * 60 * 1000,
+        retry: 1,
+        enabled: prQueriesReady,
+      })),
+    [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME],
+  )
+
+  const repoQueries = useQueries({ queries: prQueryDefs })
 
   // Derive effective branchAnalysisRepos by filtering out repos that no longer exist
   const effectiveBranchAnalysisRepos = useMemo(() => {
@@ -115,15 +121,19 @@ function App() {
   const effectiveBranchAnalysisTriggered =
     branchAnalysisTriggered && effectiveBranchAnalysisRepos.length > 0
 
-  const branchQueries = useQueries({
-    queries: effectiveBranchAnalysisRepos.map((repo) => ({
-      queryKey: ['repo-branches', token, repo],
-      queryFn: () => fetchRepoBranches(repo, token),
-      staleTime: STALE_TIME,
-      retry: 1,
-      enabled: !!token && effectiveBranchAnalysisTriggered,
-    })),
-  })
+  const branchQueryDefs = useMemo(
+    () =>
+      effectiveBranchAnalysisRepos.map((repo) => ({
+        queryKey: ['repo-branches', token, repo] as const,
+        queryFn: () => fetchRepoBranches(repo, token),
+        staleTime: STALE_TIME,
+        retry: 1,
+        enabled: !!token && effectiveBranchAnalysisTriggered,
+      })),
+    [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME],
+  )
+
+  const branchQueries = useQueries({ queries: branchQueryDefs })
 
   const prIsLoading = repoQueries.some((q) => q.isLoading)
   const prError = repoQueries.find((q) => q.error)?.error ?? null
