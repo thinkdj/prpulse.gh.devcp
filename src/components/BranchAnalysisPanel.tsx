@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BranchAnalysis, BranchStatus } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
-import { Play } from 'lucide-react'
+import { Check, Copy, Play } from 'lucide-react'
 
 type BranchAnalysisPanelProps = {
   branches: BranchAnalysis[]
@@ -60,9 +60,34 @@ export default function BranchAnalysisPanel({
 }: BranchAnalysisPanelProps) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<BranchFilter>('all')
+  const [copiedBranchKey, setCopiedBranchKey] = useState<string | null>(null)
+  const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [localRepos, setLocalRepos] = useState<string[]>(() =>
     analysisRepos.length > 0 ? analysisRepos : repos,
   )
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current)
+    }
+  }, [])
+
+  const copyBranchName = (branch: BranchAnalysis) => {
+    const key = `${branch.repo}:${branch.name}`
+    void navigator.clipboard.writeText(branch.name).then(
+      () => {
+        setCopiedBranchKey(key)
+        if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current)
+        copyFeedbackTimeoutRef.current = setTimeout(() => {
+          setCopiedBranchKey(null)
+          copyFeedbackTimeoutRef.current = null
+        }, 2000)
+      },
+      () => {
+        /* clipboard denied or unavailable */
+      },
+    )
+  }
 
   // Derive effective localRepos by filtering out removed repos and adding new ones
   const effectiveLocalRepos = useMemo(() => {
@@ -263,18 +288,40 @@ export default function BranchAnalysisPanel({
               </tr>
             </thead>
             <tbody>
-              {filteredBranches.map((branch) => (
-                <tr key={`${branch.repo}:${branch.name}`} className="align-top">
+              {filteredBranches.map((branch) => {
+                const rowKey = `${branch.repo}:${branch.name}`
+                const justCopied = copiedBranchKey === rowKey
+                return (
+                <tr key={rowKey} className="align-top">
                   <td className="border-b border-gh-border/80 px-3 py-3">
                     <div className="min-w-[20rem]">
-                      <a
-                        href={branch.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-gh-accent-fg hover:underline"
-                      >
-                        {branch.name}
-                      </a>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <a
+                          href={branch.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-gh-accent-fg hover:underline"
+                        >
+                          {branch.name}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyBranchName(branch)}
+                          title={justCopied ? 'Copied' : 'Copy branch name'}
+                          aria-label={`Copy branch name ${branch.name}`}
+                          className={`rounded-md border p-1 transition-colors shrink-0 ${
+                            justCopied
+                              ? 'border-gh-success/50 bg-gh-success/15 text-gh-success-fg'
+                              : 'border-gh-border bg-gh-overlay text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
+                          }`}
+                        >
+                          {justCopied ? (
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" aria-hidden />
+                          )}
+                        </button>
+                      </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gh-fg-muted">
                         <span>{branch.repo}</span>
                         {branch.isProtected && (
@@ -295,7 +342,7 @@ export default function BranchAnalysisPanel({
                     </span>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
