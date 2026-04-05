@@ -446,6 +446,7 @@ function App() {
                 onRefresh={handleRefresh}
                 dataUpdatedAt={dataUpdatedAt}
                 onPRSelect={setSelectedPR}
+                selectedPR={selectedPR}
               />
             ) : activeView === 'branches' ? (
               <BranchAnalysisPanel

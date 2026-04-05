@@ -10,7 +10,9 @@ import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/reac
 import { RefreshCw, X, MessageSquare } from 'lucide-react'
 import type { PullRequest, DashboardFilter } from '../types'
 import { formatAgeAgoFromMs, relativeTime } from '../utils'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import StatusBadge from './StatusBadge'
+import CopyClipboardIconButton from './CopyClipboardIconButton'
 
 type PullRequestTableProps = {
   pullRequests: PullRequest[]
@@ -23,6 +25,8 @@ type PullRequestTableProps = {
   onRefresh?: () => void
   dataUpdatedAt?: number
   onPRSelect?: (pr: PullRequest) => void
+  /** When the detail panel is open, the matching row is highlighted */
+  selectedPR?: PullRequest | null
 }
 
 const filterLabels: { value: DashboardFilter; label: string }[] = [
@@ -70,6 +74,7 @@ export default function PullRequestTable({
   onRefresh,
   dataUpdatedAt,
   onPRSelect,
+  selectedPR = null,
 }: PullRequestTableProps) {
   const [globalFilter, setGlobalFilter] = useState('')
   const [hideDrafts, setHideDrafts] = useState(false)
@@ -77,6 +82,7 @@ export default function PullRequestTable({
   const [hideMine, setHideMine] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([{ id: 'openedAt', desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const { copiedKey: copiedHeadRefKey, copy: copyHeadRefToClipboard } = useCopyFeedback()
 
   /* ── Dashboard-level filter (needs_review / safe / blocked) ── */
   const dashboardFiltered = useMemo(() => {
@@ -104,9 +110,9 @@ export default function PullRequestTable({
           const pr = row.original
           const [owner, repoName] = pr.repo.split('/')
           return (
-            <div className="whitespace-nowrap">
+            <div className="min-w-0 max-w-[14rem]">
               <span
-                className="cursor-pointer text-gh-fg-muted hover:text-gh-accent-fg"
+                className="inline-flex cursor-pointer whitespace-nowrap text-gh-fg-muted hover:text-gh-accent-fg"
                 title={`Filter by repo: ${pr.repo}`}
                 aria-label={`Filter by repo: ${pr.repo}`}
                 role="button"
@@ -127,9 +133,23 @@ export default function PullRequestTable({
                 <span className="text-xs font-medium">{repoName}</span>
               </span>
               {pr.headRef && (
-                <p className="mt-0.5 truncate text-[10px] text-gh-fg-placeholder" title={pr.headRef}>
-                  {pr.headRef}
-                </p>
+                <div className="mt-0.5 flex min-w-0 items-center gap-0.5">
+                  <span
+                    className="min-w-0 flex-1 truncate text-[10px] text-gh-fg-placeholder"
+                    title={pr.headRef}
+                  >
+                    {pr.headRef}
+                  </span>
+                  <CopyClipboardIconButton
+                    text={pr.headRef}
+                    copyKey={`${pr.repo}#${pr.id}`}
+                    copiedKey={copiedHeadRefKey}
+                    onCopy={copyHeadRefToClipboard}
+                    title="Copy branch name"
+                    ariaLabel={`Copy branch ${pr.headRef}`}
+                    stopPropagation
+                  />
+                </div>
               )}
             </div>
           )
@@ -548,11 +568,18 @@ export default function PullRequestTable({
               ) : (
                 rows.map((row) => {
                   const pr = row.original
+                  const isRowSelected =
+                    selectedPR != null && selectedPR.repo === pr.repo && selectedPR.id === pr.id
                   return (
                     <tr
                       key={row.id}
+                      aria-selected={isRowSelected}
                       className={`cursor-pointer border-t border-gh-border transition-colors hover:bg-gh-overlay ${
-                        pr.needsYourReview ? 'bg-gh-warning/5' : ''
+                        isRowSelected
+                          ? 'bg-gh-accent/15 ring-1 ring-inset ring-gh-accent/45'
+                          : pr.needsYourReview
+                            ? 'bg-gh-warning/5'
+                            : ''
                       }`}
                       onClick={(event) => {
                         // Don't open panel if click landed on an interactive element inside a cell

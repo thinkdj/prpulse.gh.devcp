@@ -17,6 +17,7 @@ import type { PRComment, PullRequest } from '../types'
 import { fetchPRActivity, postPRComment } from '../github-api'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
+import CommentMarkdown from './CommentMarkdown'
 
 type PRDetailPanelProps = {
   pr: PullRequest
@@ -306,9 +307,9 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
                         {relativeTime(comment.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-gh-fg-default">
-                      {comment.body}
-                    </p>
+                    <div className="mt-2 border-t border-gh-border/60 pt-2">
+                      <CommentMarkdown source={comment.body} />
+                    </div>
                   </li>
                 ))}
               </ul>
