@@ -19,7 +19,7 @@ vi.mock('./github-api', () => ({
   postPRComment: vi.fn().mockResolvedValue({ id: 1, author: 'test-user', authorAvatar: '', body: 'ok', createdAt: '', isReview: false }),
 }))
 
-import { clearApiCache, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
+import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
 
 const TOKEN_KEY = 'gh.devcp.dashboard.token'
 const REPOS_KEY = 'gh.devcp.dashboard.repositories'
@@ -92,6 +92,24 @@ describe('GitHub Dev Control Panel', () => {
       renderApp()
 
       expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
+      })
+    })
+
+    it('shows account error but still loads PRs when /user fails', async () => {
+      vi.mocked(fetchCurrentUser).mockRejectedValueOnce(
+        new Error('Invalid GitHub token. Check your PAT.'),
+      )
+
+      renderApp()
+
+      expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(screen.getByText(/Invalid GitHub token/i)).toBeInTheDocument()
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')

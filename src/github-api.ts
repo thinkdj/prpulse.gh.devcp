@@ -75,6 +75,16 @@ const BRANCH_DETAIL_CONCURRENCY = 8
 
 const apiCache = new Map<string, CacheEntry>()
 
+/** Opaque id for cache keys — avoids storing the raw PAT string in Map keys. */
+function tokenCacheId(token: string): string {
+  let h = 2166136261
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0).toString(16)
+}
+
 function getCached<T>(key: string): T | undefined {
   const entry = apiCache.get(key)
   if (!entry) return undefined
@@ -118,7 +128,7 @@ export function clearApiCache(): void {
 }
 
 async function githubFetch<T>(path: string, token: string): Promise<T> {
-  const cacheKey = `${token}:${path}`
+  const cacheKey = `${tokenCacheId(token)}:${path}`
   const cached = getCached<T>(cacheKey)
   if (cached !== undefined) return cached
 
@@ -238,22 +248,22 @@ async function fetchPRDetails(
   let reviews: GitHubReview[] = []
   let checkRuns: GitHubCheckRun[] = []
 
-  try {
-    const [reviewsData, checksData] = await Promise.all([
-      githubFetch<GitHubReview[]>(
-        `/repos/${fullRepo}/pulls/${pr.number}/reviews`,
-        token,
-      ),
-      githubFetch<{ check_runs: GitHubCheckRun[] }>(
-        `/repos/${fullRepo}/commits/${pr.head.sha}/check-runs`,
-        token,
-      ),
-    ])
+  const [reviewsResult, checksResult] = await Promise.allSettled([
+    githubFetch<GitHubReview[]>(
+      `/repos/${fullRepo}/pulls/${pr.number}/reviews`,
+      token,
+    ),
+    githubFetch<{ check_runs: GitHubCheckRun[] }>(
+      `/repos/${fullRepo}/commits/${pr.head.sha}/check-runs`,
+      token,
+    ),
+  ])
 
-    reviews = reviewsData
-    checkRuns = checksData.check_runs
-  } catch {
-    // If we can't fetch details, use defaults
+  if (reviewsResult.status === 'fulfilled') {
+    reviews = reviewsResult.value
+  }
+  if (checksResult.status === 'fulfilled') {
+    checkRuns = checksResult.value.check_runs
   }
 
   const checksStatus = deriveChecksStatus(checkRuns)
@@ -423,6 +433,19 @@ type GitHubPRReview = {
   submitted_at: string
 }
 
+const ACTIVITY_PAGE_SIZE = 100
+const MAX_ACTIVITY_PAGES = 30
+
+async function fetchAllPages<T>(pathForPage: (page: number) => string, token: string): Promise<T[]> {
+  const all: T[] = []
+  for (let page = 1; page <= MAX_ACTIVITY_PAGES; page += 1) {
+    const batch = await githubFetch<T[]>(pathForPage(page), token)
+    all.push(...batch)
+    if (batch.length < ACTIVITY_PAGE_SIZE) break
+  }
+  return all
+}
+
 /**
  * Fetch all activity (issue comments + review summaries) for a PR, merged and sorted by date.
  * Skips empty review bodies (e.g. an implicit review triggered only by inline comments).
@@ -436,12 +459,14 @@ export async function fetchPRActivity(
   if (!owner || !repo) return []
 
   const [issueComments, reviews] = await Promise.all([
-    githubFetch<GitHubIssueComment[]>(
-      `/repos/${owner}/${repo}/issues/${prNumber}/comments?per_page=100`,
+    fetchAllPages<GitHubIssueComment>(
+      (page) =>
+        `/repos/${owner}/${repo}/issues/${prNumber}/comments?per_page=${ACTIVITY_PAGE_SIZE}&page=${page}`,
       token,
     ),
-    githubFetch<GitHubPRReview[]>(
-      `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`,
+    fetchAllPages<GitHubPRReview>(
+      (page) =>
+        `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=${ACTIVITY_PAGE_SIZE}&page=${page}`,
       token,
     ),
   ])
