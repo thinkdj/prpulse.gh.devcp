@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BranchAnalysis, BranchStatus } from '../types'
 import { relativeTime } from '../utils'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import StatusBadge from './StatusBadge'
-import { Check, Copy, Play } from 'lucide-react'
+import CopyClipboardIconButton from './CopyClipboardIconButton'
+import { Play } from 'lucide-react'
 
 type BranchAnalysisPanelProps = {
   branches: BranchAnalysis[]
@@ -60,18 +62,11 @@ export default function BranchAnalysisPanel({
 }: BranchAnalysisPanelProps) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<BranchFilter>('all')
-  const [copiedBranchKey, setCopiedBranchKey] = useState<string | null>(null)
-  const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { copiedKey: copiedBranchKey, copy: copyBranchNameToClipboard } = useCopyFeedback()
   const prevReposForSyncRef = useRef<string[] | null>(null)
   const [localRepos, setLocalRepos] = useState<string[]>(() =>
     analysisRepos.length > 0 ? analysisRepos : [...repos],
   )
-
-  useEffect(() => {
-    return () => {
-      if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current)
-    }
-  }, [])
 
   // When `repos` changes: prune removed repos; auto-check only repos newly added to tracking.
   // Skip the first run so initial state (e.g. subset from last analysis) is not expanded to all repos.
@@ -88,23 +83,6 @@ export default function BranchAnalysisPanel({
       return [...kept, ...newlyTracked]
     })
   }, [repos])
-
-  const copyBranchName = (branch: BranchAnalysis) => {
-    const key = `${branch.repo}:${branch.name}`
-    void navigator.clipboard.writeText(branch.name).then(
-      () => {
-        setCopiedBranchKey(key)
-        if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current)
-        copyFeedbackTimeoutRef.current = setTimeout(() => {
-          setCopiedBranchKey(null)
-          copyFeedbackTimeoutRef.current = null
-        }, 2000)
-      },
-      () => {
-        /* clipboard denied or unavailable */
-      },
-    )
-  }
 
   const toggleLocalRepo = (repo: string) => {
     setLocalRepos((prev) =>
@@ -299,29 +277,11 @@ export default function BranchAnalysisPanel({
             <tbody>
               {filteredBranches.map((branch) => {
                 const rowKey = `${branch.repo}:${branch.name}`
-                const justCopied = copiedBranchKey === rowKey
                 return (
                 <tr key={rowKey} className="align-top">
                   <td className="border-b border-gh-border/80 px-3 py-3">
                     <div className="min-w-[20rem]">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => copyBranchName(branch)}
-                          title={justCopied ? 'Copied' : 'Copy branch name to clipboard'}
-                          aria-label={`Copy branch name ${branch.name}`}
-                          className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border-2 transition-colors shrink-0 ${
-                            justCopied
-                              ? 'border-gh-success bg-gh-success/20 text-gh-success-fg'
-                              : 'border-gh-accent/60 bg-gh-surface text-gh-accent-fg hover:border-gh-accent hover:bg-gh-accent/10'
-                          }`}
-                        >
-                          {justCopied ? (
-                            <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-                          ) : (
-                            <Copy className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-                          )}
-                        </button>
+                      <div className="flex flex-wrap items-center gap-1">
                         <a
                           href={branch.url}
                           target="_blank"
@@ -330,6 +290,14 @@ export default function BranchAnalysisPanel({
                         >
                           {branch.name}
                         </a>
+                        <CopyClipboardIconButton
+                          text={branch.name}
+                          copyKey={rowKey}
+                          copiedKey={copiedBranchKey}
+                          onCopy={copyBranchNameToClipboard}
+                          title="Copy branch name"
+                          ariaLabel={`Copy branch name ${branch.name}`}
+                        />
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gh-fg-muted">
                         <span>{branch.repo}</span>
