@@ -1,16 +1,15 @@
-# GitHub Dev Control Panel (gh.devcp)
+# GitHub Dev Control Panel
 
-A lightweight GitHub-style dashboard for personal repositories with many collaborators and frequent pull requests.
+A lightweight GH dashboard for personal repositories with many collaborators and frequent pull requests.
 
 Built with **TypeScript + React + Tailwind CSS + TanStack Query** using Vite.
 
-## What this dashboard solves
+## What it solves
 
 When notifications become noisy, this dashboard gives a bird's-eye view of PRs that need your attention across selectable repositories.
 
-## Dashboard preview
-
-![Dashboard preview](./public/dashboard-preview.png)
+<img src="./public/dashboard-preview.png" alt="Dashboard preview" style="border-radius: 6px;" />
+<figcaption><em>Dashboard preview with repository filters, summary widgets, and PR status indicators.</em></figcaption>
 
 ## Features
 
@@ -65,10 +64,10 @@ If you later need multi-device sync, audit history, or team-shared state, Cloudf
 
 Figures below are **typical for github.com REST** with a valid token; see [GitHub’s rate limit docs](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) for the source of truth (limits can change).
 
-| Context | Rough limit |
-|--------|----------------|
+| Context                          | Rough limit                                           |
+| -------------------------------- | ----------------------------------------------------- |
 | **Authenticated** (PAT or OAuth) | **5,000 requests/hour** per user (primary REST limit) |
-| **Unauthenticated** | **60 requests/hour** (this app always uses a token) |
+| **Unauthenticated**              | **60 requests/hour** (this app always uses a token)   |
 
 GitHub may also apply **secondary** throttling (e.g. concurrent requests, abuse detection). The UI surfaces **403** responses when the primary hourly budget is exhausted.
 
@@ -90,11 +89,11 @@ Open http://localhost:5173, click **Set token**, and paste a GitHub fine-grained
 
 Use a **fine-grained Personal Access Token** scoped to the repositories (or the entire account) you want to monitor.
 
-| Permission | Access | Used for |
-|---|---|---|
+| Permission        | Access    | Used for                                         |
+| ----------------- | --------- | ------------------------------------------------ |
 | **Pull requests** | Read-only | Fetch open PRs, reviews, and requested reviewers |
-| **Checks** | Read-only | Fetch CI check-run statuses for each PR |
-| **Metadata** | Read-only | List your repositories in the repo picker |
+| **Checks**        | Read-only | Fetch CI check-run statuses for each PR          |
+| **Metadata**      | Read-only | List your repositories in the repo picker        |
 
 Branch listing and comparisons may require **Contents: Read** (or broader repo access) on fine-grained tokens for private repositories—if analysis fails with 403, widen read access for those repos.
 
