@@ -72,13 +72,17 @@ function App() {
     saveMode(next)
   }
 
-  const { data: currentUser = '' } = useQuery({
+  const currentUserQuery = useQuery({
     queryKey: ['current-user', token],
     queryFn: () => fetchCurrentUser(token),
     enabled: !!token,
     staleTime: Infinity,
     retry: false,
   })
+
+  const currentUser = currentUserQuery.data ?? ''
+  const prQueriesReady =
+    !!token && (currentUserQuery.data !== undefined || currentUserQuery.isError)
 
   const { data: userRepos = [], isLoading: reposLoading } = useQuery({
     queryKey: ['user-repos', token],
@@ -97,7 +101,7 @@ function App() {
       staleTime: STALE_TIME,
       refetchInterval: 5 * 60 * 1000,
       retry: 1,
-      enabled: !!token && !!currentUser,
+      enabled: prQueriesReady,
     })),
   })
 
@@ -130,7 +134,10 @@ function App() {
   const branchError = branchQueries.find((q) => q.error)?.error ?? null
   const branchDataUpdatedAt = Math.max(0, ...branchQueries.map((q) => q.dataUpdatedAt))
   const isLoading = activeView === 'branches' ? branchIsLoading : prIsLoading
-  const error = activeView === 'branches' ? branchError : prError
+  const viewError = activeView === 'branches' ? branchError : prError
+  const accountError =
+    token && currentUserQuery.isError ? (currentUserQuery.error ?? null) : null
+  const error = accountError ?? viewError
   const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : prDataUpdatedAt
 
   useEffect(() => {
