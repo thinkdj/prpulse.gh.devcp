@@ -19,10 +19,13 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 - **Repository selector** — toggle and remove tracked repositories; selection persists in localStorage
 - **Summary widgets** — clickable at-a-glance counts for open PRs, items needing your review, safe-to-merge, and blocked
 - **Color-coded status badges** — visual indicators for CI checks, Copilot review state, and merge safety
-- **Dark / light theme toggle** — switch between dark and light modes; preference persisted in localStorage
-- **PR search and filtering** — search by title/author/number, filter by author/repo/label dropdowns, hide drafts
-- **Sortable columns** — click column headers to sort by PR title, author, opened date, or pushes
-- **Relative time display** — "3d ago" instead of raw dates, with full timestamp on hover; color-coded by age
+- **Theme palettes + dark / light** — Slate (default), Warm, Ocean, Ember; brightness toggle; preferences in `localStorage`
+- **My actions** — tab surfacing PRs that need your review and related follow-ups
+- **Branch analysis** — optional per-repo run: stale / merged / active branch table, search, copy branch name, GitHub links
+- **PR search and filtering** — search by title/author/number, filter by author/repo/label dropdowns, hide drafts / Copilot / yours
+- **Sortable columns** — sort by title, repo, author, opened, updated, checks, Copilot, merge safety, pushes, comments
+- **Relative time** — e.g. "5 minutes ago" (full datetime on hover); color-coded by age where relevant
+- **PR detail side panel** — metadata, activity thread, optional comment (needs write permission on the repo)
 - **"Needs your review" highlighting** — amber dot and subtle background on PRs awaiting your review
 - **Draft PR indicator** — clearly marks draft PRs in the table
 - **Label display** — color-coded labels on each PR row, clickable to filter
@@ -41,12 +44,9 @@ src/
 ├── utils.ts              # Formatters and relative-time helper
 ├── seed-data.ts          # Seed data for tests
 ├── components/
-│   ├── StatusBadge.tsx   # Color-coded status pill
-│   ├── SummaryWidgets.tsx# Clickable summary cards
-│   ├── RepoSelector.tsx  # Repo add/toggle/remove UI
-│   ├── RepoPickerModal.tsx # Browse & select repos modal
-│   ├── PullRequestTable.tsx # PR table with filter bar
-│   └── TokenSettings.tsx # PAT input panel
+│   ├── StatusBadge.tsx, SummaryWidgets.tsx, RepoSelector.tsx, RepoPickerModal.tsx
+│   ├── PullRequestTable.tsx, TokenSettings.tsx, PRDetailPanel.tsx, ConfirmDialog.tsx
+│   ├── BranchAnalysisPanel.tsx, ActionRequiredPanel.tsx
 ├── App.tsx               # Dashboard orchestrator
 ├── App.test.tsx          # Component & integration tests
 ├── main.tsx              # Entry point
@@ -57,9 +57,25 @@ src/
 
 - **Storage:** `localStorage` for repo selection and token (local-first, no backend needed)
 - **Data fetching:** GitHub REST API via `fetch` with TanStack Query for caching, refetch, and error handling
-- **UI:** GitHub-inspired dark theme with Tailwind CSS utility classes
+- **UI:** GitHub-inspired styling with Tailwind CSS; in-memory response cache (~3 min TTL) for GETs
 
 If you later need multi-device sync, audit history, or team-shared state, Cloudflare Wrangler services (D1/KV) can be added as a next step.
+
+## GitHub API usage and rate limits
+
+Figures below are **typical for github.com REST** with a valid token; see [GitHub’s rate limit docs](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) for the source of truth (limits can change).
+
+| Context | Rough limit |
+|--------|----------------|
+| **Authenticated** (PAT or OAuth) | **5,000 requests/hour** per user (primary REST limit) |
+| **Unauthenticated** | **60 requests/hour** (this app always uses a token) |
+
+GitHub may also apply **secondary** throttling (e.g. concurrent requests, abuse detection). The UI surfaces **403** responses when the primary hourly budget is exhausted.
+
+**Rough request cost (order of magnitude):**
+
+- **PR dashboard (per repo, per refresh):** list open PRs, then per PR fetches for reviews + check runs (cached ~3 minutes in-app).
+- **Branch analysis (per repo, per run):** one repo metadata call, paginated branch list, then **~2 calls per branch** (commit + compare vs default). Large repos can mean **hundreds** of calls in one run—use a subset of repos or rerun sparingly if you hit limits.
 
 ## Setup
 
@@ -79,6 +95,8 @@ Use a **fine-grained Personal Access Token** scoped to the repositories (or the 
 | **Pull requests** | Read-only | Fetch open PRs, reviews, and requested reviewers |
 | **Checks** | Read-only | Fetch CI check-run statuses for each PR |
 | **Metadata** | Read-only | List your repositories in the repo picker |
+
+Branch listing and comparisons may require **Contents: Read** (or broader repo access) on fine-grained tokens for private repositories—if analysis fails with 403, widen read access for those repos.
 
 > **Security note:** The token is stored in your browser's `localStorage` so it persists between sessions.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
