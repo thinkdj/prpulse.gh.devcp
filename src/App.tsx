@@ -30,11 +30,12 @@ import ActionRequiredPanel from './components/ActionRequiredPanel'
 import ConfirmDialog from './components/ConfirmDialog'
 
 function applyTheme(theme: Theme, mode: Mode) {
-  document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember')
+  document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember', 'zinc')
   if (mode === 'light') document.documentElement.classList.add('light')
   if (theme === 'slate') document.documentElement.classList.add('slate')
   if (theme === 'ocean') document.documentElement.classList.add('ocean')
   if (theme === 'ember') document.documentElement.classList.add('ember')
+  if (theme === 'zinc') document.documentElement.classList.add('zinc')
 }
 
 function App() {
@@ -283,6 +284,7 @@ function App() {
                 <option value="warm">Warm</option>
                 <option value="ocean">Ocean</option>
                 <option value="ember">Ember</option>
+                <option value="zinc">Zinc</option>
               </select>
               {/* Light/dark mode toggle */}
               <button
@@ -484,6 +486,15 @@ function App() {
                 token={token}
                 currentUser={currentUser}
                 onClose={() => setSelectedPR(null)}
+                onPRClosed={() => {
+                  setSelectedPR(null)
+                  clearApiCache()
+                  void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+                }}
+                onBranchDeleted={() => {
+                  clearApiCache()
+                  void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+                }}
               />
             )}
 

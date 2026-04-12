@@ -79,6 +79,7 @@ export default function PullRequestTable({
   const [globalFilter, setGlobalFilter] = useState('')
   const [hideDrafts, setHideDrafts] = useState(false)
   const [hideCopilot, setHideCopilot] = useState(false)
+  const [hideDependabot, setHideDependabot] = useState(false)
   const [hideMine, setHideMine] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([{ id: 'openedAt', desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -93,17 +94,22 @@ export default function PullRequestTable({
     if (hideDrafts) result = result.filter((pr) => !pr.isDraft)
     if (hideCopilot) result = result.filter((pr) => {
       const a = pr.author.toLowerCase()
-      return !a.includes('copilot') && !a.endsWith('[bot]')
+      return !a.includes('copilot') && !a.includes('github-copilot')
+    })
+    if (hideDependabot) result = result.filter((pr) => {
+      const a = pr.author.toLowerCase()
+      return !a.includes('dependabot') && a !== 'dependabot[bot]'
     })
     if (hideMine && currentUser) result = result.filter((pr) => pr.author !== currentUser)
     return result
-  }, [pullRequests, filter, hideDrafts, hideCopilot, hideMine, currentUser])
+  }, [pullRequests, filter, hideDrafts, hideCopilot, hideDependabot, hideMine, currentUser])
 
   const columns: ColumnDef<PullRequest, unknown>[] = [
       {
         id: 'repo',
         accessorKey: 'repo',
         header: 'Repo',
+        size: 180,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => {
@@ -135,7 +141,7 @@ export default function PullRequestTable({
               {pr.headRef && (
                 <div className="mt-0.5 flex min-w-0 items-center gap-0.5">
                   <span
-                    className="min-w-0 flex-1 truncate text-[10px] text-gh-fg-placeholder"
+                    className="min-w-0 flex-1 truncate text-[10px] text-gh-fg-muted"
                     title={pr.headRef}
                   >
                     {pr.headRef}
@@ -159,6 +165,7 @@ export default function PullRequestTable({
         id: 'title',
         accessorFn: (row) => `#${row.id} ${row.title} ${row.repo} ${row.labels.join(' ')}`,
         header: 'PR',
+        size: 340,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => {
@@ -218,6 +225,7 @@ export default function PullRequestTable({
         id: 'author',
         accessorKey: 'author',
         header: 'Author',
+        size: 140,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => {
@@ -276,6 +284,7 @@ export default function PullRequestTable({
         id: 'openedAt',
         accessorKey: 'openedAt',
         header: 'Opened',
+        size: 90,
         enableColumnFilter: false,
         cell: ({ row }) => {
           const pr = row.original
@@ -295,6 +304,7 @@ export default function PullRequestTable({
         id: 'updatedAt',
         accessorKey: 'updatedAt',
         header: 'Updated',
+        size: 90,
         enableColumnFilter: false,
         cell: ({ row }) => {
           const pr = row.original
@@ -314,6 +324,7 @@ export default function PullRequestTable({
         id: 'checksStatus',
         accessorKey: 'checksStatus',
         header: 'Checks',
+        size: 80,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => <StatusBadge kind="checksStatus" value={row.original.checksStatus} />,
@@ -322,6 +333,7 @@ export default function PullRequestTable({
         id: 'copilotReview',
         accessorKey: 'copilotReview',
         header: 'Copilot',
+        size: 80,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => <StatusBadge kind="copilotReview" value={row.original.copilotReview} />,
@@ -330,6 +342,7 @@ export default function PullRequestTable({
         id: 'mergeSafety',
         accessorKey: 'mergeSafety',
         header: 'Merge',
+        size: 80,
         filterFn: 'includesString',
         enableColumnFilter: true,
         cell: ({ row }) => <StatusBadge kind="mergeSafety" value={row.original.mergeSafety} />,
@@ -338,6 +351,7 @@ export default function PullRequestTable({
         id: 'pushesAfterOpen',
         accessorKey: 'pushesAfterOpen',
         header: 'Pushes',
+        size: 60,
         enableColumnFilter: false,
         cell: ({ row }) => {
           const pr = row.original
@@ -361,6 +375,7 @@ export default function PullRequestTable({
             <MessageSquare className="h-3.5 w-3.5 text-gh-fg-muted" aria-hidden="true" />
           </span>
         ),
+        size: 48,
         enableColumnFilter: false,
         cell: ({ row }) => (
           <span className="text-xs text-gh-fg-muted">{row.original.commentCount}</span>
@@ -385,13 +400,14 @@ export default function PullRequestTable({
 
   const rows = table.getRowModel().rows
   const hasActiveColumnFilters = columnFilters.length > 0
-  const hasActiveFilters = !!(globalFilter || hasActiveColumnFilters || hideDrafts || hideCopilot || hideMine)
+  const hasActiveFilters = !!(globalFilter || hasActiveColumnFilters || hideDrafts || hideCopilot || hideDependabot || hideMine)
 
   const clearAllFilters = () => {
     setGlobalFilter('')
     setColumnFilters([])
     setHideDrafts(false)
     setHideCopilot(false)
+    setHideDependabot(false)
     setHideMine(false)
     onFilterChange('all')
   }
@@ -441,6 +457,16 @@ export default function PullRequestTable({
               className="accent-gh-accent"
             />
             Hide Copilot
+          </label>
+
+          <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+            <input
+              type="checkbox"
+              checked={hideDependabot}
+              onChange={() => setHideDependabot(!hideDependabot)}
+              className="accent-gh-accent"
+            />
+            Hide Dependabot
           </label>
 
           {currentUser && (
@@ -526,6 +552,7 @@ export default function PullRequestTable({
                       <th
                         key={header.id}
                         className={`px-3 py-2 ${isLast ? 'text-right' : ''}`}
+                        style={{ width: header.column.columnDef.size, minWidth: header.column.columnDef.size }}
                         aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
                       >
                         {canSort ? (
@@ -598,6 +625,7 @@ export default function PullRequestTable({
                           <td
                             key={cell.id}
                             className={`px-3 py-3 ${isLast ? 'text-right' : ''}`}
+                            style={{ width: cell.column.columnDef.size, minWidth: cell.column.columnDef.size }}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
