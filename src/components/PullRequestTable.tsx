@@ -94,7 +94,7 @@ export default function PullRequestTable({
     if (hideDrafts) result = result.filter((pr) => !pr.isDraft)
     if (hideCopilot) result = result.filter((pr) => {
       const a = pr.author.toLowerCase()
-      return !a.includes('copilot') && !a.includes('github-copilot')
+      return !a.includes('copilot')
     })
     if (hideDependabot) result = result.filter((pr) => {
       const a = pr.author.toLowerCase()
