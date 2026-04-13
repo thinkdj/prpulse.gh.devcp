@@ -12,19 +12,35 @@ import {
   ExternalLink,
   AlertCircle,
   Send,
+  XOctagon,
+  Trash2,
+  Bot,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import type { PRComment, PullRequest } from '../types'
-import { fetchPRActivity, postPRComment } from '../github-api'
+import { fetchPRActivity, postPRComment, closePR, deleteBranch } from '../github-api'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
 import CommentMarkdown from './CommentMarkdown'
+import ConfirmDialog from './ConfirmDialog'
 
 type PRDetailPanelProps = {
   pr: PullRequest
   token: string
   currentUser: string
   onClose: () => void
+  onPRClosed?: () => void
+  onBranchDeleted?: () => void
 }
+
+const COPILOT_PRESETS = [
+  { label: 'Review PR', body: '@github-copilot Please do a thorough code review of this PR, covering correctness, readability, and maintainability.' },
+  { label: 'Check performance', body: '@github-copilot Review this PR for performance bottlenecks. Identify any expensive operations, unnecessary re-renders, or algorithmic issues.' },
+  { label: 'Security audit', body: '@github-copilot Review this PR for security vulnerabilities including injection risks, auth issues, data exposure, and insecure dependencies.' },
+  { label: 'Test coverage', body: '@github-copilot Identify gaps in test coverage for the changes in this PR and suggest what unit and integration tests should be added.' },
+  { label: 'Summarize', body: '@github-copilot Summarize the key changes in this PR, their purpose, and any potential risks or breaking changes to be aware of.' },
+]
 
 const labelColorMap: Record<string, string> = {
   bug: 'border-gh-danger-fg/60 text-gh-danger-fg bg-gh-danger/10',
@@ -67,9 +83,12 @@ function reviewStateLabel(state?: string): string {
   return 'Review'
 }
 
-export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDetailPanelProps) {
+export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
   const queryClient = useQueryClient()
   const [commentBody, setCommentBody] = useState('')
+  const [showPresets, setShowPresets] = useState(false)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [showDeleteBranchConfirm, setShowDeleteBranchConfirm] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const panelRef = useRef<HTMLElement>(null)
 
@@ -88,6 +107,22 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
         (prev = []) => [...prev, newComment],
       )
       setCommentBody('')
+    },
+  })
+
+  const closePRMutation = useMutation({
+    mutationFn: () => closePR(pr.repo, pr.id, token),
+    onSuccess: () => {
+      setShowCloseConfirm(false)
+      onPRClosed?.()
+    },
+  })
+
+  const deleteBranchMutation = useMutation({
+    mutationFn: () => deleteBranch(pr.repo, pr.headRef, token),
+    onSuccess: () => {
+      setShowDeleteBranchConfirm(false)
+      onBranchDeleted?.()
     },
   })
 
@@ -282,6 +317,47 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
             </dl>
           </div>
 
+          {/* PR Actions */}
+          <div className="border-b border-gh-border px-5 py-3">
+            <h3 className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gh-fg-muted">
+              Actions
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCloseConfirm(true)}
+                disabled={closePRMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-gh-danger/40 bg-gh-danger/8 px-3 py-1.5 text-xs font-medium text-gh-danger-fg hover:bg-gh-danger/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <XOctagon className="h-3.5 w-3.5" aria-hidden="true" />
+                {closePRMutation.isPending ? 'Closing…' : 'Close PR'}
+              </button>
+              {pr.headRef && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteBranchConfirm(true)}
+                  disabled={deleteBranchMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {deleteBranchMutation.isPending ? 'Deleting…' : 'Delete branch'}
+                </button>
+              )}
+            </div>
+            {closePRMutation.isError && (
+              <p className="mt-2 flex items-center gap-1 text-xs text-gh-danger-fg">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {closePRMutation.error instanceof Error ? closePRMutation.error.message : 'Failed to close PR.'}
+              </p>
+            )}
+            {deleteBranchMutation.isError && (
+              <p className="mt-2 flex items-center gap-1 text-xs text-gh-danger-fg">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {deleteBranchMutation.error instanceof Error ? deleteBranchMutation.error.message : 'Failed to delete branch.'}
+              </p>
+            )}
+          </div>
+
           {/* Comment thread */}
           <div className="px-5 py-4">
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
@@ -334,6 +410,38 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
 
         {/* Comment composer */}
         <div className="border-t border-gh-border bg-gh-surface px-5 py-4">
+          {/* Copilot prompt presets */}
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setShowPresets(!showPresets)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gh-fg-muted hover:text-gh-fg-default"
+            >
+              <Bot className="h-3.5 w-3.5 text-gh-accent-fg" aria-hidden="true" />
+              Copilot prompts
+              {showPresets ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
+            </button>
+            {showPresets && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {COPILOT_PRESETS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      setCommentBody(preset.body)
+                      setShowPresets(false)
+                      textareaRef.current?.focus()
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-gh-accent/40 bg-gh-accent/8 px-2.5 py-1 text-[11px] font-medium text-gh-accent-fg hover:border-gh-accent/70 hover:bg-gh-accent/15 transition-colors"
+                  >
+                    <Bot className="h-3 w-3" aria-hidden="true" />
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {mutation.isError && (
             <div className="mb-2 flex items-center gap-1.5 text-xs text-gh-danger-fg">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -364,6 +472,28 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose }: PRDet
           </div>
         </div>
       </aside>
+
+      {/* Close PR confirmation */}
+      <ConfirmDialog
+        isOpen={showCloseConfirm}
+        title="Close this pull request?"
+        message={`This will close PR #${pr.id} "${pr.title}". The branch will not be deleted.`}
+        confirmLabel="Close PR"
+        variant="danger"
+        onConfirm={() => closePRMutation.mutate()}
+        onCancel={() => setShowCloseConfirm(false)}
+      />
+
+      {/* Delete branch confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteBranchConfirm}
+        title="Delete branch?"
+        message={`This will permanently delete the branch "${pr.headRef}" from ${pr.repo}. This cannot be undone.`}
+        confirmLabel="Delete branch"
+        variant="danger"
+        onConfirm={() => deleteBranchMutation.mutate()}
+        onCancel={() => setShowDeleteBranchConfirm(false)}
+      />
     </>
   )
 }

@@ -17,9 +17,12 @@ vi.mock('./github-api', () => ({
   fetchUserRepos: vi.fn().mockResolvedValue([]),
   fetchPRActivity: vi.fn().mockResolvedValue([]),
   postPRComment: vi.fn().mockResolvedValue({ id: 1, author: 'test-user', authorAvatar: '', body: 'ok', createdAt: '', isReview: false }),
+  closePR: vi.fn().mockResolvedValue(undefined),
+  deleteBranch: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
+import type { Mock } from 'vitest'
 
 const TOKEN_KEY = 'gh.devcp.dashboard.token'
 const REPOS_KEY = 'gh.devcp.dashboard.repositories'
@@ -588,5 +591,323 @@ describe('GitHub Dev Control Panel', () => {
     // Now in light mode
     expect(document.documentElement.classList.contains('light')).toBe(true)
     expect(screen.getByRole('button', { name: /Switch to dark mode/i })).toBeInTheDocument()
+  })
+
+  /* ── Zinc theme ── */
+
+  it('applies the zinc class when zinc theme is selected', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
+
+    fireEvent.change(themeSelect, { target: { value: 'zinc' } })
+
+    expect(document.documentElement.classList.contains('zinc')).toBe(true)
+    expect(document.documentElement.classList.contains('slate')).toBe(false)
+    expect(document.documentElement.classList.contains('ocean')).toBe(false)
+    expect(document.documentElement.classList.contains('ember')).toBe(false)
+  })
+
+  it('offers "Zinc" as a theme option in the selector', async () => {
+    renderApp()
+
+    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
+
+    const options = Array.from(themeSelect.querySelectorAll('option')).map((o) => o.value)
+    expect(options).toContain('zinc')
+  })
+
+  /* ── Hide Dependabot filter (within token block) ── */
+
+  describe('with token — Hide Dependabot filter', () => {
+    beforeEach(seedAuthenticatedState)
+
+    // Reset any per-test mock overrides so they don't leak into subsequent tests.
+    afterEach(() => {
+      vi.mocked(fetchRepoPullRequests).mockImplementation((repoFullName: string) =>
+        Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
+      )
+    })
+
+    it('shows "Hide Dependabot" checkbox in the toolbar', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => screen.getByText('5 PRs'))
+
+      expect(screen.getByLabelText('Hide Dependabot')).toBeInTheDocument()
+    })
+
+    it('filters out dependabot PRs when "Hide Dependabot" is checked', async () => {
+      // Override fetchRepoPullRequests to inject a dependabot PR
+      vi.mocked(fetchRepoPullRequests).mockImplementation((repoFullName: string) => {
+        const base = seedPullRequests.filter((pr) => pr.repo === repoFullName)
+        if (repoFullName === 'thinkdj/gh.devcp') {
+          return Promise.resolve([
+            ...base,
+            {
+              id: 9001,
+              repo: 'thinkdj/gh.devcp',
+              title: 'chore(deps): bump lodash',
+              author: 'dependabot[bot]',
+              authorAvatar: '',
+              url: '#',
+              openedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              pushesAfterOpen: 0,
+              checksStatus: 'passing' as const,
+              copilotReview: 'not_run' as const,
+              mergeSafety: 'pending' as const,
+              needsYourReview: false,
+              isDraft: false,
+              labels: ['dependencies'],
+              reviewers: [],
+              baseRef: 'main',
+              headRef: 'dependabot/npm_and_yarn/lodash-4.17.21',
+              commentCount: 0,
+            },
+          ])
+        }
+        return Promise.resolve(base)
+      })
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => screen.getByText('6 PRs'))
+
+      fireEvent.click(screen.getByLabelText('Hide Dependabot'))
+
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+    })
+
+    it('"Hide Copilot" and "Hide Dependabot" are independent checkboxes', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      const hideCopilot = screen.getByLabelText('Hide Copilot')
+      const hideDependabot = screen.getByLabelText('Hide Dependabot')
+
+      expect(hideCopilot).not.toBeChecked()
+      expect(hideDependabot).not.toBeChecked()
+
+      fireEvent.click(hideCopilot)
+      expect(hideCopilot).toBeChecked()
+      expect(hideDependabot).not.toBeChecked()
+
+      fireEvent.click(hideDependabot)
+      expect(hideDependabot).toBeChecked()
+      expect(hideCopilot).toBeChecked()
+    })
+
+    it('clearing all filters resets the "Hide Dependabot" checkbox', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => screen.getByText('5 PRs'))
+
+      fireEvent.click(screen.getByLabelText('Hide Dependabot'))
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Clear filters/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Clear filters/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Hide Dependabot')).not.toBeChecked()
+      })
+    })
+  })
+
+  /* ── PR detail panel — Close PR ── */
+
+  describe('with token — PR detail panel actions', () => {
+    beforeEach(() => {
+      seedAuthenticatedState()
+      // Re-establish mock implementations explicitly, as prior tests that called
+      // mockImplementation() may have interacted with vi.restoreAllMocks() tracking.
+      vi.mocked(fetchRepoPullRequests).mockImplementation((repoFullName: string) =>
+        Promise.resolve(seedPullRequests.filter((pr) => pr.repo === repoFullName)),
+      )
+    })
+
+    /** Helper: open the detail panel on the first PR row. */
+    async function openFirstPRPanel() {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => {
+        expect(screen.getByText('5 PRs')).toBeInTheDocument()
+      })
+      const table = screen.getByTestId('pr-table')
+      const firstRow = table.querySelector('tbody tr')
+      fireEvent.click(firstRow!)
+      return screen.findByRole('dialog', { name: 'Pull request details' })
+    }
+
+    it('shows an "Actions" section in the PR detail panel', async () => {
+      await openFirstPRPanel()
+      expect(screen.getByText('Actions')).toBeInTheDocument()
+    })
+
+    it('shows the "Close PR" button in the detail panel', async () => {
+      const panel = await openFirstPRPanel()
+      expect(within(panel).getByRole('button', { name: 'Close PR' })).toBeInTheDocument()
+    })
+
+    it('shows the "Delete branch" button when headRef is set', async () => {
+      const panel = await openFirstPRPanel()
+      expect(within(panel).getByRole('button', { name: 'Delete branch' })).toBeInTheDocument()
+    })
+
+    it('clicking "Close PR" opens a confirmation dialog', async () => {
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close PR' }))
+
+      await screen.findByRole('dialog', { name: 'Close this pull request?' })
+    })
+
+    it('cancelling the Close PR dialog does not call closePR', async () => {
+      const { closePR: mockClosePR } = await import('./github-api')
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close PR' }))
+
+      const confirmDialog = await screen.findByRole('dialog', { name: 'Close this pull request?' })
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancel' }))
+
+      expect(mockClosePR).not.toHaveBeenCalled()
+      // Panel should still be visible
+      expect(screen.queryByRole('dialog', { name: 'Pull request details' })).toBeInTheDocument()
+    })
+
+    it('confirming Close PR calls closePR and closes the panel', async () => {
+      const { closePR: mockClosePR } = await import('./github-api')
+      ;(mockClosePR as Mock).mockResolvedValue(undefined)
+
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close PR' }))
+
+      const confirmDialog = await screen.findByRole('dialog', { name: 'Close this pull request?' })
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Close PR' }))
+
+      await waitFor(() => {
+        expect(mockClosePR).toHaveBeenCalledOnce()
+      })
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Pull request details' })).not.toBeInTheDocument()
+      })
+    })
+
+    it('confirming Close PR invalidates the PR cache (calls clearApiCache)', async () => {
+      const { closePR: mockClosePR } = await import('./github-api')
+      ;(mockClosePR as Mock).mockResolvedValue(undefined)
+      vi.mocked(clearApiCache).mockClear()
+
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close PR' }))
+
+      const confirmDialog = await screen.findByRole('dialog', { name: 'Close this pull request?' })
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Close PR' }))
+
+      await waitFor(() => {
+        expect(clearApiCache).toHaveBeenCalled()
+      })
+    })
+
+    it('clicking "Delete branch" opens a confirmation dialog', async () => {
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Delete branch' }))
+
+      await screen.findByRole('dialog', { name: 'Delete branch?' })
+    })
+
+    it('cancelling Delete branch dialog does not call deleteBranch', async () => {
+      const { deleteBranch: mockDeleteBranch } = await import('./github-api')
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Delete branch' }))
+
+      const confirmDialog = await screen.findByRole('dialog', { name: 'Delete branch?' })
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancel' }))
+
+      expect(mockDeleteBranch).not.toHaveBeenCalled()
+    })
+
+    it('confirming Delete branch calls deleteBranch API', async () => {
+      const { deleteBranch: mockDeleteBranch } = await import('./github-api')
+      ;(mockDeleteBranch as Mock).mockResolvedValue(undefined)
+
+      const panel = await openFirstPRPanel()
+      fireEvent.click(within(panel).getByRole('button', { name: 'Delete branch' }))
+
+      const confirmDialog = await screen.findByRole('dialog', { name: 'Delete branch?' })
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Delete branch' }))
+
+      await waitFor(() => {
+        expect(mockDeleteBranch).toHaveBeenCalledOnce()
+      })
+    })
+
+    /* ── Copilot prompt presets ── */
+
+    it('shows "Copilot prompts" toggle in the comment composer', async () => {
+      await openFirstPRPanel()
+      expect(screen.getByText(/Copilot prompts/i)).toBeInTheDocument()
+    })
+
+    it('copilot presets are hidden by default', async () => {
+      await openFirstPRPanel()
+      // Preset chips should not be visible until toggled
+      expect(screen.queryByRole('button', { name: /Review PR/i })).toBeNull()
+    })
+
+    it('clicking "Copilot prompts" reveals the preset chips', async () => {
+      await openFirstPRPanel()
+      fireEvent.click(screen.getByText(/Copilot prompts/i))
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Review PR/i })).toBeInTheDocument()
+      })
+      expect(screen.getByRole('button', { name: /Check performance/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Security audit/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Test coverage/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Summarize/i })).toBeInTheDocument()
+    })
+
+    it('clicking a preset fills the comment textarea and hides the presets', async () => {
+      await openFirstPRPanel()
+      fireEvent.click(screen.getByText(/Copilot prompts/i))
+
+      await waitFor(() => screen.getByRole('button', { name: /Review PR/i }))
+      fireEvent.click(screen.getByRole('button', { name: /Review PR/i }))
+
+      const textarea = screen.getByLabelText('Comment body') as HTMLTextAreaElement
+      expect(textarea.value).toContain('@github-copilot')
+      expect(textarea.value).toContain('code review')
+
+      // Presets should collapse after selection
+      expect(screen.queryByRole('button', { name: /Check performance/i })).toBeNull()
+    })
+
+    it('preset body for "Security audit" contains "security"', async () => {
+      await openFirstPRPanel()
+      fireEvent.click(screen.getByText(/Copilot prompts/i))
+      await waitFor(() => screen.getByRole('button', { name: /Security audit/i }))
+      fireEvent.click(screen.getByRole('button', { name: /Security audit/i }))
+
+      const textarea = screen.getByLabelText('Comment body') as HTMLTextAreaElement
+      expect(textarea.value.toLowerCase()).toContain('security')
+    })
+
+    it('preset body for "Summarize" contains "summarize"', async () => {
+      await openFirstPRPanel()
+      fireEvent.click(screen.getByText(/Copilot prompts/i))
+      await waitFor(() => screen.getByRole('button', { name: /Summarize/i }))
+      fireEvent.click(screen.getByRole('button', { name: /Summarize/i }))
+
+      const textarea = screen.getByLabelText('Comment body') as HTMLTextAreaElement
+      expect(textarea.value.toLowerCase()).toContain('summarize')
+    })
   })
 })
