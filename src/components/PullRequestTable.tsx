@@ -98,7 +98,7 @@ export default function PullRequestTable({
     })
     if (hideDependabot) result = result.filter((pr) => {
       const a = pr.author.toLowerCase()
-      return !a.includes('dependabot') && a !== 'dependabot[bot]'
+      return !a.includes('dependabot')
     })
     if (hideMine && currentUser) result = result.filter((pr) => pr.author !== currentUser)
     return result

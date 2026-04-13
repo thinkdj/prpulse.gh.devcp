@@ -66,7 +66,7 @@ describe('relativeTime', () => {
     expect(relativeTime(date)).toBe('30 seconds ago')
   })
 
-  it('uses singular "second" for exactly 5 seconds ago', () => {
+  it('uses plural "seconds" for exactly 5 seconds ago', () => {
     const date = new Date(NOW - 5_000).toISOString()
     expect(relativeTime(date)).toBe('5 seconds ago')
   })

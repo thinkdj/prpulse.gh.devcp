@@ -329,7 +329,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
                 disabled={closePRMutation.isPending}
                 className="inline-flex items-center gap-1.5 rounded-md border border-gh-danger/40 bg-gh-danger/8 px-3 py-1.5 text-xs font-medium text-gh-danger-fg hover:bg-gh-danger/15 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <XOctagon className="h-3.5 w-3.5" />
+                <XOctagon className="h-3.5 w-3.5" aria-hidden="true" />
                 {closePRMutation.isPending ? 'Closing…' : 'Close PR'}
               </button>
               {pr.headRef && (
@@ -339,7 +339,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
                   disabled={deleteBranchMutation.isPending}
                   className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   {deleteBranchMutation.isPending ? 'Deleting…' : 'Delete branch'}
                 </button>
               )}
@@ -417,9 +417,9 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
               onClick={() => setShowPresets(!showPresets)}
               className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gh-fg-muted hover:text-gh-fg-default"
             >
-              <Bot className="h-3.5 w-3.5 text-gh-accent-fg" />
+              <Bot className="h-3.5 w-3.5 text-gh-accent-fg" aria-hidden="true" />
               Copilot prompts
-              {showPresets ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {showPresets ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
             </button>
             {showPresets && (
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -434,7 +434,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
                     }}
                     className="inline-flex items-center gap-1 rounded-full border border-gh-accent/40 bg-gh-accent/8 px-2.5 py-1 text-[11px] font-medium text-gh-accent-fg hover:border-gh-accent/70 hover:bg-gh-accent/15 transition-colors"
                   >
-                    <Bot className="h-3 w-3" />
+                    <Bot className="h-3 w-3" aria-hidden="true" />
                     {preset.label}
                   </button>
                 ))}
