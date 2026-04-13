@@ -6,7 +6,7 @@ const THEME_STORAGE_KEY = 'gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'gh.devcp.dashboard.mode'
 
 /** Visual palette theme (accent colours, surface tones). */
-export type Theme = 'warm' | 'slate' | 'ocean' | 'ember'
+export type Theme = 'warm' | 'slate' | 'ocean' | 'ember' | 'zinc'
 
 /** Brightness mode — applied on top of the active theme. */
 export type Mode = 'dark' | 'light'
@@ -68,7 +68,7 @@ export const saveToken = (token: string) => {
 export const loadTheme = (): Theme => {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
-    if (raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember') return raw
+    if (raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember' || raw === 'zinc') return raw
     // Migrate legacy values
     if (raw === 'notion') return 'slate'
     if (raw === 'dark' || raw === 'light') return 'slate'

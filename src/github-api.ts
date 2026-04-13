@@ -497,6 +497,67 @@ export async function fetchPRActivity(
 }
 
 /**
+ * Close a pull request by setting its state to "closed".
+ * Requires the token to have write access.
+ */
+export async function closePR(
+  repoFullName: string,
+  prNumber: number,
+  token: string,
+): Promise<void> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) throw new Error('Invalid repository name')
+
+  const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/pulls/${prNumber}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ state: 'closed' }),
+  })
+
+  if (!response.ok) {
+    if (response.status === 403) throw new Error('Forbidden: token may not have write access to this repository.')
+    if (response.status === 401) throw new Error('Invalid GitHub token.')
+    throw new Error(`Failed to close PR: ${response.status}`)
+  }
+}
+
+/**
+ * Delete a branch from a repository.
+ * Requires the token to have write access.
+ */
+export async function deleteBranch(
+  repoFullName: string,
+  branchName: string,
+  token: string,
+): Promise<void> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) throw new Error('Invalid repository name')
+
+  const encodedBranch = encodeURIComponent(branchName)
+  const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/git/refs/heads/${encodedBranch}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 422) throw new Error('Branch is protected and cannot be deleted.')
+    if (response.status === 403) throw new Error('Forbidden: token may not have write access to this repository.')
+    if (response.status === 401) throw new Error('Invalid GitHub token.')
+    if (response.status === 404) throw new Error(`Branch "${branchName}" not found.`)
+    throw new Error(`Failed to delete branch: ${response.status}`)
+  }
+}
+
+/**
  * Post a general comment on a PR (uses the Issues comments endpoint).
  * Requires the token to have write access (e.g. repo scope or pull_requests:write).
  */
