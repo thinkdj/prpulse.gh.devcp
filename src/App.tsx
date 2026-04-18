@@ -14,6 +14,7 @@ import {
   GitPullRequest,
   Zap,
   Bot,
+  FlaskConical,
 } from 'lucide-react'
 import type { DashboardFilter, PullRequest, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
@@ -30,6 +31,18 @@ import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
 import CopilotMetricsPanel from './components/CopilotMetricsPanel'
 import ConfirmDialog from './components/ConfirmDialog'
+import {
+  DEMO_CURRENT_USER,
+  DEMO_REPOS,
+  demoBranches,
+  demoCopilotOrgData,
+  demoCopilotOrgs,
+  demoPRActivity,
+  demoPullRequests,
+} from './demo-data'
+
+const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true'
+const DEMO_TOKEN = 'demo-mode'
 
 function applyTheme(theme: Theme, mode: Mode) {
   document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember', 'zinc')
@@ -43,7 +56,7 @@ function applyTheme(theme: Theme, mode: Mode) {
 function App() {
   const queryClient = useQueryClient()
 
-  const [token, setToken] = useState(() => loadToken())
+  const [token, setToken] = useState(() => isDemoMode ? DEMO_TOKEN : loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [activeView, setActiveView] = useState<'pull_requests' | 'my_actions' | 'branches' | 'copilot'>('pull_requests')
@@ -59,7 +72,9 @@ function App() {
     applyTheme(theme, mode)
   }, [theme, mode])
 
-  const [initialRepoState] = useState<RepoState>(() => loadRepoState([]))
+  const [initialRepoState] = useState<RepoState>(() =>
+    isDemoMode ? { repos: DEMO_REPOS, selectedRepos: DEMO_REPOS } : loadRepoState([]),
+  )
   const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
   const [selectedRepos, setSelectedRepos] = useState<string[]>(initialRepoState.selectedRepos)
   const [newRepo, setNewRepo] = useState('')
@@ -78,7 +93,9 @@ function App() {
 
   const currentUserQuery = useQuery({
     queryKey: ['current-user', token],
-    queryFn: () => fetchCurrentUser(token),
+    queryFn: isDemoMode
+      ? () => Promise.resolve(DEMO_CURRENT_USER)
+      : () => fetchCurrentUser(token),
     enabled: !!token,
     staleTime: Infinity,
     retry: false,
@@ -91,7 +108,7 @@ function App() {
   const { data: userRepos = [], isLoading: reposLoading } = useQuery({
     queryKey: ['user-repos', token],
     queryFn: () => fetchUserRepos(token),
-    enabled: !!token && showRepoPicker,
+    enabled: !isDemoMode && !!token && showRepoPicker,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   })
@@ -104,10 +121,12 @@ function App() {
     () =>
       selectedRepos.map((repo) => ({
         queryKey: ['repo-prs', token, repo, currentUser] as const,
-        queryFn: () => fetchRepoPullRequests(repo, token, currentUser),
+        queryFn: isDemoMode
+          ? () => Promise.resolve(demoPullRequests.filter((pr) => pr.repo === repo))
+          : () => fetchRepoPullRequests(repo, token, currentUser),
         staleTime: STALE_TIME,
-        refetchInterval: 5 * 60 * 1000,
-        retry: 1,
+        refetchInterval: isDemoMode ? (false as const) : 5 * 60 * 1000,
+        retry: isDemoMode ? 0 : 1,
         enabled: prQueriesReady,
       })),
     [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME],
@@ -128,9 +147,11 @@ function App() {
     () =>
       effectiveBranchAnalysisRepos.map((repo) => ({
         queryKey: ['repo-branches', token, repo] as const,
-        queryFn: () => fetchRepoBranches(repo, token),
+        queryFn: isDemoMode
+          ? () => Promise.resolve(demoBranches.filter((b) => b.repo === repo))
+          : () => fetchRepoBranches(repo, token),
         staleTime: STALE_TIME,
-        retry: 1,
+        retry: isDemoMode ? 0 : 1,
         enabled: !!token && effectiveBranchAnalysisTriggered,
       })),
     [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME],
@@ -142,7 +163,9 @@ function App() {
 
   const { data: userOrgs = [], isPending: orgsIsPending } = useQuery({
     queryKey: ['user-orgs', token],
-    queryFn: () => fetchUserOrgs(token),
+    queryFn: isDemoMode
+      ? () => Promise.resolve(demoCopilotOrgs)
+      : () => fetchUserOrgs(token),
     enabled: !!token && activeView === 'copilot',
     staleTime: 10 * 60 * 1000,
     retry: 1,
@@ -170,9 +193,11 @@ function App() {
       selectedCopilotOrg
         ? [{
             queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
-            queryFn: () => fetchCopilotOrgData(selectedCopilotOrg, token),
+            queryFn: isDemoMode
+              ? () => Promise.resolve(demoCopilotOrgData.find((d) => d.org === selectedCopilotOrg) ?? demoCopilotOrgData[0])
+              : () => fetchCopilotOrgData(selectedCopilotOrg, token),
             staleTime: STALE_TIME,
-            retry: 1,
+            retry: isDemoMode ? 0 : 1,
             enabled: !!token && activeView === 'copilot' && !!selectedCopilotOrg,
           }]
         : [],
@@ -202,7 +227,7 @@ function App() {
   const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : activeView === 'copilot' ? copilotDataUpdatedAt : prDataUpdatedAt
 
   useEffect(() => {
-    saveRepoState({ repos, selectedRepos })
+    if (!isDemoMode) saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
 
   const summary = useMemo(
@@ -300,6 +325,15 @@ function App() {
   return (
     <main className="min-h-screen bg-gh-bg text-gh-fg-default">
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+        {isDemoMode && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-gh-accent/40 bg-gh-accent/10 px-4 py-2.5 text-sm text-gh-accent-fg">
+            <FlaskConical className="h-4 w-4 shrink-0" />
+            <span>
+              <strong>Demo mode</strong> — exploring with sample data. No GitHub token required.{' '}
+              <a href="/" className="underline hover:no-underline">Exit demo</a>
+            </span>
+          </div>
+        )}
         <header className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -365,18 +399,20 @@ function App() {
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setShowSettings(!showSettings)}
-                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                  token
-                    ? 'border-gh-success/40 bg-gh-success/10 text-gh-success-fg'
-                    : 'border-gh-warning/40 bg-gh-warning/10 text-gh-warning'
-                }`}
-              >
-                <Settings className="h-3.5 w-3.5" />
-                {token ? 'Connected' : 'Set token'}
-              </button>
+              {!isDemoMode && (
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
+                    token
+                      ? 'border-gh-success/40 bg-gh-success/10 text-gh-success-fg'
+                      : 'border-gh-warning/40 bg-gh-warning/10 text-gh-warning'
+                  }`}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  {token ? 'Connected' : 'Set token'}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -399,7 +435,7 @@ function App() {
           </div>
         )}
 
-        {!token ? (
+        {!token && !isDemoMode ? (
           /* ── Empty state: no token configured ── */
           <section className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
             <div className="mx-auto max-w-md">
@@ -417,13 +453,21 @@ function App() {
                 <li className="flex items-center gap-2"><GitPullRequest className="h-4 w-4 text-gh-fg-muted shrink-0" /> Track draft PRs and push counts</li>
                 <li className="flex items-center gap-2"><Zap className="h-4 w-4 text-gh-fg-muted shrink-0" /> Auto-refreshes every 5 minutes</li>
               </ul>
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="mt-6 inline-flex items-center gap-2 rounded-md border border-gh-accent bg-gh-accent px-5 py-2 text-sm font-medium text-white"
-              >
-                <Key className="h-4 w-4" /> Connect GitHub Token
-              </button>
+              <div className="mt-6 flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(true)}
+                  className="inline-flex items-center gap-2 rounded-md border border-gh-accent bg-gh-accent px-5 py-2 text-sm font-medium text-white"
+                >
+                  <Key className="h-4 w-4" /> Connect GitHub Token
+                </button>
+                <a
+                  href="?demo=true"
+                  className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-5 py-2 text-sm font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg"
+                >
+                  <FlaskConical className="h-4 w-4" /> Try demo
+                </a>
+              </div>
               <p className="mt-3 text-xs text-gh-fg-muted">
                 Use a fine-grained PAT with read-only pull request access.
               </p>
@@ -560,6 +604,7 @@ function App() {
                 pr={selectedPR}
                 token={token}
                 currentUser={currentUser}
+                demoActivity={isDemoMode ? (demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
                 onClose={() => setSelectedPR(null)}
                 onPRClosed={() => {
                   setSelectedPR(null)
