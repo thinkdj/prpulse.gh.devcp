@@ -13,11 +13,12 @@ import {
   Tag,
   GitPullRequest,
   Zap,
+  Bot,
 } from 'lucide-react'
 import type { DashboardFilter, PullRequest, RepoState } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
-import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserRepos } from './github-api'
+import { clearApiCache, fetchCopilotOrgData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
 import { formatAgeAgoFromMs } from './utils'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
@@ -27,6 +28,7 @@ import RepoPickerModal from './components/RepoPickerModal'
 import BranchAnalysisPanel from './components/BranchAnalysisPanel'
 import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
+import CopilotMetricsPanel from './components/CopilotMetricsPanel'
 import ConfirmDialog from './components/ConfirmDialog'
 
 function applyTheme(theme: Theme, mode: Mode) {
@@ -44,7 +46,7 @@ function App() {
   const [token, setToken] = useState(() => loadToken())
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [activeView, setActiveView] = useState<'pull_requests' | 'my_actions' | 'branches'>('pull_requests')
+  const [activeView, setActiveView] = useState<'pull_requests' | 'my_actions' | 'branches' | 'copilot'>('pull_requests')
   const [filter, setFilter] = useState<DashboardFilter>('all')
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
   const [mode, setMode] = useState<Mode>(() => loadMode())
@@ -52,7 +54,7 @@ function App() {
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
   const [branchAnalysisTriggered, setBranchAnalysisTriggered] = useState(false)
   const [branchAnalysisRepos, setBranchAnalysisRepos] = useState<string[]>([])
-
+  const [selectedCopilotOrgRaw, setSelectedCopilotOrg] = useState('')
   useEffect(() => {
     applyTheme(theme, mode)
   }, [theme, mode])
@@ -136,6 +138,51 @@ function App() {
 
   const branchQueries = useQueries({ queries: branchQueryDefs })
 
+  /* ── Copilot metrics ── */
+
+  const { data: userOrgs = [] } = useQuery({
+    queryKey: ['user-orgs', token],
+    queryFn: () => fetchUserOrgs(token),
+    enabled: !!token && activeView === 'copilot',
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  })
+
+  // Derive orgs from both the user's org memberships and unique repo owners
+  const copilotOrgs = useMemo(() => {
+    const fromRepos = new Set(repos.map((r) => r.split('/')[0]).filter(Boolean))
+    const fromApi = new Set(userOrgs)
+    // Only show orgs the user actually belongs to (API-confirmed)
+    // Fall back to repo owners if no org API data yet
+    if (fromApi.size > 0) return [...fromApi].sort()
+    return [...fromRepos].sort()
+  }, [repos, userOrgs])
+
+  // Derive effective selected org: fall back to first org if raw selection is invalid
+  const selectedCopilotOrg = copilotOrgs.includes(selectedCopilotOrgRaw) && selectedCopilotOrgRaw
+    ? selectedCopilotOrgRaw
+    : copilotOrgs[0] ?? ''
+
+  const copilotQueryDefs = useMemo(
+    () =>
+      selectedCopilotOrg
+        ? [{
+            queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
+            queryFn: () => fetchCopilotOrgData(selectedCopilotOrg, token),
+            staleTime: STALE_TIME,
+            retry: 1,
+            enabled: !!token && activeView === 'copilot' && !!selectedCopilotOrg,
+          }]
+        : [],
+    [selectedCopilotOrg, token, activeView, STALE_TIME],
+  )
+
+  const copilotQueries = useQueries({ queries: copilotQueryDefs })
+  const copilotOrgData = copilotQueries.flatMap((q) => (q.data ? [q.data] : []))
+  const copilotIsLoading = copilotQueries.some((q) => q.isLoading)
+  const copilotError = copilotQueries.find((q) => q.error)?.error ?? null
+  const copilotDataUpdatedAt = Math.max(0, ...copilotQueries.map((q) => q.dataUpdatedAt))
+
   const prIsLoading = repoQueries.some((q) => q.isLoading)
   const prError = repoQueries.find((q) => q.error)?.error ?? null
   const prDataUpdatedAt = Math.max(0, ...repoQueries.map((q) => q.dataUpdatedAt))
@@ -145,12 +192,12 @@ function App() {
   const branchIsLoading = branchQueries.some((q) => q.isLoading)
   const branchError = branchQueries.find((q) => q.error)?.error ?? null
   const branchDataUpdatedAt = Math.max(0, ...branchQueries.map((q) => q.dataUpdatedAt))
-  const isLoading = activeView === 'branches' ? branchIsLoading : prIsLoading
-  const viewError = activeView === 'branches' ? branchError : prError
+  const isLoading = activeView === 'branches' ? branchIsLoading : activeView === 'copilot' ? copilotIsLoading : prIsLoading
+  const viewError = activeView === 'branches' ? branchError : activeView === 'copilot' ? copilotError : prError
   const accountError =
     token && currentUserQuery.isError ? (currentUserQuery.error ?? null) : null
   const error = accountError ?? viewError
-  const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : prDataUpdatedAt
+  const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : activeView === 'copilot' ? copilotDataUpdatedAt : prDataUpdatedAt
 
   useEffect(() => {
     saveRepoState({ repos, selectedRepos })
@@ -205,6 +252,8 @@ function App() {
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
+    void queryClient.invalidateQueries({ queryKey: ['copilot-org'] })
+    void queryClient.invalidateQueries({ queryKey: ['user-orgs'] })
   }
 
   const handleRefresh = () => {
@@ -216,6 +265,7 @@ function App() {
     clearApiCache()
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
+    void queryClient.invalidateQueries({ queryKey: ['copilot-org'] })
     setBranchAnalysisTriggered(false)
   }
 
@@ -419,6 +469,17 @@ function App() {
               >
                 <GitBranch className="h-3.5 w-3.5" /> Branch analysis
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('copilot')}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                  activeView === 'copilot'
+                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                }`}
+              >
+                <Bot className="h-3.5 w-3.5" /> Copilot
+              </button>
             </section>
 
             {activeView === 'pull_requests' && (
@@ -432,19 +493,21 @@ function App() {
               />
             )}
 
-            <RepoSelector
-              repos={repos}
-              selectedRepos={selectedRepos}
-              newRepo={newRepo}
-              repoError={repoError}
-              onNewRepoChange={handleNewRepoChange}
-              onAddRepo={addRepo}
-              onToggleRepo={toggleRepo}
-              onRemoveRepo={removeRepo}
-              onSelectAll={() => setSelectedRepos(repos)}
-              onDeselectAll={() => setSelectedRepos([])}
-              onBrowseRepos={() => setShowRepoPicker(true)}
-            />
+            {activeView !== 'copilot' && (
+              <RepoSelector
+                repos={repos}
+                selectedRepos={selectedRepos}
+                newRepo={newRepo}
+                repoError={repoError}
+                onNewRepoChange={handleNewRepoChange}
+                onAddRepo={addRepo}
+                onToggleRepo={toggleRepo}
+                onRemoveRepo={removeRepo}
+                onSelectAll={() => setSelectedRepos(repos)}
+                onDeselectAll={() => setSelectedRepos([])}
+                onBrowseRepos={() => setShowRepoPicker(true)}
+              />
+            )}
 
             {activeView === 'pull_requests' ? (
               <PullRequestTable
@@ -469,6 +532,15 @@ function App() {
                 analysisRepos={effectiveBranchAnalysisRepos}
                 analysisTriggered={effectiveBranchAnalysisTriggered}
                 onRunAnalysis={handleRunBranchAnalysis}
+              />
+            ) : activeView === 'copilot' ? (
+              <CopilotMetricsPanel
+                orgData={copilotOrgData}
+                isLoading={copilotIsLoading}
+                orgs={copilotOrgs}
+                selectedOrg={selectedCopilotOrg}
+                onOrgChange={setSelectedCopilotOrg}
+                error={copilotError ? (copilotError instanceof Error ? copilotError.message : 'Failed to fetch Copilot data') : null}
               />
             ) : (
               <ActionRequiredPanel

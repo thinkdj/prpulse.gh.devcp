@@ -19,6 +19,10 @@ vi.mock('./github-api', () => ({
   postPRComment: vi.fn().mockResolvedValue({ id: 1, author: 'test-user', authorAvatar: '', body: 'ok', createdAt: '', isReview: false }),
   closePR: vi.fn().mockResolvedValue(undefined),
   deleteBranch: vi.fn().mockResolvedValue(undefined),
+  fetchUserOrgs: vi.fn().mockResolvedValue([]),
+  fetchCopilotMetrics: vi.fn().mockResolvedValue([]),
+  fetchCopilotBilling: vi.fn().mockResolvedValue(null),
+  fetchCopilotOrgData: vi.fn().mockResolvedValue({ org: 'test-org', billing: null, metrics: [], error: undefined }),
 }))
 
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
