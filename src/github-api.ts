@@ -1,4 +1,4 @@
-import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotReview, MergeSafety, PRComment, PullRequest } from './types'
+import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotBilling, CopilotDayMetrics, CopilotOrgData, CopilotReview, MergeSafety, PRComment, PullRequest } from './types'
 
 export type GitHubRepo = {
   full_name: string
@@ -595,5 +595,77 @@ export async function postPRComment(
     body: comment.body,
     createdAt: comment.created_at,
     isReview: false,
+  }
+}
+
+/* ── Copilot metrics API ── */
+
+type GitHubOrg = {
+  login: string
+}
+
+/** Fetch the organisations the authenticated user belongs to. */
+export async function fetchUserOrgs(token: string): Promise<string[]> {
+  const orgs = await githubFetch<GitHubOrg[]>('/user/orgs?per_page=100', token)
+  return orgs.map((o) => o.login)
+}
+
+/**
+ * Fetch Copilot daily metrics for an organisation (last 28 days).
+ * Requires the token to have `manage_billing:copilot` or `read:org` scope.
+ */
+export async function fetchCopilotMetrics(
+  org: string,
+  token: string,
+): Promise<CopilotDayMetrics[]> {
+  return githubFetch<CopilotDayMetrics[]>(
+    `/orgs/${encodeURIComponent(org)}/copilot/metrics`,
+    token,
+  )
+}
+
+/**
+ * Fetch Copilot billing / seat info for an organisation.
+ * Requires the token to have `manage_billing:copilot` or `read:org` scope.
+ */
+export async function fetchCopilotBilling(
+  org: string,
+  token: string,
+): Promise<CopilotBilling> {
+  return githubFetch<CopilotBilling>(
+    `/orgs/${encodeURIComponent(org)}/copilot/billing`,
+    token,
+  )
+}
+
+/**
+ * Fetch Copilot data for an organisation: billing + metrics.
+ * Both calls are made concurrently; partial failures are tolerated.
+ */
+export async function fetchCopilotOrgData(
+  org: string,
+  token: string,
+): Promise<CopilotOrgData> {
+  const [billingResult, metricsResult] = await Promise.allSettled([
+    fetchCopilotBilling(org, token),
+    fetchCopilotMetrics(org, token),
+  ])
+
+  const billing = billingResult.status === 'fulfilled' ? billingResult.value : null
+  const metrics = metricsResult.status === 'fulfilled' ? metricsResult.value : []
+
+  const errors: string[] = []
+  if (billingResult.status === 'rejected') {
+    errors.push(`Billing: ${billingResult.reason instanceof Error ? billingResult.reason.message : 'Unknown error'}`)
+  }
+  if (metricsResult.status === 'rejected') {
+    errors.push(`Metrics: ${metricsResult.reason instanceof Error ? metricsResult.reason.message : 'Unknown error'}`)
+  }
+
+  return {
+    org,
+    billing,
+    metrics,
+    error: errors.length > 0 ? errors.join('; ') : undefined,
   }
 }
