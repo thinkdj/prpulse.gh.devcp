@@ -607,7 +607,7 @@ type GitHubOrg = {
 /** Fetch the organisations the authenticated user belongs to. */
 export async function fetchUserOrgs(token: string): Promise<string[]> {
   const orgs = await githubFetch<GitHubOrg[]>('/user/orgs?per_page=100', token)
-  return orgs.map((o) => o.login)
+  return Array.isArray(orgs) ? orgs.map((o) => o.login) : []
 }
 
 /**
