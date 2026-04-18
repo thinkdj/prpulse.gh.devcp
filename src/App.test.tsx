@@ -28,8 +28,8 @@ vi.mock('./github-api', () => ({
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
 import type { Mock } from 'vitest'
 
-const TOKEN_KEY = 'gh.devcp.dashboard.token'
-const REPOS_KEY = 'gh.devcp.dashboard.repositories'
+const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
+const REPOS_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 
 const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 
@@ -61,14 +61,14 @@ function seedAuthenticatedState() {
   )
 }
 
-describe('GitHub Dev Control Panel', () => {
+describe('PR Pulse – The GitHub Control Panel', () => {
   /* ── Empty / welcome state (no token) ── */
 
   it('shows welcome state when no token is configured', async () => {
     renderApp()
 
     expect(await screen.findByTestId('welcome-state')).toBeInTheDocument()
-    expect(screen.getByText(/Welcome to GitHub Dev CP/i)).toBeInTheDocument()
+    expect(screen.getByText(/Welcome to PR Pulse/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Connect GitHub Token/i })).toBeInTheDocument()
   })
 
@@ -84,7 +84,7 @@ describe('GitHub Dev Control Panel', () => {
   it('shows settings panel when "Set token" button is clicked', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
     fireEvent.click(screen.getByRole('button', { name: /Set token/i }))
 
     expect(screen.getByLabelText(/GitHub Personal Access Token/i)).toBeInTheDocument()
@@ -98,7 +98,7 @@ describe('GitHub Dev Control Panel', () => {
     it('renders the dashboard and summary widgets', async () => {
       renderApp()
 
-      expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })).toBeInTheDocument()
 
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
@@ -112,7 +112,7 @@ describe('GitHub Dev Control Panel', () => {
 
       renderApp()
 
-      expect(await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })).toBeInTheDocument()
 
       await waitFor(() => {
         expect(screen.getByText(/Invalid GitHub token/i)).toBeInTheDocument()
@@ -126,7 +126,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters PRs when a repository is toggled off', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -141,14 +141,14 @@ describe('GitHub Dev Control Panel', () => {
       localStorage.setItem(
         REPOS_KEY,
         JSON.stringify({
-          repos: ['thinkdj/gh.devcp', 'thinkdj/website'],
-          selectedRepos: ['thinkdj/gh.devcp'],
+          repos: ['thinkdj/prpulse.gh.devcp', 'thinkdj/website'],
+          selectedRepos: ['thinkdj/prpulse.gh.devcp'],
         }),
       )
 
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('2')
       })
@@ -159,7 +159,7 @@ describe('GitHub Dev Control Panel', () => {
 
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('0')
       })
@@ -170,7 +170,7 @@ describe('GitHub Dev Control Panel', () => {
 
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -197,7 +197,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters visible PRs using the filter buttons', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -218,7 +218,7 @@ describe('GitHub Dev Control Panel', () => {
     it('removes a repository when the remove button is clicked', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -240,7 +240,7 @@ describe('GitHub Dev Control Panel', () => {
     it('shows validation error for invalid repo format', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       const input = screen.getByLabelText('Add repository')
       fireEvent.change(input, { target: { value: 'invalid-no-slash' } })
@@ -255,7 +255,7 @@ describe('GitHub Dev Control Panel', () => {
     it('rejects repo names with more than one slash', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       const input = screen.getByLabelText('Add repository')
       fireEvent.change(input, { target: { value: 'a/b/c' } })
@@ -269,7 +269,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters PRs by search query on title', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -285,7 +285,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters PRs by author using the column filter', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -301,7 +301,7 @@ describe('GitHub Dev Control Panel', () => {
     it('hides draft PRs when hide drafts checkbox is checked', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -317,7 +317,7 @@ describe('GitHub Dev Control Panel', () => {
     it('clears all filters when clear button is clicked', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -339,7 +339,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters PRs by label using the column filter', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -355,7 +355,7 @@ describe('GitHub Dev Control Panel', () => {
     it('applies filter when clicking a summary widget', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -371,7 +371,7 @@ describe('GitHub Dev Control Panel', () => {
     it('displays labels on PR rows', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -386,7 +386,7 @@ describe('GitHub Dev Control Panel', () => {
     it('clears API cache and re-fetches PRs when refresh button is clicked', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -412,7 +412,7 @@ describe('GitHub Dev Control Panel', () => {
     it('shows branch analysis with stale and merged counts', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       await screen.findByTestId('branch-analysis-panel')
@@ -431,7 +431,7 @@ describe('GitHub Dev Control Panel', () => {
     it('branch analysis repo checkboxes, All, and None change selection', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       const panel = await screen.findByTestId('branch-analysis-panel')
@@ -441,7 +441,7 @@ describe('GitHub Dev Control Panel', () => {
       expect(websiteBox).not.toBeChecked()
 
       fireEvent.click(within(panel).getByRole('button', { name: 'None' }))
-      expect(within(panel).getByRole('checkbox', { name: /thinkdj\/gh\.devcp/i })).not.toBeChecked()
+      expect(within(panel).getByRole('checkbox', { name: /thinkdj\/prpulse\.gh\.devcp/i })).not.toBeChecked()
 
       fireEvent.click(within(panel).getByRole('button', { name: 'All' }))
       expect(within(panel).getByRole('checkbox', { name: /thinkdj\/website/i })).toBeChecked()
@@ -450,7 +450,7 @@ describe('GitHub Dev Control Panel', () => {
     it('filters branch analysis to stale branches', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       await screen.findByTestId('branch-analysis-panel')
@@ -473,7 +473,7 @@ describe('GitHub Dev Control Panel', () => {
     it('shows the My Actions tab with prioritised action items', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
@@ -492,7 +492,7 @@ describe('GitHub Dev Control Panel', () => {
     it('opens PR detail panel when clicking on a PR row', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -509,7 +509,7 @@ describe('GitHub Dev Control Panel', () => {
     it('closes PR detail panel with the close button', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -528,7 +528,7 @@ describe('GitHub Dev Control Panel', () => {
     it('closes PR detail panel with the Escape key', async () => {
       renderApp()
 
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -550,7 +550,7 @@ describe('GitHub Dev Control Panel', () => {
   it('changes theme palette when theme selector is changed', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
     const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
     // Default palette is Slate
@@ -584,7 +584,7 @@ describe('GitHub Dev Control Panel', () => {
   it('toggles between dark and light mode when mode button is clicked', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
     // Default is dark mode → button says "Switch to light mode"
     const modeButton = screen.getByRole('button', { name: /Switch to light mode/i })
@@ -602,7 +602,7 @@ describe('GitHub Dev Control Panel', () => {
   it('applies the zinc class when zinc theme is selected', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
     const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
     fireEvent.change(themeSelect, { target: { value: 'zinc' } })
@@ -616,7 +616,7 @@ describe('GitHub Dev Control Panel', () => {
   it('offers "Zinc" as a theme option in the selector', async () => {
     renderApp()
 
-    await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+    await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
     const themeSelect = screen.getByRole('combobox', { name: /Theme/i })
 
     const options = Array.from(themeSelect.querySelectorAll('option')).map((o) => o.value)
@@ -637,7 +637,7 @@ describe('GitHub Dev Control Panel', () => {
 
     it('shows "Hide Dependabot" checkbox in the toolbar', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => screen.getByText('5 PRs'))
 
       expect(screen.getByLabelText('Hide Dependabot')).toBeInTheDocument()
@@ -647,12 +647,12 @@ describe('GitHub Dev Control Panel', () => {
       // Override fetchRepoPullRequests to inject a dependabot PR
       vi.mocked(fetchRepoPullRequests).mockImplementation((repoFullName: string) => {
         const base = seedPullRequests.filter((pr) => pr.repo === repoFullName)
-        if (repoFullName === 'thinkdj/gh.devcp') {
+        if (repoFullName === 'thinkdj/prpulse.gh.devcp') {
           return Promise.resolve([
             ...base,
             {
               id: 9001,
-              repo: 'thinkdj/gh.devcp',
+              repo: 'thinkdj/prpulse.gh.devcp',
               title: 'chore(deps): bump lodash',
               author: 'dependabot[bot]',
               authorAvatar: '',
@@ -677,7 +677,7 @@ describe('GitHub Dev Control Panel', () => {
       })
 
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => screen.getByText('6 PRs'))
 
       fireEvent.click(screen.getByLabelText('Hide Dependabot'))
@@ -689,7 +689,7 @@ describe('GitHub Dev Control Panel', () => {
 
     it('"Hide Copilot" and "Hide Dependabot" are independent checkboxes', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       const hideCopilot = screen.getByLabelText('Hide Copilot')
       const hideDependabot = screen.getByLabelText('Hide Dependabot')
@@ -708,7 +708,7 @@ describe('GitHub Dev Control Panel', () => {
 
     it('clearing all filters resets the "Hide Dependabot" checkbox', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => screen.getByText('5 PRs'))
 
       fireEvent.click(screen.getByLabelText('Hide Dependabot'))
@@ -740,7 +740,7 @@ describe('GitHub Dev Control Panel', () => {
     /** Helper: open the detail panel on the first PR row. */
     async function openFirstPRPanel() {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
@@ -928,13 +928,13 @@ describe('GitHub Dev Control Panel', () => {
 
     it('shows the Copilot tab button in the view switcher', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       expect(getCopilotTabBtn()).toBeInTheDocument()
     })
 
     it('clicking the Copilot tab renders the metrics panel', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       fireEvent.click(getCopilotTabBtn())
 
@@ -943,7 +943,7 @@ describe('GitHub Dev Control Panel', () => {
 
     it('hides RepoSelector when Copilot tab is active', async () => {
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
       await waitFor(() => screen.getByTestId('summary-total'))
 
       // RepoSelector is visible on the PR tab
@@ -966,7 +966,7 @@ describe('GitHub Dev Control Panel', () => {
       })
 
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       fireEvent.click(getCopilotTabBtn())
       await screen.findByTestId('copilot-metrics-panel')
@@ -1005,7 +1005,7 @@ describe('GitHub Dev Control Panel', () => {
       })
 
       renderApp()
-      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
 
       fireEvent.click(getCopilotTabBtn())
       await screen.findByTestId('copilot-metrics-panel')
