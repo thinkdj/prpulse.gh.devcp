@@ -29,6 +29,7 @@ type PRDetailPanelProps = {
   pr: PullRequest
   token: string
   currentUser: string
+  demoActivity?: PRComment[]
   onClose: () => void
   onPRClosed?: () => void
   onBranchDeleted?: () => void
@@ -83,7 +84,8 @@ function reviewStateLabel(state?: string): string {
   return 'Review'
 }
 
-export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
+export default function PRDetailPanel({ pr, token, currentUser, demoActivity, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
+  const isDemo = demoActivity !== undefined
   const queryClient = useQueryClient()
   const [commentBody, setCommentBody] = useState('')
   const [showPresets, setShowPresets] = useState(false)
@@ -95,9 +97,12 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
   const { data: activity = [], isLoading: activityLoading, isError: activityError } = useQuery({
     queryKey: ['pr-activity', pr.repo, pr.id, token],
     queryFn: () => fetchPRActivity(pr.repo, pr.id, token),
-    enabled: !!token,
+    enabled: !!token && !isDemo,
     staleTime: 60 * 1000,
+    placeholderData: isDemo ? demoActivity : undefined,
   })
+
+  const displayedActivity = isDemo ? demoActivity : activity
 
   const mutation = useMutation({
     mutationFn: (body: string) => postPRComment(pr.repo, pr.id, token, body),
@@ -141,6 +146,7 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
   }, [])
 
   const handleSubmitComment = () => {
+    if (isDemo) return
     const trimmed = commentBody.trim()
     if (!trimmed || mutation.isPending) return
     mutation.mutate(trimmed)
@@ -155,7 +161,11 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
 
   // Derive displayed comment count: prefer live activity count once loaded successfully
   const displayedCommentCount =
-    activityLoading || activityError ? pr.commentCount : activity.length
+    isDemo
+      ? demoActivity.length
+      : activityLoading || activityError
+        ? pr.commentCount
+        : activity.length
 
   return (
     <>
@@ -322,28 +332,32 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
             <h3 className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gh-fg-muted">
               Actions
             </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCloseConfirm(true)}
-                disabled={closePRMutation.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gh-danger/40 bg-gh-danger/8 px-3 py-1.5 text-xs font-medium text-gh-danger-fg hover:bg-gh-danger/15 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <XOctagon className="h-3.5 w-3.5" aria-hidden="true" />
-                {closePRMutation.isPending ? 'Closing…' : 'Close PR'}
-              </button>
-              {pr.headRef && (
+            {isDemo ? (
+              <p className="text-xs text-gh-fg-muted italic">Actions are disabled in demo mode.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowDeleteBranchConfirm(true)}
-                  disabled={deleteBranchMutation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setShowCloseConfirm(true)}
+                  disabled={closePRMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-gh-danger/40 bg-gh-danger/8 px-3 py-1.5 text-xs font-medium text-gh-danger-fg hover:bg-gh-danger/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  {deleteBranchMutation.isPending ? 'Deleting…' : 'Delete branch'}
+                  <XOctagon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {closePRMutation.isPending ? 'Closing…' : 'Close PR'}
                 </button>
-              )}
-            </div>
+                {pr.headRef && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteBranchConfirm(true)}
+                    disabled={deleteBranchMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {deleteBranchMutation.isPending ? 'Deleting…' : 'Delete branch'}
+                  </button>
+                )}
+              </div>
+            )}
             {closePRMutation.isError && (
               <p className="mt-2 flex items-center gap-1 text-xs text-gh-danger-fg">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -364,18 +378,18 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
               <MessageSquare className="h-3.5 w-3.5" />
               Activity
             </h3>
-            {activityLoading ? (
+            {!isDemo && activityLoading ? (
               <p className="text-sm text-gh-fg-muted">Loading activity…</p>
-            ) : activityError ? (
+            ) : !isDemo && activityError ? (
               <div className="flex items-center gap-2 rounded-lg border border-gh-danger/30 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 Failed to load activity. Check your token permissions.
               </div>
-            ) : activity.length === 0 ? (
+            ) : displayedActivity.length === 0 ? (
               <p className="text-sm text-gh-fg-muted">No comments yet.</p>
             ) : (
               <ul className="space-y-3">
-                {activity.map((comment) => (
+                {displayedActivity.map((comment) => (
                   <li key={`${comment.isReview ? 'r' : 'c'}-${comment.id}`} className="rounded-lg border border-gh-border bg-gh-overlay p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -453,17 +467,18 @@ export default function PRDetailPanel({ pr, token, currentUser, onClose, onPRClo
             value={commentBody}
             onChange={(e) => setCommentBody(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Leave a comment… (Ctrl+Enter to submit)"
+            placeholder={isDemo ? 'Commenting is disabled in demo mode.' : 'Leave a comment… (Ctrl+Enter to submit)'}
             aria-label="Comment body"
+            disabled={isDemo}
             rows={3}
-            className="w-full resize-none rounded-md border border-gh-border bg-gh-bg px-3 py-2 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none"
+            className="w-full resize-none rounded-md border border-gh-border bg-gh-bg px-3 py-2 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-[10px] text-gh-fg-placeholder">Ctrl+Enter to submit</span>
+            <span className="text-[10px] text-gh-fg-placeholder">{isDemo ? 'Demo mode' : 'Ctrl+Enter to submit'}</span>
             <button
               type="button"
               onClick={handleSubmitComment}
-              disabled={!commentBody.trim() || mutation.isPending}
+              disabled={isDemo || !commentBody.trim() || mutation.isPending}
               className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send className="h-3.5 w-3.5" />
