@@ -4,6 +4,7 @@ Six-month plan for making gh.devcp the single pane of glass for repo owners.
 
 ## Q2 2026 (Apr – Jun) — Foundations
 
+- [x] **Copilot Analytics tab** — org-level usage metrics, seat utilisation, acceptance rate, daily trend, language/editor/model breakdowns
 - [ ] **Keyboard shortcuts** — `j/k` navigation, `r` to refresh, `/` to focus search
 - [ ] **Notification badge** — show count of new PRs since last visit
 - [ ] **Column visibility preferences** — hide/show columns (Copilot, Merge, Pushes, etc.)

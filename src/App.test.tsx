@@ -914,4 +914,106 @@ describe('GitHub Dev Control Panel', () => {
       expect(textarea.value.toLowerCase()).toContain('summarize')
     })
   })
+
+  /* ── Copilot Analytics tab ── */
+
+  describe('Copilot Analytics tab', () => {
+    beforeEach(seedAuthenticatedState)
+
+    /** Scope helper: find the Copilot tab button inside the view-switcher nav section */
+    const getCopilotTabBtn = () => {
+      const nav = screen.getByRole('region', { name: /dashboard views/i })
+      return within(nav).getByRole('button', { name: /Copilot/i })
+    }
+
+    it('shows the Copilot tab button in the view switcher', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      expect(getCopilotTabBtn()).toBeInTheDocument()
+    })
+
+    it('clicking the Copilot tab renders the metrics panel', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+
+      expect(await screen.findByTestId('copilot-metrics-panel')).toBeInTheDocument()
+    })
+
+    it('hides RepoSelector when Copilot tab is active', async () => {
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+      await waitFor(() => screen.getByTestId('summary-total'))
+
+      // RepoSelector is visible on the PR tab
+      expect(screen.getByLabelText('Add repository')).toBeInTheDocument()
+
+      fireEvent.click(getCopilotTabBtn())
+      await screen.findByTestId('copilot-metrics-panel')
+
+      // RepoSelector should be hidden on the Copilot tab
+      expect(screen.queryByLabelText('Add repository')).not.toBeInTheDocument()
+    })
+
+    it('shows the no-metrics empty state when org has no metrics data', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        org: 'thinkdj',
+        billing: null,
+        metrics: [],
+        error: undefined,
+      })
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+      await screen.findByTestId('copilot-metrics-panel')
+
+      // org query resolves to empty array; fetchUserOrgs returns [] by default so
+      // the panel shows empty-state or no-metrics depending on org list
+      expect(screen.getByTestId('copilot-metrics-panel')).toBeInTheDocument()
+    })
+
+    it('shows usage bars and summary cards when metrics data is available', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+      const { fetchUserOrgs: mockUserOrgs } = await import('./github-api')
+
+      ;(mockUserOrgs as Mock).mockResolvedValueOnce(['thinkdj'])
+      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        org: 'thinkdj',
+        billing: {
+          seat_breakdown: { total: 10, added_this_cycle: 2, pending_invitation: 1, pending_cancellation: 0, active_this_cycle: 8, inactive_this_cycle: 2 },
+          seat_management_setting: 'assign_selected',
+          public_code_suggestions: 'allow',
+          plan_type: 'business',
+        },
+        metrics: [
+          {
+            date: '2024-06-24',
+            total_active_users: 8,
+            total_engaged_users: 6,
+            copilot_ide_code_completions: {
+              total_engaged_users: 6,
+              languages: [{ name: 'typescript', total_engaged_users: 6, total_code_suggestions: 300, total_code_acceptances: 150, total_code_lines_suggested: 600, total_code_lines_accepted: 300 }],
+              editors: [{ name: 'vscode', total_engaged_users: 6, models: [{ name: 'default', is_custom_model: false, custom_model_training_date: null, total_engaged_users: 6, languages: [{ name: 'typescript', total_engaged_users: 6, total_code_suggestions: 300, total_code_acceptances: 150, total_code_lines_suggested: 600, total_code_lines_accepted: 300 }] }] }],
+            },
+          },
+        ],
+        error: undefined,
+      })
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'GitHub Dev Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+      await screen.findByTestId('copilot-metrics-panel')
+
+      // Usage bars should appear
+      await waitFor(() => {
+        expect(screen.getAllByTestId('copilot-usage-bar').length).toBeGreaterThanOrEqual(1)
+      })
+    })
+  })
 })

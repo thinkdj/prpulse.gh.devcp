@@ -16,6 +16,7 @@ import type { CopilotDayMetrics, CopilotOrgData } from '../types'
 type CopilotMetricsPanelProps = {
   orgData: CopilotOrgData[]
   isLoading: boolean
+  orgsLoading: boolean
   orgs: string[]
   selectedOrg: string
   onOrgChange: (org: string) => void
@@ -404,6 +405,7 @@ function BreakdownTable<T extends Record<string, unknown>>({
 export default function CopilotMetricsPanel({
   orgData,
   isLoading,
+  orgsLoading,
   orgs,
   selectedOrg,
   onOrgChange,
@@ -430,10 +432,21 @@ export default function CopilotMetricsPanel({
       : 0
     : null
 
-  if (orgs.length === 0) {
+  if (orgsLoading) {
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
         <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <Bot className="h-12 w-12 text-gh-accent-fg opacity-40 animate-pulse" />
+          <p className="text-sm text-gh-fg-muted">Loading organisations…</p>
+        </div>
+      </section>
+    )
+  }
+
+  if (orgs.length === 0) {
+    return (
+      <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
+        <div className="flex flex-col items-center gap-3 py-10 text-center" data-testid="copilot-empty-state">
           <Bot className="h-12 w-12 text-gh-accent-fg opacity-60" />
           <h2 className="text-lg font-semibold text-gh-fg">Copilot Metrics</h2>
           <p className="text-sm text-gh-fg-muted max-w-md">
@@ -499,7 +512,7 @@ export default function CopilotMetricsPanel({
       ) : (
         <>
           {/* Top-level usage bars */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {seatUtilisation !== null && (
               <UsageBar
                 percentage={seatUtilisation}
@@ -510,6 +523,12 @@ export default function CopilotMetricsPanel({
               <UsageBar
                 percentage={agg.engagementRate}
                 label="Engagement rate (engaged / active users)"
+              />
+            )}
+            {agg.totalSuggestions > 0 && (
+              <UsageBar
+                percentage={agg.acceptanceRate}
+                label="Acceptance rate (accepted / suggested)"
               />
             )}
           </div>
@@ -647,7 +666,10 @@ export default function CopilotMetricsPanel({
           )}
 
           {agg.totalDays === 0 && !isLoading && (
-            <div className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted">
+            <div
+              className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
+              data-testid="copilot-no-metrics"
+            >
               No Copilot metrics data available for <span className="font-medium text-gh-fg">{selectedOrg}</span>.
               Metrics may take up to 24 hours to appear after Copilot activity.
             </div>

@@ -140,7 +140,7 @@ function App() {
 
   /* ── Copilot metrics ── */
 
-  const { data: userOrgs = [] } = useQuery({
+  const { data: userOrgs = [], isPending: orgsIsPending } = useQuery({
     queryKey: ['user-orgs', token],
     queryFn: () => fetchUserOrgs(token),
     enabled: !!token && activeView === 'copilot',
@@ -148,15 +148,19 @@ function App() {
     retry: 1,
   })
 
-  // Derive orgs from both the user's org memberships and unique repo owners
+  // Only fall back to repo owners once the org API call has settled (not while loading).
+  // This prevents personal repo owners (non-orgs) from flashing as org candidates.
   const copilotOrgs = useMemo(() => {
-    const fromRepos = new Set(repos.map((r) => r.split('/')[0]).filter(Boolean))
     const fromApi = new Set(userOrgs)
-    // Only show orgs the user actually belongs to (API-confirmed)
-    // Fall back to repo owners if no org API data yet
     if (fromApi.size > 0) return [...fromApi].sort()
+    // While loading show nothing; once settled and still empty, stay empty so the
+    // panel's "no orgs" empty state is shown instead of confusing personal handles.
+    if (orgsIsPending) return []
+    // Query has resolved empty (no org memberships) — show repo owners as a best-effort
+    // fallback so users with direct org-repo access (not membership) can still try.
+    const fromRepos = new Set(repos.map((r) => r.split('/')[0]).filter(Boolean))
     return [...fromRepos].sort()
-  }, [repos, userOrgs])
+  }, [repos, userOrgs, orgsIsPending])
 
   // Derive effective selected org: fall back to first org if raw selection is invalid
   const selectedCopilotOrg =
@@ -538,6 +542,7 @@ function App() {
               <CopilotMetricsPanel
                 orgData={copilotOrgData}
                 isLoading={copilotIsLoading}
+                orgsLoading={orgsIsPending}
                 orgs={copilotOrgs}
                 selectedOrg={selectedCopilotOrg}
                 onOrgChange={setSelectedCopilotOrg}
