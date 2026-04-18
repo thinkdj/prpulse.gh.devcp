@@ -21,6 +21,7 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 - **Theme palettes + dark / light** — Slate (default), Warm, Ocean, Ember; brightness toggle; preferences in `localStorage`
 - **My actions** — tab surfacing PRs that need your review and related follow-ups
 - **Branch analysis** — optional per-repo run: stale / merged / active branch table, search, copy branch name, GitHub links
+- **Copilot Analytics** — org-level Copilot usage metrics: seat utilisation, engagement rate, acceptance rate, daily trend chart, language/editor/model breakdowns (requires `manage_billing:copilot` or `read:org` token scope)
 - **PR search and filtering** — search by title/author/number, filter by author/repo/label dropdowns, hide drafts / Copilot / yours
 - **Sortable columns** — sort by title, repo, author, opened, updated, checks, Copilot, merge safety, pushes, comments
 - **Relative time** — e.g. "5 minutes ago" (full datetime on hover); color-coded by age where relevant
@@ -37,7 +38,7 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 
 ```
 src/
-├── types.ts              # Shared type definitions
+├── types.ts              # Shared type definitions (PullRequest, BranchAnalysis, Copilot metrics)
 ├── github-api.ts         # GitHub REST API client
 ├── storage.ts            # localStorage helpers (repos, token & theme)
 ├── utils.ts              # Formatters and relative-time helper
@@ -46,6 +47,7 @@ src/
 │   ├── StatusBadge.tsx, SummaryWidgets.tsx, RepoSelector.tsx, RepoPickerModal.tsx
 │   ├── PullRequestTable.tsx, TokenSettings.tsx, PRDetailPanel.tsx, ConfirmDialog.tsx
 │   ├── BranchAnalysisPanel.tsx, ActionRequiredPanel.tsx
+│   ├── CopilotMetricsPanel.tsx
 ├── App.tsx               # Dashboard orchestrator
 ├── App.test.tsx          # Component & integration tests
 ├── main.tsx              # Entry point
@@ -97,6 +99,19 @@ Use a **fine-grained Personal Access Token** scoped to the repositories (or the 
 
 Branch listing and comparisons may require **Contents: Read** (or broader repo access) on fine-grained tokens for private repositories—if analysis fails with 403, widen read access for those repos.
 
+#### Copilot Analytics tab
+
+The **Copilot Analytics** tab uses additional org-level APIs. Grant these **organisation-level** permissions on a **classic PAT** (or add an OAuth scope):
+
+| Scope / Permission              | Access    | Used for                                                    |
+| ------------------------------- | --------- | ----------------------------------------------------------- |
+| `read:org`                      | Read-only | List org memberships, fetch Copilot usage metrics           |
+| `manage_billing:copilot`        | Read-only | Fetch seat breakdown and billing details                    |
+
+> **Note:** Copilot usage metrics (`/orgs/{org}/copilot/metrics`) require the token owner to be an **org owner or billing manager** in the target organisation. The panel shows a helpful error banner if the token lacks sufficient access.
+
+> **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
+
 > **Security note:** The token is stored in your browser's `localStorage` so it persists between sessions.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
 > (read-only access to pull requests, checks, and repository metadata). Avoid classic tokens with broad
@@ -130,3 +145,7 @@ Focused tests validate:
 - Settings panel visibility toggle
 - PR filter buttons (All / Needs review)
 - Repository removal
+- Branch analysis panel and filtering
+- My Actions tab
+- PR detail panel open/close, Close PR, Delete branch actions
+- Copilot Analytics tab navigation, panel rendering, usage bars
