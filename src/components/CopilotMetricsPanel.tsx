@@ -425,7 +425,7 @@ export default function CopilotMetricsPanel({
 
   const billing = currentOrgData?.billing ?? null
 
-  // Seat utilisation as the top-level "usage" percentage
+  // Seat utilization as the top-level "usage" percentage
   const seatUtilisation = billing
     ? billing.seat_breakdown.total > 0
       ? (billing.seat_breakdown.active_this_cycle / billing.seat_breakdown.total) * 100
@@ -516,7 +516,7 @@ export default function CopilotMetricsPanel({
             {seatUtilisation !== null && (
               <UsageBar
                 percentage={seatUtilisation}
-                label="Seat utilisation (active / total)"
+                label="Seat utilization (active / total)"
               />
             )}
             {agg.totalDays > 0 && (
