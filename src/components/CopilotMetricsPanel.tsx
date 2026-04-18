@@ -560,7 +560,7 @@ export default function CopilotMetricsPanel({
                   icon={<Users className="h-4 w-4" />}
                   label="New seats this cycle"
                   value={billing.seat_breakdown.added_this_cycle.toString()}
-                  sub={`${billing.seat_breakdown.pending_invitation} pending invitation`}
+                  sub={`${billing.seat_breakdown.pending_invitation} pending invitation${billing.seat_breakdown.pending_invitation === 1 ? '' : 's'}`}
                 />
                 <SummaryCard
                   icon={<Cpu className="h-4 w-4" />}
