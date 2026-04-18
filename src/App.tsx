@@ -159,9 +159,10 @@ function App() {
   }, [repos, userOrgs])
 
   // Derive effective selected org: fall back to first org if raw selection is invalid
-  const selectedCopilotOrg = copilotOrgs.includes(selectedCopilotOrgRaw) && selectedCopilotOrgRaw
-    ? selectedCopilotOrgRaw
-    : copilotOrgs[0] ?? ''
+  const selectedCopilotOrg =
+    selectedCopilotOrgRaw && copilotOrgs.includes(selectedCopilotOrgRaw)
+      ? selectedCopilotOrgRaw
+      : (copilotOrgs[0] ?? '')
 
   const copilotQueryDefs = useMemo(
     () =>
