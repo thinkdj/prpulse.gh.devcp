@@ -883,7 +883,7 @@ describe('GitHub Dev Control Panel', () => {
       fireEvent.click(screen.getByRole('button', { name: /Review PR/i }))
 
       const textarea = screen.getByLabelText('Comment body') as HTMLTextAreaElement
-      expect(textarea.value).toContain('@github-copilot')
+      expect(textarea.value).toContain('@copilot')
       expect(textarea.value).toContain('code review')
 
       // Presets should collapse after selection

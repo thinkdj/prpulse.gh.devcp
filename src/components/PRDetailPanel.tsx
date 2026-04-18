@@ -35,11 +35,11 @@ type PRDetailPanelProps = {
 }
 
 const COPILOT_PRESETS = [
-  { label: 'Review PR', body: '@github-copilot Please do a thorough code review of this PR, covering correctness, readability, and maintainability.' },
-  { label: 'Check performance', body: '@github-copilot Review this PR for performance bottlenecks. Identify any expensive operations, unnecessary re-renders, or algorithmic issues.' },
-  { label: 'Security audit', body: '@github-copilot Review this PR for security vulnerabilities including injection risks, auth issues, data exposure, and insecure dependencies.' },
-  { label: 'Test coverage', body: '@github-copilot Identify gaps in test coverage for the changes in this PR and suggest what unit and integration tests should be added.' },
-  { label: 'Summarize', body: '@github-copilot Summarize the key changes in this PR, their purpose, and any potential risks or breaking changes to be aware of.' },
+  { label: 'Review PR', body: '@copilot Please do a thorough code review of this PR, covering correctness, readability, and maintainability.' },
+  { label: 'Check performance', body: '@copilot Review this PR for performance bottlenecks. Identify any expensive operations, unnecessary re-renders, or algorithmic issues.' },
+  { label: 'Security audit', body: '@copilot Review this PR for security vulnerabilities including injection risks, auth issues, data exposure, and insecure dependencies.' },
+  { label: 'Test coverage', body: '@copilot Identify gaps in test coverage for the changes in this PR and suggest what unit and integration tests should be added.' },
+  { label: 'Summarize', body: '@copilot Summarize the key changes in this PR, their purpose, and any potential risks or breaking changes to be aware of.' },
 ]
 
 const labelColorMap: Record<string, string> = {
