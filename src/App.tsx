@@ -125,7 +125,7 @@ function App() {
           ? () => Promise.resolve(demoPullRequests.filter((pr) => pr.repo === repo))
           : () => fetchRepoPullRequests(repo, token, currentUser),
         staleTime: STALE_TIME,
-        refetchInterval: isDemoMode ? false : (5 * 60 * 1000 as number | false),
+        refetchInterval: isDemoMode ? (false as const) : 5 * 60 * 1000,
         retry: isDemoMode ? 0 : 1,
         enabled: prQueriesReady,
       })),
