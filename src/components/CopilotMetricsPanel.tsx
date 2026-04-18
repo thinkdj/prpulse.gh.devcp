@@ -450,10 +450,12 @@ export default function CopilotMetricsPanel({
           <Bot className="h-12 w-12 text-gh-accent-fg opacity-60" />
           <h2 className="text-lg font-semibold text-gh-fg">Copilot Metrics</h2>
           <p className="text-sm text-gh-fg-muted max-w-md">
-            Copilot usage metrics are available for organisations you belong to. Add repositories from
-            an organisation to get started, or ensure your token has the{' '}
+            Copilot usage metrics are available for organisations you belong to — not personal accounts.
+            GitHub does not provide a personal Copilot metrics API. Add repositories from an organisation
+            to get started, or ensure your token has the{' '}
             <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">manage_billing:copilot</code>{' '}
-            or <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">read:org</code> scope.
+            or <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">read:org</code> scope and
+            you are an owner or billing manager of that organisation.
           </p>
         </div>
       </section>

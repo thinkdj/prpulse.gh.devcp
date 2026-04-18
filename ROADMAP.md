@@ -1,6 +1,6 @@
-# Roadmap — GitHub Dev Control Panel
+# Roadmap — PR Pulse – The GitHub Control Panel
 
-Six-month plan for making gh.devcp the single pane of glass for repo owners.
+Six-month plan for making prpulse.gh.devcp the single pane of glass for repo owners.
 
 ## Q2 2026 (Apr – Jun) — Foundations
 
