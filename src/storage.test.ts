@@ -111,26 +111,26 @@ describe('loadToken', () => {
 
 /* ── saveToken ── */
 describe('saveToken', () => {
-  it('saves a non-empty token to sessionStorage and stores only a hash in localStorage', () => {
-    saveToken('ghp_test')
+  it('saves a non-empty token to sessionStorage and stores only a hash in localStorage', async () => {
+    await saveToken('ghp_test')
     expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('ghp_test')
-    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^fnv1a32:[0-9a-f]{8}$/)
+    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
     expect(localStorage.getItem(TOKEN_KEY)).not.toBe('ghp_test')
   })
 
-  it('removes the token key when given an empty string', () => {
+  it('removes the token key when given an empty string', async () => {
     localStorage.setItem(TOKEN_KEY, 'old_token')
     sessionStorage.setItem(TOKEN_SESSION_KEY, 'old_token')
-    saveToken('')
+    await saveToken('')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
     expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBeNull()
   })
 
-  it('does not throw when localStorage throws', () => {
+  it('does not throw when localStorage throws', async () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
-    expect(() => saveToken('token')).not.toThrow()
+    await expect(saveToken('token')).resolves.toBeUndefined()
   })
 })
 
@@ -222,10 +222,10 @@ describe('saveMode', () => {
 
 /* ── Round-trip integration ── */
 describe('storage round-trips', () => {
-  it('can save and reload a token', () => {
-    saveToken('ghp_roundtrip')
+  it('can save and reload a token', async () => {
+    await saveToken('ghp_roundtrip')
     expect(loadToken()).toBe('ghp_roundtrip')
-    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^fnv1a32:[0-9a-f]{8}$/)
+    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
   })
 
   it('can save and reload a theme', () => {

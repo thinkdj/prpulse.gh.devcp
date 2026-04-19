@@ -6,13 +6,24 @@ const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 
-const hashToken = (token: string): string => {
+const fallbackHashToken = (token: string): string => {
   let h = 2166136261 >>> 0
   for (let i = 0; i < token.length; i += 1) {
     h ^= token.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
   return `fnv1a32:${(h >>> 0).toString(16).padStart(8, '0')}`
+}
+
+const hashToken = async (token: string): Promise<string> => {
+  try {
+    const encoded = new TextEncoder().encode(token)
+    const digest = await crypto.subtle.digest('SHA-256', encoded)
+    const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+    return `sha256:${hex}`
+  } catch {
+    return fallbackHashToken(token)
+  }
 }
 
 /** Visual palette theme (accent colours, surface tones). */
@@ -63,11 +74,11 @@ export const loadToken = (): string => {
   }
 }
 
-export const saveToken = (token: string) => {
+export const saveToken = async (token: string): Promise<void> => {
   try {
     if (token) {
       sessionStorage.setItem(TOKEN_SESSION_KEY, token)
-      localStorage.setItem(TOKEN_STORAGE_KEY, hashToken(token))
+      localStorage.setItem(TOKEN_STORAGE_KEY, await hashToken(token))
     } else {
       sessionStorage.removeItem(TOKEN_SESSION_KEY)
       localStorage.removeItem(TOKEN_STORAGE_KEY)
