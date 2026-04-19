@@ -102,7 +102,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
     staleTime: 60 * 1000,
   })
 
-  const displayedActivity = isDemo ? demoActivity : activity
+  const displayedActivity = isDemo ? (demoActivity ?? []) : activity
 
   const mutation = useMutation({
     mutationFn: (body: string) => postPRComment(pr.repo, pr.id, token, body),
@@ -162,7 +162,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
   // Derive displayed comment count: prefer live activity count once loaded successfully
   const displayedCommentCount =
     isDemo
-      ? demoActivity.length
+      ? (demoActivity ?? []).length
       : activityLoading || activityError
         ? pr.commentCount
         : activity.length
