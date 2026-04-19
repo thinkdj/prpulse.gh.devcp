@@ -416,8 +416,10 @@ function aggregatePersonalUsage(
   usage: CopilotBillingUsageItem[],
   premiumRequests: CopilotBillingUsageItem[],
 ): AggregatedPersonalUsage {
-  const readQuantity = (item: CopilotBillingUsageItem): number =>
+  const readUsageQuantity = (item: CopilotBillingUsageItem): number =>
     item.quantity ?? item.grossQuantity ?? item.netQuantity ?? item.discountQuantity ?? 0
+  const readPremiumRequestQuantity = (item: CopilotBillingUsageItem): number =>
+    item.grossQuantity ?? item.quantity ?? item.netQuantity ?? item.discountQuantity ?? 0
 
   const productMap = new Map<string, { quantity: number; netAmount: number; unitType: string }>()
   const premiumMap = new Map<string, { quantity: number; netAmount: number }>()
@@ -428,7 +430,7 @@ function aggregatePersonalUsage(
   let totalNetAmount = 0
 
   for (const item of usage) {
-    const quantity = readQuantity(item)
+    const quantity = readUsageQuantity(item)
     totalUsageQuantity += quantity
     totalNetAmount += item.netAmount ?? 0
 
@@ -447,7 +449,7 @@ function aggregatePersonalUsage(
   }
 
   for (const item of premiumRequests) {
-    const quantity = readQuantity(item)
+    const quantity = readPremiumRequestQuantity(item)
     totalPremiumRequests += quantity
     totalNetAmount += item.netAmount ?? 0
     const key = item.model ? `${item.product} · ${item.model}` : `${item.product} · ${item.sku}`

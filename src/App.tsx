@@ -215,12 +215,15 @@ function App() {
     [copilotOrgs, currentUser],
   )
 
-  const selectedCopilotTarget = copilotTargets.find((target) => target.id === selectedCopilotTargetRaw)
-    ?? copilotTargets[0]
-    ?? null
-  const hasSelectedCopilotTargetRaw = copilotTargets.some((target) => target.id === selectedCopilotTargetRaw)
   const copilotTargetsStillResolving =
     orgsIsPending || (!isDemoMode && !!token && activeView === 'copilot' && currentUserQuery.isLoading)
+  const selectedCopilotTarget = useMemo(() => {
+    const exactMatch = copilotTargets.find((target) => target.id === selectedCopilotTargetRaw)
+    if (exactMatch) return exactMatch
+    if (selectedCopilotTargetRaw && copilotTargetsStillResolving) return null
+    return copilotTargets[0] ?? null
+  }, [copilotTargets, selectedCopilotTargetRaw, copilotTargetsStillResolving])
+  const hasSelectedCopilotTargetRaw = copilotTargets.some((target) => target.id === selectedCopilotTargetRaw)
 
   useEffect(() => {
     if (!selectedCopilotTarget || hasSelectedCopilotTargetRaw) return
@@ -228,7 +231,7 @@ function App() {
     if (selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
       setSelectedCopilotTarget(selectedCopilotTarget.id)
     }
-  }, [selectedCopilotTarget, selectedCopilotTargetRaw, hasSelectedCopilotTargetRaw, copilotTargetsStillResolving])
+  }, [selectedCopilotTarget, selectedCopilotTargetRaw, hasSelectedCopilotTargetRaw, copilotTargetsStillResolving, setSelectedCopilotTarget])
 
   const handleCopilotTargetChange = useCallback((target: string) => {
     setSelectedCopilotTarget(target)

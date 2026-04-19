@@ -1113,7 +1113,7 @@ describe('PR Pulse – The GitHub Control Panel', () => {
         expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
       })
       expect(screen.getByLabelText(/account/i)).toHaveValue('org:some-org')
-      expect(mockCopilotPersonalData).toHaveBeenCalled()
+      expect(mockCopilotPersonalData).not.toHaveBeenCalled()
     })
 
     it('loads organization analytics when organization target is selected', async () => {
