@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearApiCache, closePR, deleteBranch, postPRComment } from './github-api'
+import { clearApiCache, closePR, deleteBranch, fetchCopilotPersonalData, postPRComment } from './github-api'
 
 /* Helpers to build minimal fetch Response objects. */
 function okResponse(body: unknown = {}): Response {
@@ -227,5 +227,76 @@ describe('clearApiCache invalidation', () => {
     clearApiCache()
     await fetchCurrentUser('token-a')
     expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('fetchCopilotPersonalData', () => {
+  it('loads personal billing usage and premium request usage from user billing endpoints', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(okResponse({
+        usageItems: [
+          {
+            product: 'GitHub Copilot',
+            sku: 'copilot_pro',
+            unitType: 'requests',
+            pricePerUnit: 0,
+            grossAmount: 0,
+            discountAmount: 0,
+            netAmount: 0,
+            quantity: 42,
+          },
+        ],
+      }))
+      .mockResolvedValueOnce(okResponse({
+        timePeriod: { year: 2026, month: 4 },
+        user: 'octocat',
+        usageItems: [
+          {
+            product: 'GitHub Copilot',
+            sku: 'premium_requests',
+            model: 'gpt-5',
+            unitType: 'requests',
+            pricePerUnit: 0.04,
+            grossAmount: 2,
+            discountAmount: 0,
+            netAmount: 2,
+            netQuantity: 50,
+          },
+        ],
+      }))
+
+    const result = await fetchCopilotPersonalData('octocat', TOKEN)
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe('https://api.github.com/users/octocat/settings/billing/usage')
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe('https://api.github.com/users/octocat/settings/billing/premium_request/usage')
+    expect(result).toEqual({
+      type: 'personal',
+      target: 'personal:octocat',
+      account: 'octocat',
+      usage: [
+        expect.objectContaining({ sku: 'copilot_pro', quantity: 42 }),
+      ],
+      premiumRequests: [
+        expect.objectContaining({ sku: 'premium_requests', netQuantity: 50 }),
+      ],
+      error: undefined,
+    })
+  })
+
+  it('keeps partial results and surfaces partial failures', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(errorResponse(403, { message: 'denied' }))
+      .mockResolvedValueOnce(okResponse({
+        timePeriod: { year: 2026, month: 4 },
+        user: 'octocat',
+        usageItems: [],
+      }))
+
+    const result = await fetchCopilotPersonalData('octocat', TOKEN)
+
+    expect(result.usage).toEqual([])
+    expect(result.premiumRequests).toEqual([])
+    expect(result.error).toContain('Usage:')
   })
 })

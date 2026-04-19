@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   BarChart3,
   Bot,
@@ -10,16 +11,17 @@ import {
   Cpu,
   TrendingUp,
   AlertTriangle,
+  Wallet,
 } from 'lucide-react'
-import type { CopilotDayMetrics, CopilotOrgData } from '../types'
+import type { CopilotAccountData, CopilotAnalyticsTarget, CopilotBillingUsageItem, CopilotDayMetrics } from '../types'
 
 type CopilotMetricsPanelProps = {
-  orgData: CopilotOrgData[]
+  accountData: CopilotAccountData | null
   isLoading: boolean
-  orgsLoading: boolean
-  orgs: string[]
-  selectedOrg: string
-  onOrgChange: (org: string) => void
+  targetsLoading: boolean
+  targets: CopilotAnalyticsTarget[]
+  selectedTarget: string
+  onTargetChange: (target: string) => void
   error?: string | null
 }
 
@@ -282,7 +284,7 @@ function UsageBar({ percentage, label }: { percentage: number; label: string }) 
   )
 }
 
-function SummaryCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+function SummaryCard({ icon, label, value, sub }: { icon: ReactNode; label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
       <div className="flex items-center gap-2 mb-2">
@@ -400,30 +402,100 @@ function BreakdownTable<T extends Record<string, unknown>>({
   )
 }
 
+type AggregatedPersonalUsage = {
+  totalUsageQuantity: number
+  totalPremiumRequests: number
+  totalNetAmount: number
+  distinctProducts: number
+  productBreakdown: { name: string; quantity: number; netAmount: number; unitType: string }[]
+  premiumRequestBreakdown: { name: string; quantity: number; netAmount: number }[]
+  repositoryBreakdown: { name: string; quantity: number; netAmount: number }[]
+}
+
+function aggregatePersonalUsage(
+  usage: CopilotBillingUsageItem[],
+  premiumRequests: CopilotBillingUsageItem[],
+): AggregatedPersonalUsage {
+  const productMap = new Map<string, { quantity: number; netAmount: number; unitType: string }>()
+  const premiumMap = new Map<string, { quantity: number; netAmount: number }>()
+  const repoMap = new Map<string, { quantity: number; netAmount: number }>()
+
+  let totalUsageQuantity = 0
+  let totalPremiumRequests = 0
+  let totalNetAmount = 0
+
+  for (const item of usage) {
+    const quantity = item.quantity ?? item.netQuantity ?? item.grossQuantity ?? 0
+    totalUsageQuantity += quantity
+    totalNetAmount += item.netAmount ?? 0
+
+    const key = `${item.product} · ${item.sku}`
+    const existing = productMap.get(key) ?? { quantity: 0, netAmount: 0, unitType: item.unitType }
+    existing.quantity += quantity
+    existing.netAmount += item.netAmount ?? 0
+    productMap.set(key, existing)
+
+    if (item.repositoryName) {
+      const repoExisting = repoMap.get(item.repositoryName) ?? { quantity: 0, netAmount: 0 }
+      repoExisting.quantity += quantity
+      repoExisting.netAmount += item.netAmount ?? 0
+      repoMap.set(item.repositoryName, repoExisting)
+    }
+  }
+
+  for (const item of premiumRequests) {
+    const quantity = item.netQuantity ?? item.quantity ?? item.grossQuantity ?? 0
+    totalPremiumRequests += quantity
+    const key = item.model ? `${item.product} · ${item.model}` : `${item.product} · ${item.sku}`
+    const existing = premiumMap.get(key) ?? { quantity: 0, netAmount: 0 }
+    existing.quantity += quantity
+    existing.netAmount += item.netAmount ?? 0
+    premiumMap.set(key, existing)
+  }
+
+  return {
+    totalUsageQuantity,
+    totalPremiumRequests,
+    totalNetAmount,
+    distinctProducts: productMap.size,
+    productBreakdown: [...productMap.entries()]
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.netAmount - a.netAmount),
+    premiumRequestBreakdown: [...premiumMap.entries()]
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.quantity - a.quantity),
+    repositoryBreakdown: [...repoMap.entries()]
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.netAmount - a.netAmount),
+  }
+}
+
 /* ── Main panel ── */
 
 export default function CopilotMetricsPanel({
-  orgData,
+  accountData,
   isLoading,
-  orgsLoading,
-  orgs,
-  selectedOrg,
-  onOrgChange,
+  targetsLoading,
+  targets,
+  selectedTarget,
+  onTargetChange,
   error,
 }: CopilotMetricsPanelProps) {
   const [activeSection, setActiveSection] = useState<'overview' | 'languages' | 'editors' | 'models'>('overview')
 
-  const currentOrgData = useMemo(
-    () => orgData.find((d) => d.org === selectedOrg),
-    [orgData, selectedOrg],
-  )
-
   const agg = useMemo(
-    () => aggregateMetrics(currentOrgData?.metrics ?? []),
-    [currentOrgData],
+    () => accountData?.type === 'organization' ? aggregateMetrics(accountData.metrics) : aggregateMetrics([]),
+    [accountData],
   )
 
-  const billing = currentOrgData?.billing ?? null
+  const personalAgg = useMemo(
+    () => accountData?.type === 'personal'
+      ? aggregatePersonalUsage(accountData.usage, accountData.premiumRequests)
+      : aggregatePersonalUsage([], []),
+    [accountData],
+  )
+
+  const billing = accountData?.type === 'organization' ? accountData.billing : null
 
   // Seat utilization as the top-level "usage" percentage
   const seatUtilisation = billing
@@ -432,30 +504,28 @@ export default function CopilotMetricsPanel({
       : 0
     : null
 
-  if (orgsLoading) {
+  if (targetsLoading) {
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <Bot className="h-12 w-12 text-gh-accent-fg opacity-40 animate-pulse" />
-          <p className="text-sm text-gh-fg-muted">Loading organisations…</p>
+          <p className="text-sm text-gh-fg-muted">Loading Copilot analytics sources…</p>
         </div>
       </section>
     )
   }
 
-  if (orgs.length === 0) {
+  if (targets.length === 0) {
     return (
       <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
         <div className="flex flex-col items-center gap-3 py-10 text-center" data-testid="copilot-empty-state">
           <Bot className="h-12 w-12 text-gh-accent-fg opacity-60" />
           <h2 className="text-lg font-semibold text-gh-fg">Copilot Metrics</h2>
           <p className="text-sm text-gh-fg-muted max-w-md">
-            Copilot usage metrics are available for organisations you belong to — not personal accounts.
-            GitHub does not provide a personal Copilot metrics API. Add repositories from an organisation
-            to get started, or ensure your token has the{' '}
-            <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">manage_billing:copilot</code>{' '}
-            or <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">read:org</code> scope and
-            you are an owner or billing manager of that organisation.
+            No Copilot analytics sources are available for this token yet. Personal analytics use your
+            account billing usage endpoints, while organization analytics require organization access and
+            a token with <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">read:org</code>{' '}
+            or <code className="rounded bg-gh-overlay px-1 py-0.5 text-xs">manage_billing:copilot</code>.
           </p>
         </div>
       </section>
@@ -465,216 +535,312 @@ export default function CopilotMetricsPanel({
   return (
     <section className="space-y-4" data-testid="copilot-metrics-panel">
       {/* Org selector */}
-      <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Bot className="h-5 w-5 text-gh-accent-fg" />
-            <div>
-              <h2 className="text-base font-semibold text-gh-fg">Copilot Analytics</h2>
-              <p className="text-xs text-gh-fg-muted">Usage metrics and insights for your organisation</p>
+        <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Bot className="h-5 w-5 text-gh-accent-fg" />
+              <div>
+                <h2 className="text-base font-semibold text-gh-fg">Copilot Analytics</h2>
+                <p className="text-xs text-gh-fg-muted">Organization metrics plus personal Copilot Pro usage</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="org-select" className="text-xs text-gh-fg-muted">Organisation</label>
-            <select
-              id="org-select"
-              value={selectedOrg}
-              onChange={(e) => onOrgChange(e.target.value)}
-              className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
-            >
-              {orgs.map((org) => (
-                <option key={org} value={org}>{org}</option>
-              ))}
-            </select>
-          </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="copilot-target-select" className="text-xs text-gh-fg-muted">Account</label>
+              <select
+                id="copilot-target-select"
+                value={selectedTarget}
+                onChange={(e) => onTargetChange(e.target.value)}
+                className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
+              >
+                {targets.map((target) => (
+                  <option key={target.id} value={target.id}>{target.label}</option>
+                ))}
+              </select>
+            </div>
         </div>
       </div>
 
       {/* Error banner */}
-      {(error || currentOrgData?.error) && (
+      {(error || accountData?.error) && (
         <div className="rounded-md border border-gh-warning/40 bg-gh-warning/10 px-4 py-3 text-sm text-gh-warning flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
             <p className="font-medium">Some data could not be loaded</p>
-            <p className="text-xs mt-0.5 opacity-80">{currentOrgData?.error ?? error}</p>
-            <p className="text-xs mt-1 opacity-70">
-              Ensure your token has{' '}
-              <code className="rounded bg-gh-overlay px-1 py-0.5">manage_billing:copilot</code>{' '}
-              or <code className="rounded bg-gh-overlay px-1 py-0.5">read:org</code>{' '}
-              scope and you have org owner/billing manager access.
-            </p>
+            <p className="text-xs mt-0.5 opacity-80">{accountData?.error ?? error}</p>
+            {accountData?.type === 'personal' ? (
+              <p className="text-xs mt-1 opacity-70">
+                Personal analytics use GitHub billing usage endpoints and require access to your own
+                billing data for the authenticated account.
+              </p>
+            ) : (
+              <p className="text-xs mt-1 opacity-70">
+                Ensure your token has{' '}
+                <code className="rounded bg-gh-overlay px-1 py-0.5">manage_billing:copilot</code>{' '}
+                or <code className="rounded bg-gh-overlay px-1 py-0.5">read:org</code>{' '}
+                scope and you have org owner/billing manager access.
+              </p>
+            )}
           </div>
         </div>
       )}
 
-      {isLoading && !currentOrgData ? (
+      {accountData?.type === 'personal' && (
+        <div className="rounded-lg border border-gh-border bg-gh-surface px-4 py-3 text-sm text-gh-fg-muted">
+          GitHub does not expose the organization-style Copilot IDE metrics API for personal Copilot Pro
+          accounts. This personal view uses your billing usage and premium request analytics instead.
+        </div>
+      )}
+
+      {isLoading && !accountData ? (
         <div className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center text-sm text-gh-fg-muted">
           Loading Copilot metrics…
         </div>
       ) : (
         <>
-          {/* Top-level usage bars */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {seatUtilisation !== null && (
-              <UsageBar
-                percentage={seatUtilisation}
-                label="Seat utilization (active / total)"
-              />
-            )}
-            {agg.totalDays > 0 && (
-              <UsageBar
-                percentage={agg.engagementRate}
-                label="Engagement rate (engaged / active users)"
-              />
-            )}
-            {agg.totalSuggestions > 0 && (
-              <UsageBar
-                percentage={agg.acceptanceRate}
-                label="Acceptance rate (accepted / suggested)"
-              />
-            )}
-          </div>
+          {accountData?.type === 'organization' ? (
+            <>
+              {/* Top-level usage bars */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {seatUtilisation !== null && (
+                  <UsageBar
+                    percentage={seatUtilisation}
+                    label="Seat utilization (active / total)"
+                  />
+                )}
+                {agg.totalDays > 0 && (
+                  <UsageBar
+                    percentage={agg.engagementRate}
+                    label="Engagement rate (engaged / active users)"
+                  />
+                )}
+                {agg.totalSuggestions > 0 && (
+                  <UsageBar
+                    percentage={agg.acceptanceRate}
+                    label="Acceptance rate (accepted / suggested)"
+                  />
+                )}
+              </div>
 
-          {/* Summary cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {billing && (
-              <SummaryCard
-                icon={<Users className="h-4 w-4" />}
-                label="Total seats"
-                value={billing.seat_breakdown.total.toString()}
-                sub={`${billing.seat_breakdown.active_this_cycle} active · ${billing.seat_breakdown.inactive_this_cycle} inactive · ${billing.plan_type}`}
-              />
-            )}
-            <SummaryCard
-              icon={<Users className="h-4 w-4" />}
-              label="Avg daily active users"
-              value={agg.avgActiveUsers.toString()}
-              sub={`${agg.avgEngagedUsers} avg engaged (${agg.totalDays} days)`}
-            />
-            <SummaryCard
-              icon={<Code className="h-4 w-4" />}
-              label="Code suggestions"
-              value={formatNumber(agg.totalSuggestions)}
-              sub={`${formatNumber(agg.totalAcceptances)} accepted (${agg.acceptanceRate.toFixed(1)}%)`}
-            />
-            <SummaryCard
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Total chats"
-              value={formatNumber(agg.totalChats + agg.totalDotcomChats)}
-              sub={`${formatNumber(agg.totalChatInsertions)} insertions · ${formatNumber(agg.totalChatCopies)} copies`}
-            />
-            <SummaryCard
-              icon={<GitPullRequest className="h-4 w-4" />}
-              label="PR summaries"
-              value={formatNumber(agg.totalPRSummaries)}
-              sub="Auto-generated PR summaries"
-            />
-            <SummaryCard
-              icon={<BarChart3 className="h-4 w-4" />}
-              label="Lines accepted"
-              value={formatNumber(agg.totalLinesAccepted)}
-              sub={`of ${formatNumber(agg.totalLinesSuggested)} suggested (${agg.lineAcceptanceRate.toFixed(1)}%)`}
-            />
-            {billing && (
-              <>
+              {/* Summary cards */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {billing && (
+                  <SummaryCard
+                    icon={<Users className="h-4 w-4" />}
+                    label="Total seats"
+                    value={billing.seat_breakdown.total.toString()}
+                    sub={`${billing.seat_breakdown.active_this_cycle} active · ${billing.seat_breakdown.inactive_this_cycle} inactive · ${billing.plan_type}`}
+                  />
+                )}
                 <SummaryCard
                   icon={<Users className="h-4 w-4" />}
-                  label="New seats this cycle"
-                  value={billing.seat_breakdown.added_this_cycle.toString()}
-                  sub={`${billing.seat_breakdown.pending_invitation} pending invitation${billing.seat_breakdown.pending_invitation === 1 ? '' : 's'}`}
+                  label="Avg daily active users"
+                  value={agg.avgActiveUsers.toString()}
+                  sub={`${agg.avgEngagedUsers} avg engaged (${agg.totalDays} days)`}
+                />
+                <SummaryCard
+                  icon={<Code className="h-4 w-4" />}
+                  label="Code suggestions"
+                  value={formatNumber(agg.totalSuggestions)}
+                  sub={`${formatNumber(agg.totalAcceptances)} accepted (${agg.acceptanceRate.toFixed(1)}%)`}
+                />
+                <SummaryCard
+                  icon={<MessageSquare className="h-4 w-4" />}
+                  label="Total chats"
+                  value={formatNumber(agg.totalChats + agg.totalDotcomChats)}
+                  sub={`${formatNumber(agg.totalChatInsertions)} insertions · ${formatNumber(agg.totalChatCopies)} copies`}
+                />
+                <SummaryCard
+                  icon={<GitPullRequest className="h-4 w-4" />}
+                  label="PR summaries"
+                  value={formatNumber(agg.totalPRSummaries)}
+                  sub="Auto-generated PR summaries"
+                />
+                <SummaryCard
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  label="Lines accepted"
+                  value={formatNumber(agg.totalLinesAccepted)}
+                  sub={`of ${formatNumber(agg.totalLinesSuggested)} suggested (${agg.lineAcceptanceRate.toFixed(1)}%)`}
+                />
+                {billing && (
+                  <>
+                    <SummaryCard
+                      icon={<Users className="h-4 w-4" />}
+                      label="New seats this cycle"
+                      value={billing.seat_breakdown.added_this_cycle.toString()}
+                      sub={`${billing.seat_breakdown.pending_invitation} pending invitation${billing.seat_breakdown.pending_invitation === 1 ? '' : 's'}`}
+                    />
+                    <SummaryCard
+                      icon={<Cpu className="h-4 w-4" />}
+                      label="Plan"
+                      value={billing.plan_type.charAt(0).toUpperCase() + billing.plan_type.slice(1)}
+                      sub={`Code suggestions: ${billing.public_code_suggestions}`}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Section tabs */}
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { key: 'overview' as const, label: 'Overview', icon: <TrendingUp className="h-3.5 w-3.5" /> },
+                  { key: 'languages' as const, label: 'Languages', icon: <Code className="h-3.5 w-3.5" /> },
+                  { key: 'editors' as const, label: 'Editors', icon: <Monitor className="h-3.5 w-3.5" /> },
+                  { key: 'models' as const, label: 'Models', icon: <Cpu className="h-3.5 w-3.5" /> },
+                ]).map(({ key, label, icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveSection(key)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${
+                      activeSection === key
+                        ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
+                        : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
+                    }`}
+                  >
+                    {icon} {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Section content */}
+              {activeSection === 'overview' && (
+                <DailyTrendChart data={agg.dailyTrend} />
+              )}
+
+              {activeSection === 'languages' && (
+                <BreakdownTable
+                  title="Language breakdown"
+                  icon={<Code className="h-4 w-4 text-gh-accent-fg" />}
+                  columns={[
+                    { header: 'Language', accessor: (r) => r.name },
+                    { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
+                    { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
+                    { header: 'Accept rate', accessor: (r) => `${r.rate.toFixed(1)}%`, align: 'right' },
+                  ]}
+                  rows={agg.languageBreakdown}
+                  getKey={(r) => r.name}
+                />
+              )}
+
+              {activeSection === 'editors' && (
+                <BreakdownTable
+                  title="Editor breakdown"
+                  icon={<Monitor className="h-4 w-4 text-gh-accent-fg" />}
+                  columns={[
+                    { header: 'Editor', accessor: (r) => r.name },
+                    { header: 'Max users', accessor: (r) => r.users.toString(), align: 'right' },
+                    { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
+                    { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
+                  ]}
+                  rows={agg.editorBreakdown}
+                  getKey={(r) => r.name}
+                />
+              )}
+
+              {activeSection === 'models' && (
+                <BreakdownTable
+                  title="Model usage"
+                  icon={<Cpu className="h-4 w-4 text-gh-accent-fg" />}
+                  columns={[
+                    { header: 'Model', accessor: (r) => `${r.name}${r.isCustom ? ' (custom)' : ''}` },
+                    { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
+                    { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
+                    { header: 'Chats', accessor: (r) => formatNumber(r.chats), align: 'right' },
+                    { header: 'PR summaries', accessor: (r) => formatNumber(r.prSummaries), align: 'right' },
+                  ]}
+                  rows={agg.modelBreakdown}
+                  getKey={(r) => r.name}
+                />
+              )}
+
+              {agg.totalDays === 0 && !isLoading && (
+                <div
+                  className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
+                  data-testid="copilot-no-metrics"
+                >
+                  No Copilot metrics data available for <span className="font-medium text-gh-fg">{accountData.org}</span>.
+                  Metrics may take up to 24 hours to appear after Copilot activity.
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <SummaryCard
+                  icon={<Wallet className="h-4 w-4" />}
+                  label="Billable units"
+                  value={formatNumber(personalAgg.totalUsageQuantity)}
+                  sub="From personal billing usage"
+                />
+                <SummaryCard
+                  icon={<MessageSquare className="h-4 w-4" />}
+                  label="Premium requests"
+                  value={formatNumber(personalAgg.totalPremiumRequests)}
+                  sub="Metered Copilot premium requests"
+                />
+                <SummaryCard
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  label="Net spend"
+                  value={`$${personalAgg.totalNetAmount.toFixed(2)}`}
+                  sub="Across Copilot-billed usage items"
                 />
                 <SummaryCard
                   icon={<Cpu className="h-4 w-4" />}
-                  label="Plan"
-                  value={billing.plan_type.charAt(0).toUpperCase() + billing.plan_type.slice(1)}
-                  sub={`Code suggestions: ${billing.public_code_suggestions}`}
+                  label="Products / SKUs"
+                  value={personalAgg.distinctProducts.toString()}
+                  sub="Distinct Copilot billing lines"
                 />
-              </>
-            )}
-          </div>
+              </div>
 
-          {/* Section tabs */}
-          <div className="flex flex-wrap gap-2">
-            {([
-              { key: 'overview' as const, label: 'Overview', icon: <TrendingUp className="h-3.5 w-3.5" /> },
-              { key: 'languages' as const, label: 'Languages', icon: <Code className="h-3.5 w-3.5" /> },
-              { key: 'editors' as const, label: 'Editors', icon: <Monitor className="h-3.5 w-3.5" /> },
-              { key: 'models' as const, label: 'Models', icon: <Cpu className="h-3.5 w-3.5" /> },
-            ]).map(({ key, label, icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveSection(key)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${
-                  activeSection === key
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
-                }`}
-              >
-                {icon} {label}
-              </button>
-            ))}
-          </div>
+              <BreakdownTable
+                title="Billing usage breakdown"
+                icon={<Wallet className="h-4 w-4 text-gh-accent-fg" />}
+                columns={[
+                  { header: 'Product / SKU', accessor: (r) => r.name },
+                  { header: 'Quantity', accessor: (r) => formatNumber(r.quantity), align: 'right' },
+                  { header: 'Net amount', accessor: (r) => `$${r.netAmount.toFixed(2)}`, align: 'right' },
+                  { header: 'Unit', accessor: (r) => r.unitType, align: 'right' },
+                ]}
+                rows={personalAgg.productBreakdown}
+                getKey={(r) => r.name}
+              />
 
-          {/* Section content */}
-          {activeSection === 'overview' && (
-            <DailyTrendChart data={agg.dailyTrend} />
-          )}
+              <BreakdownTable
+                title="Premium request analytics"
+                icon={<MessageSquare className="h-4 w-4 text-gh-accent-fg" />}
+                columns={[
+                  { header: 'Product / model', accessor: (r) => r.name },
+                  { header: 'Requests', accessor: (r) => formatNumber(r.quantity), align: 'right' },
+                  { header: 'Net amount', accessor: (r) => `$${r.netAmount.toFixed(2)}`, align: 'right' },
+                ]}
+                rows={personalAgg.premiumRequestBreakdown}
+                getKey={(r) => r.name}
+              />
 
-          {activeSection === 'languages' && (
-            <BreakdownTable
-              title="Language breakdown"
-              icon={<Code className="h-4 w-4 text-gh-accent-fg" />}
-              columns={[
-                { header: 'Language', accessor: (r) => r.name },
-                { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
-                { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
-                { header: 'Accept rate', accessor: (r) => `${r.rate.toFixed(1)}%`, align: 'right' },
-              ]}
-              rows={agg.languageBreakdown}
-              getKey={(r) => r.name}
-            />
-          )}
+              {personalAgg.repositoryBreakdown.length > 0 && (
+                <BreakdownTable
+                  title="Repository usage"
+                  icon={<GitPullRequest className="h-4 w-4 text-gh-accent-fg" />}
+                  columns={[
+                    { header: 'Repository', accessor: (r) => r.name },
+                    { header: 'Quantity', accessor: (r) => formatNumber(r.quantity), align: 'right' },
+                    { header: 'Net amount', accessor: (r) => `$${r.netAmount.toFixed(2)}`, align: 'right' },
+                  ]}
+                  rows={personalAgg.repositoryBreakdown}
+                  getKey={(r) => r.name}
+                />
+              )}
 
-          {activeSection === 'editors' && (
-            <BreakdownTable
-              title="Editor breakdown"
-              icon={<Monitor className="h-4 w-4 text-gh-accent-fg" />}
-              columns={[
-                { header: 'Editor', accessor: (r) => r.name },
-                { header: 'Max users', accessor: (r) => r.users.toString(), align: 'right' },
-                { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
-                { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
-              ]}
-              rows={agg.editorBreakdown}
-              getKey={(r) => r.name}
-            />
-          )}
-
-          {activeSection === 'models' && (
-            <BreakdownTable
-              title="Model usage"
-              icon={<Cpu className="h-4 w-4 text-gh-accent-fg" />}
-              columns={[
-                { header: 'Model', accessor: (r) => `${r.name}${r.isCustom ? ' (custom)' : ''}` },
-                { header: 'Suggestions', accessor: (r) => formatNumber(r.suggestions), align: 'right' },
-                { header: 'Accepted', accessor: (r) => formatNumber(r.acceptances), align: 'right' },
-                { header: 'Chats', accessor: (r) => formatNumber(r.chats), align: 'right' },
-                { header: 'PR summaries', accessor: (r) => formatNumber(r.prSummaries), align: 'right' },
-              ]}
-              rows={agg.modelBreakdown}
-              getKey={(r) => r.name}
-            />
-          )}
-
-          {agg.totalDays === 0 && !isLoading && (
-            <div
-              className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
-              data-testid="copilot-no-metrics"
-            >
-              No Copilot metrics data available for <span className="font-medium text-gh-fg">{selectedOrg}</span>.
-              Metrics may take up to 24 hours to appear after Copilot activity.
-            </div>
+              {personalAgg.productBreakdown.length === 0 && personalAgg.premiumRequestBreakdown.length === 0 && !isLoading && (
+                <div
+                  className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
+                  data-testid="copilot-no-metrics"
+                >
+                  No personal Copilot billing usage was returned for <span className="font-medium text-gh-fg">{accountData.account}</span>.
+                  GitHub usually shows this data in your billing settings after usage has been processed.
+                </div>
+              )}
+            </>
           )}
         </>
       )}
