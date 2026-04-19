@@ -694,8 +694,7 @@ function isCopilotBillingItem(item: Pick<CopilotBillingUsageItem, 'product' | 's
 }
 
 function filterCopilotBillingItems(items: CopilotBillingUsageItem[]): CopilotBillingUsageItem[] {
-  const copilotItems = items.filter(isCopilotBillingItem)
-  return copilotItems.length > 0 ? copilotItems : items
+  return items.filter(isCopilotBillingItem)
 }
 
 /**
