@@ -5,6 +5,7 @@ const TOKEN_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.token'
 const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
+const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 const fallbackHashToken = (token: string): string => {
   let h = 2166136261 >>> 0
@@ -119,6 +120,26 @@ export const loadMode = (): Mode => {
 export const saveMode = (mode: Mode) => {
   try {
     localStorage.setItem(MODE_STORAGE_KEY, mode)
+  } catch {
+    // no-op
+  }
+}
+
+export const loadCopilotTarget = (): string => {
+  try {
+    return localStorage.getItem(COPILOT_TARGET_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+export const saveCopilotTarget = (target: string) => {
+  try {
+    if (target) {
+      localStorage.setItem(COPILOT_TARGET_STORAGE_KEY, target)
+    } else {
+      localStorage.removeItem(COPILOT_TARGET_STORAGE_KEY)
+    }
   } catch {
     // no-op
   }

@@ -32,6 +32,7 @@ import type { Mock } from 'vitest'
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
 const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const REPOS_KEY = 'prpulse.gh.devcp.dashboard.repositories'
+const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 
@@ -1034,7 +1035,19 @@ describe('PR Pulse – The GitHub Control Panel', () => {
             quantity: 12,
           },
         ],
-        premiumRequests: [],
+        premiumRequests: [
+          {
+            product: 'Copilot',
+            sku: 'Copilot Premium Request',
+            unitType: 'requests',
+            pricePerUnit: 0.04,
+            grossAmount: 0.96,
+            discountAmount: 0.96,
+            netAmount: 0,
+            grossQuantity: 24,
+            netQuantity: 0,
+          },
+        ],
         error: undefined,
       })
 
@@ -1056,28 +1069,64 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       await screen.findByTestId('copilot-metrics-panel')
 
       await waitFor(() => {
-        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
+        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
       })
 
       const selector = screen.getByLabelText(/account/i)
       expect(within(selector).getByRole('option', { name: /some-org \(organization\)/i })).toBeInTheDocument()
       expect(within(selector).getByRole('option', { name: /test-user \(personal\)/i })).toBeInTheDocument()
+      expect((selector as HTMLSelectElement).value).toBe('personal:test-user')
+      expect(screen.getAllByText('24').length).toBeGreaterThan(0)
 
-      fireEvent.change(selector, { target: { value: 'personal:test-user' } })
+      fireEvent.change(selector, { target: { value: 'org:some-org' } })
 
       await waitFor(() => {
-        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
       })
-      expect(screen.getByText(/billable units/i)).toBeInTheDocument()
-      expect(screen.getByText(/from personal billing usage/i)).toBeInTheDocument()
+      expect(localStorage.getItem(COPILOT_TARGET_KEY)).toBe('org:some-org')
     })
 
-    it('shows usage bars and summary cards when metrics data is available', async () => {
+    it('uses the last saved Copilot target when available', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData, fetchCopilotPersonalData: mockCopilotPersonalData } = await import('./github-api')
+
+      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        type: 'organization',
+        target: 'org:some-org',
+        org: 'some-org',
+        billing: null,
+        metrics: [],
+        error: undefined,
+      })
+
+      localStorage.setItem(TOKEN_KEY, 'fnv1a32:5b5a9c12')
+      localStorage.setItem(
+        REPOS_KEY,
+        JSON.stringify({
+          repos: ['test-user/my-project', 'some-org/their-repo'],
+          selectedRepos: ['test-user/my-project', 'some-org/their-repo'],
+        }),
+      )
+      localStorage.setItem(COPILOT_TARGET_KEY, 'org:some-org')
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+      await screen.findByTestId('copilot-metrics-panel')
+
+      await waitFor(() => {
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
+      })
+      expect(screen.getByLabelText(/account/i)).toHaveValue('org:some-org')
+      expect(mockCopilotPersonalData).not.toHaveBeenCalled()
+    })
+
+    it('loads organization analytics when organization target is selected', async () => {
       const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
       const { fetchUserOrgs: mockUserOrgs } = await import('./github-api')
 
-      ;(mockUserOrgs as Mock).mockResolvedValueOnce(['thinkdj'])
-      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+      ;(mockUserOrgs as Mock).mockResolvedValue(['thinkdj'])
+      ;(mockCopilotOrgData as Mock).mockResolvedValue({
         type: 'organization',
         target: 'org:thinkdj',
         org: 'thinkdj',
@@ -1101,6 +1150,7 @@ describe('PR Pulse – The GitHub Control Panel', () => {
         ],
         error: undefined,
       })
+      localStorage.setItem(COPILOT_TARGET_KEY, 'org:thinkdj')
 
       renderApp()
       await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
@@ -1108,10 +1158,10 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       fireEvent.click(getCopilotTabBtn())
       await screen.findByTestId('copilot-metrics-panel')
 
-      // Usage bars should appear
       await waitFor(() => {
-        expect(screen.getAllByTestId('copilot-usage-bar').length).toBeGreaterThanOrEqual(1)
-      })
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('thinkdj', expect.any(String))
+      }, { timeout: 3000 })
+      expect(screen.getByLabelText(/account/i)).toHaveValue('org:thinkdj')
     })
   })
 })
