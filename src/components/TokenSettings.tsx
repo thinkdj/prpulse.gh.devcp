@@ -70,8 +70,8 @@ function TokenSettingsForm({
             Required for fetching live PR data. Recommend a <strong>fine-grained PAT</strong> with
             read-only access to pull requests and checks. For the Copilot tab, personal analytics use your
             account billing usage access and organization analytics may require a classic PAT with{' '}
-            <code>read:org</code> or <code>manage_billing:copilot</code>. Token is stored in your
-            browser&apos;s localStorage.
+            <code>read:org</code> or <code>manage_billing:copilot</code>. Token stays in this
+            tab&apos;s session storage; localStorage only keeps a one-way token fingerprint.
           </p>
           <input
             id="github-token"
