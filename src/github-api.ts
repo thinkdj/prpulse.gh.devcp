@@ -1,4 +1,19 @@
-import type { BranchAnalysis, BranchStatus, ChecksStatus, CopilotBilling, CopilotDayMetrics, CopilotOrgData, CopilotReview, MergeSafety, PRComment, PullRequest } from './types'
+import type {
+  BranchAnalysis,
+  BranchStatus,
+  ChecksStatus,
+  CopilotBilling,
+  CopilotBillingUsageItem,
+  CopilotBillingUsageReport,
+  CopilotDayMetrics,
+  CopilotOrgData,
+  CopilotPersonalData,
+  CopilotPremiumRequestUsageReport,
+  CopilotReview,
+  MergeSafety,
+  PRComment,
+  PullRequest,
+} from './types'
 
 export type GitHubRepo = {
   full_name: string
@@ -663,9 +678,82 @@ export async function fetchCopilotOrgData(
   }
 
   return {
+    type: 'organization',
+    target: `org:${org}`,
     org,
     billing,
     metrics,
+    error: errors.length > 0 ? errors.join('; ') : undefined,
+  }
+}
+
+function isCopilotBillingItem(item: Pick<CopilotBillingUsageItem, 'product' | 'sku'>): boolean {
+  return /copilot/i.test(item.product ?? '') || /copilot/i.test(item.sku ?? '')
+}
+
+function filterCopilotBillingItems(items: CopilotBillingUsageItem[]): CopilotBillingUsageItem[] {
+  const copilotItems = items.filter(isCopilotBillingItem)
+  return copilotItems.length > 0 ? copilotItems : items
+}
+
+/**
+ * Fetch billing usage for a personal account. This includes Copilot usage billed
+ * directly to the authenticated user.
+ */
+export async function fetchUserBillingUsage(
+  username: string,
+  token: string,
+): Promise<CopilotBillingUsageItem[]> {
+  const report = await githubFetch<CopilotBillingUsageReport>(
+    `/users/${encodeURIComponent(username)}/settings/billing/usage`,
+    token,
+  )
+  return filterCopilotBillingItems(report.usageItems ?? [])
+}
+
+/**
+ * Fetch premium request usage for a personal account.
+ */
+export async function fetchUserPremiumRequestUsage(
+  username: string,
+  token: string,
+): Promise<CopilotBillingUsageItem[]> {
+  const report = await githubFetch<CopilotPremiumRequestUsageReport>(
+    `/users/${encodeURIComponent(username)}/settings/billing/premium_request/usage`,
+    token,
+  )
+  return filterCopilotBillingItems(report.usageItems ?? [])
+}
+
+/**
+ * Fetch personal Copilot analytics using GitHub billing usage APIs.
+ */
+export async function fetchCopilotPersonalData(
+  username: string,
+  token: string,
+): Promise<CopilotPersonalData> {
+  const [usageResult, premiumRequestsResult] = await Promise.allSettled([
+    fetchUserBillingUsage(username, token),
+    fetchUserPremiumRequestUsage(username, token),
+  ])
+
+  const usage = usageResult.status === 'fulfilled' ? usageResult.value : []
+  const premiumRequests = premiumRequestsResult.status === 'fulfilled' ? premiumRequestsResult.value : []
+
+  const errors: string[] = []
+  if (usageResult.status === 'rejected') {
+    errors.push(`Usage: ${usageResult.reason instanceof Error ? usageResult.reason.message : 'Unknown error'}`)
+  }
+  if (premiumRequestsResult.status === 'rejected') {
+    errors.push(`Premium requests: ${premiumRequestsResult.reason instanceof Error ? premiumRequestsResult.reason.message : 'Unknown error'}`)
+  }
+
+  return {
+    type: 'personal',
+    target: `personal:${username}`,
+    account: username,
+    usage,
+    premiumRequests,
     error: errors.length > 0 ? errors.join('; ') : undefined,
   }
 }

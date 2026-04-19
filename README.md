@@ -21,7 +21,7 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 - **Theme palettes + dark / light** — Slate (default), Warm, Ocean, Ember; brightness toggle; preferences in `localStorage`
 - **My actions** — tab surfacing PRs that need your review and related follow-ups
 - **Branch analysis** — optional per-repo run: stale / merged / active branch table, search, copy branch name, GitHub links
-- **Copilot Analytics** — org-level Copilot usage metrics: seat utilisation, engagement rate, acceptance rate, daily trend chart, language/editor/model breakdowns (requires `manage_billing:copilot` or `read:org` token scope)
+- **Copilot Analytics** — org-level Copilot usage metrics plus personal-account Copilot Pro billing analytics and premium-request usage
 - **PR search and filtering** — search by title/author/number, filter by author/repo/label dropdowns, hide drafts / Copilot / yours
 - **Sortable columns** — sort by title, repo, author, opened, updated, checks, Copilot, merge safety, pushes, comments
 - **Relative time** — e.g. "5 minutes ago" (full datetime on hover); color-coded by age where relevant
@@ -85,30 +85,50 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173, click **Set token**, and paste a GitHub fine-grained Personal Access Token with read-only access to the repositories you want to monitor (pull requests, checks, and metadata).
+Open http://localhost:5173, click **Set token**, and paste a GitHub token with the minimum access needed for the tabs you plan to use.
 
 ### Required token permissions
 
-Use a **fine-grained Personal Access Token** scoped to the repositories (or the entire account) you want to monitor.
+Use a **fine-grained Personal Access Token** scoped to the repositories (or the entire account) you want to monitor for the PR, branch, and most dashboard features.
 
-| Permission        | Access    | Used for                                         |
-| ----------------- | --------- | ------------------------------------------------ |
-| **Pull requests** | Read-only | Fetch open PRs, reviews, and requested reviewers |
-| **Checks**        | Read-only | Fetch CI check-run statuses for each PR          |
-| **Metadata**      | Read-only | List your repositories in the repo picker        |
+| Area / Scope | Access | Used for |
+| --- | --- | --- |
+| **Pull requests** (fine-grained repo permission) | Read-only | Fetch open PRs, review state, requested reviewers, PR metadata, and PR detail panel activity |
+| **Checks** (fine-grained repo permission) | Read-only | Fetch CI check-run status for each PR |
+| **Metadata** (fine-grained repo permission) | Read-only | List repositories in the repo picker and read basic repo metadata |
+| **Contents** (fine-grained repo permission) | Read-only | Recommended for branch analysis on private repos, where branch/compare lookups can otherwise fail with 403 |
+| **Issues** or **Pull requests** (fine-grained repo permission) | Read/Write only if you want to post comments | Post a comment from the PR detail panel |
+| **Account billing access** (your own account) | Read-only | Personal Copilot analytics in the Copilot tab via `/users/{username}/settings/billing/usage` and `/users/{username}/settings/billing/premium_request/usage` |
+| `read:org` (classic PAT or OAuth scope) | Read-only | List org memberships, fetch org Copilot analytics, and fetch org Copilot billing data |
+| `manage_billing:copilot` (classic PAT or OAuth scope) | Read-only for this app | Fetch org Copilot billing / seat data and, where allowed by GitHub, org Copilot metrics |
 
 Branch listing and comparisons may require **Contents: Read** (or broader repo access) on fine-grained tokens for private repositories—if analysis fails with 403, widen read access for those repos.
 
+If you only want the **Pull requests** and **Branch analysis** tabs, a fine-grained PAT is usually enough. If you also want the **Copilot Analytics** tab for organization data, you will typically need a **classic PAT** (or OAuth token) with the org scopes listed below, because GitHub documents the org Copilot endpoints with `read:org` / `manage_billing:copilot` scopes.
+
 #### Copilot Analytics tab
 
-The **Copilot Analytics** tab uses additional org-level APIs. Grant these **organisation-level** permissions on a **classic PAT** (or add an OAuth scope):
+The **Copilot Analytics** tab supports two data sources:
+
+1. **Personal account analytics** — backed by GitHub billing usage endpoints for the authenticated user.
+2. **Organization analytics** — backed by GitHub Copilot org billing / metrics endpoints.
+
+##### Personal account analytics (GitHub Copilot Pro / Pro+)
+
+| Permission / access | Access | Used for |
+| --- | --- | --- |
+| **Read access to your own account billing data** | Read-only | Load Copilot-billed usage and premium request usage for your personal account |
+
+> **What GitHub exposes for personal accounts:** GitHub does **not** expose the same IDE adoption breakdown API for personal Copilot plans that it exposes for organizations. In this app, the personal view shows the analytics GitHub does expose publicly for personal accounts: billing usage and premium request usage.
+
+##### Organization analytics
 
 | Scope / Permission              | Access    | Used for                                                    |
 | ------------------------------- | --------- | ----------------------------------------------------------- |
-| `read:org`                      | Read-only | List org memberships, fetch Copilot usage metrics           |
-| `manage_billing:copilot`        | Read-only | Fetch seat breakdown and billing details                    |
+| `read:org`                      | Read-only | List org memberships, fetch org Copilot metrics, fetch org Copilot billing data |
+| `manage_billing:copilot`        | Read-only | Fetch org Copilot billing / seat details and org Copilot metrics where permitted |
 
-> **Note:** Copilot usage metrics (`/orgs/{org}/copilot/metrics`) require the token owner to be an **org owner or billing manager** in the target organisation. The panel shows a helpful error banner if the token lacks sufficient access. Personal GitHub accounts are not supported — GitHub does not provide a personal Copilot metrics API.
+> **Note:** Organization Copilot analytics require the token owner to be an **org owner** or **billing manager** in the target organization. The panel shows a helpful error banner if the token lacks sufficient access.
 
 > **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
 
