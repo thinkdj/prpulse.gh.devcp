@@ -355,7 +355,7 @@ function BreakdownTable<T extends Record<string, unknown>>({
   getKey,
 }: {
   title: string
-  icon: React.ReactNode
+  icon: ReactNode
   columns: { header: string; accessor: (row: T) => string; align?: 'right' }[]
   rows: T[]
   getKey: (row: T) => string
@@ -446,6 +446,7 @@ function aggregatePersonalUsage(
   for (const item of premiumRequests) {
     const quantity = item.netQuantity ?? item.quantity ?? item.grossQuantity ?? 0
     totalPremiumRequests += quantity
+    totalNetAmount += item.netAmount ?? 0
     const key = item.model ? `${item.product} · ${item.model}` : `${item.product} · ${item.sku}`
     const existing = premiumMap.get(key) ?? { quantity: 0, netAmount: 0 }
     existing.quantity += quantity
@@ -534,7 +535,7 @@ export default function CopilotMetricsPanel({
 
   return (
     <section className="space-y-4" data-testid="copilot-metrics-panel">
-      {/* Org selector */}
+      {/* Account/target selector */}
         <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
