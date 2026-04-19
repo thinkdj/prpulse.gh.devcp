@@ -134,8 +134,59 @@ export type CopilotBilling = {
 /* ── Aggregated Copilot metrics for display ── */
 
 export type CopilotOrgData = {
+  type: 'organization'
+  target: string
   org: string
   billing: CopilotBilling | null
   metrics: CopilotDayMetrics[]
   error?: string
+}
+
+export type CopilotBillingUsageItem = {
+  product: string
+  sku: string
+  unitType: string
+  pricePerUnit: number
+  grossAmount: number
+  discountAmount: number
+  netAmount: number
+  quantity?: number
+  grossQuantity?: number
+  discountQuantity?: number
+  netQuantity?: number
+  repositoryName?: string
+  model?: string
+}
+
+export type CopilotBillingUsageReport = {
+  usageItems: CopilotBillingUsageItem[]
+}
+
+export type CopilotPremiumRequestUsageReport = {
+  timePeriod: {
+    year: number
+    month?: number
+    day?: number
+  }
+  user: string
+  product?: string
+  model?: string
+  usageItems: CopilotBillingUsageItem[]
+}
+
+export type CopilotPersonalData = {
+  type: 'personal'
+  target: string
+  account: string
+  usage: CopilotBillingUsageItem[]
+  premiumRequests: CopilotBillingUsageItem[]
+  error?: string
+}
+
+export type CopilotAccountData = CopilotOrgData | CopilotPersonalData
+
+export type CopilotAnalyticsTarget = {
+  id: string
+  label: string
+  type: 'organization' | 'personal'
 }
