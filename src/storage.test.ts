@@ -14,12 +14,14 @@ import {
 
 const REPO_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
+const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const THEME_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 afterEach(() => {
   localStorage.clear()
+  sessionStorage.clear()
   vi.restoreAllMocks()
 })
 
@@ -98,7 +100,7 @@ describe('loadToken', () => {
   })
 
   it('returns the stored token', () => {
-    localStorage.setItem(TOKEN_KEY, 'ghp_abc123')
+    sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_abc123')
     expect(loadToken()).toBe('ghp_abc123')
   })
 
@@ -112,22 +114,27 @@ describe('loadToken', () => {
 
 /* ── saveToken ── */
 describe('saveToken', () => {
-  it('saves a non-empty token to localStorage', () => {
-    saveToken('ghp_test')
-    expect(localStorage.getItem(TOKEN_KEY)).toBe('ghp_test')
+  it('saves a non-empty token to sessionStorage and stores only a hash in localStorage', async () => {
+    await saveToken('ghp_test')
+    expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('ghp_test')
+    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
+    expect(localStorage.getItem(TOKEN_KEY)).not.toBe('ghp_test')
   })
 
-  it('removes the token key when given an empty string', () => {
+  it('removes the token key when given an empty string', async () => {
     localStorage.setItem(TOKEN_KEY, 'old_token')
-    saveToken('')
+    sessionStorage.setItem(TOKEN_SESSION_KEY, 'old_token')
+    await saveToken('')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBeNull()
   })
 
-  it('does not throw when localStorage throws', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+  it('does not throw when localStorage throws', async () => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
-    expect(() => saveToken('token')).not.toThrow()
+    await expect(saveToken('token')).resolves.toBeUndefined()
+    expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('token')
   })
 })
 
@@ -144,26 +151,6 @@ describe('loadTheme', () => {
       expect(loadTheme()).toBe(theme)
     },
   )
-
-  it('migrates legacy "notion" value to "slate"', () => {
-    localStorage.setItem(THEME_KEY, 'notion')
-    expect(loadTheme()).toBe('slate')
-  })
-
-  it('migrates legacy "dark" value to "slate"', () => {
-    localStorage.setItem(THEME_KEY, 'dark')
-    expect(loadTheme()).toBe('slate')
-  })
-
-  it('migrates legacy "light" value to "slate"', () => {
-    localStorage.setItem(THEME_KEY, 'light')
-    expect(loadTheme()).toBe('slate')
-  })
-
-  it('migrates legacy "github" value to "slate"', () => {
-    localStorage.setItem(THEME_KEY, 'github')
-    expect(loadTheme()).toBe('slate')
-  })
 
   it('returns "slate" for an unrecognised value', () => {
     localStorage.setItem(THEME_KEY, 'totally-unknown')
@@ -207,16 +194,6 @@ describe('loadMode', () => {
   it('returns "dark" when stored', () => {
     localStorage.setItem(MODE_KEY, 'dark')
     expect(loadMode()).toBe('dark')
-  })
-
-  it('migrates legacy theme "light" to mode "light"', () => {
-    localStorage.setItem(THEME_KEY, 'light')
-    expect(loadMode()).toBe('light')
-  })
-
-  it('migrates legacy theme "github" to mode "light"', () => {
-    localStorage.setItem(THEME_KEY, 'github')
-    expect(loadMode()).toBe('light')
   })
 
   it('returns "dark" for unrecognised mode value', () => {
@@ -289,9 +266,10 @@ describe('saveCopilotTarget', () => {
 
 /* ── Round-trip integration ── */
 describe('storage round-trips', () => {
-  it('can save and reload a token', () => {
-    saveToken('ghp_roundtrip')
+  it('can save and reload a token', async () => {
+    await saveToken('ghp_roundtrip')
     expect(loadToken()).toBe('ghp_roundtrip')
+    expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
   })
 
   it('can save and reload a theme', () => {

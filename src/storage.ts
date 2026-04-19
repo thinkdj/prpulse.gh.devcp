@@ -2,10 +2,12 @@ import type { RepoState } from './types'
 
 const REPO_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.token'
+const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
+<<<<<<< HEAD
 // One-time migration: move data from old gh.devcp keys to the new prpulse.gh.devcp keys.
 ;(function migrateStorageKeys() {
   const migrations: [string, string][] = [
@@ -25,8 +27,27 @@ const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
     }
   } catch {
     // no-op: localStorage can be unavailable in restricted browser contexts
+=======
+const fallbackHashToken = (token: string): string => {
+  let h = 2166136261 >>> 0
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+>>>>>>> 02787e71861c2505b28dc5cb500f971437cc64db
   }
-})()
+  return `fnv1a32:${(h >>> 0).toString(16).padStart(8, '0')}`
+}
+
+const hashToken = async (token: string): Promise<string> => {
+  try {
+    const encoded = new TextEncoder().encode(token)
+    const digest = await crypto.subtle.digest('SHA-256', encoded)
+    const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+    return `sha256:${hex}`
+  } catch {
+    return fallbackHashToken(token)
+  }
+}
 
 /** Visual palette theme (accent colours, surface tones). */
 export type Theme = 'warm' | 'slate' | 'ocean' | 'ember' | 'zinc'
@@ -70,17 +91,19 @@ export const saveRepoState = (state: RepoState) => {
 
 export const loadToken = (): string => {
   try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY) ?? ''
+    return sessionStorage.getItem(TOKEN_SESSION_KEY) ?? ''
   } catch {
     return ''
   }
 }
 
-export const saveToken = (token: string) => {
+export const saveToken = async (token: string): Promise<void> => {
   try {
     if (token) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, token)
+      sessionStorage.setItem(TOKEN_SESSION_KEY, token)
+      localStorage.setItem(TOKEN_STORAGE_KEY, await hashToken(token))
     } else {
+      sessionStorage.removeItem(TOKEN_SESSION_KEY)
       localStorage.removeItem(TOKEN_STORAGE_KEY)
     }
   } catch {
@@ -92,10 +115,6 @@ export const loadTheme = (): Theme => {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
     if (raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember' || raw === 'zinc') return raw
-    // Migrate legacy values
-    if (raw === 'notion') return 'slate'
-    if (raw === 'dark' || raw === 'light') return 'slate'
-    if (raw === 'github') return 'slate'
   } catch {
     // fall through
   }
@@ -112,10 +131,6 @@ export const saveTheme = (theme: Theme) => {
 
 export const loadMode = (): Mode => {
   try {
-    const themeRaw = localStorage.getItem(THEME_STORAGE_KEY)
-    // Migrate legacy combined theme values
-    if (themeRaw === 'light' || themeRaw === 'github') return 'light'
-
     const raw = localStorage.getItem(MODE_STORAGE_KEY)
     if (raw === 'light' || raw === 'dark') return raw
   } catch {

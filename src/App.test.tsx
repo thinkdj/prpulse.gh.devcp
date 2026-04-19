@@ -30,6 +30,7 @@ import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullReques
 import type { Mock } from 'vitest'
 
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
+const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const REPOS_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
@@ -38,6 +39,7 @@ const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  sessionStorage.clear()
   vi.clearAllMocks()
   vi.restoreAllMocks()
 })
@@ -54,9 +56,10 @@ const renderApp = () => {
   )
 }
 
-/** Set up localStorage so the app boots in "authenticated" mode with seed repos */
+/** Seed authenticated boot state: raw token in sessionStorage, fingerprint + repos in localStorage. */
 function seedAuthenticatedState() {
-  localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+  localStorage.setItem(TOKEN_KEY, 'fnv1a32:deadc0de')
+  sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_test_token')
   localStorage.setItem(
     REPOS_KEY,
     JSON.stringify({ repos: defaultRepos, selectedRepos: defaultRepos }),
@@ -983,7 +986,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
     it('shows personal Copilot analytics when all tracked repos belong to the authenticated user', async () => {
       const { fetchCopilotOrgData: mockCopilotOrgData, fetchCopilotPersonalData: mockCopilotPersonalData } = await import('./github-api')
 
-      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(TOKEN_KEY, 'fnv1a32:deadc0de')
+      sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_test_token')
       localStorage.setItem(
         REPOS_KEY,
         JSON.stringify({ repos: ['test-user/my-project', 'test-user/another-repo'], selectedRepos: ['test-user/my-project'] }),
@@ -1047,7 +1051,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
         error: undefined,
       })
 
-      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(TOKEN_KEY, 'fnv1a32:deadc0de')
+      sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_test_token')
       localStorage.setItem(
         REPOS_KEY,
         JSON.stringify({
