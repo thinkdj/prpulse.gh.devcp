@@ -12,7 +12,7 @@ const hashToken = (token: string): string => {
     h ^= token.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
-  return `fnv1a32:${h.toString(16).padStart(8, '0')}`
+  return `fnv1a32:${(h >>> 0).toString(16).padStart(8, '0')}`
 }
 
 /** Visual palette theme (accent colours, surface tones). */
