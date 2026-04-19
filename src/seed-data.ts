@@ -3,7 +3,7 @@ import type { BranchAnalysis, PullRequest } from './types'
 export const seedPullRequests: PullRequest[] = [
   {
     id: 1021,
-    repo: 'thinkdj/gh.devcp',
+    repo: 'thinkdj/prpulse.gh.devcp',
     title: 'feat: dashboard widgets for PR supervision',
     author: 'priya-dev',
     authorAvatar: '',
@@ -87,7 +87,7 @@ export const seedPullRequests: PullRequest[] = [
   },
   {
     id: 1028,
-    repo: 'thinkdj/gh.devcp',
+    repo: 'thinkdj/prpulse.gh.devcp',
     title: 'refactor: simplify repo selector state',
     author: 'lee-ui',
     authorAvatar: '',
@@ -112,7 +112,7 @@ export const defaultRepoNames = Array.from(new Set(seedPullRequests.map((pr) => 
 
 export const seedBranchAnalysis: BranchAnalysis[] = [
   {
-    repo: 'thinkdj/gh.devcp',
+    repo: 'thinkdj/prpulse.gh.devcp',
     name: 'main',
     url: '#',
     isDefault: true,
@@ -124,7 +124,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'default',
   },
   {
-    repo: 'thinkdj/gh.devcp',
+    repo: 'thinkdj/prpulse.gh.devcp',
     name: 'feat/branch-analysis',
     url: '#',
     isDefault: false,
@@ -136,7 +136,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'active',
   },
   {
-    repo: 'thinkdj/gh.devcp',
+    repo: 'thinkdj/prpulse.gh.devcp',
     name: 'chore/repo-cleanup',
     url: '#',
     isDefault: false,

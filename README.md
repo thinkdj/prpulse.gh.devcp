@@ -1,6 +1,6 @@
-# GitHub Dev Control Panel
+# PR Pulse – The GitHub Control Panel
 
-A lightweight GH dashboard for personal repositories with many collaborators and frequent pull requests.
+A lightweight GitHub control panel for monitoring pull requests, branches, and Copilot analytics across your repositories.
 
 Built with **TypeScript + React + Tailwind CSS + TanStack Query** using Vite.
 
@@ -108,7 +108,7 @@ The **Copilot Analytics** tab uses additional org-level APIs. Grant these **orga
 | `read:org`                      | Read-only | List org memberships, fetch Copilot usage metrics           |
 | `manage_billing:copilot`        | Read-only | Fetch seat breakdown and billing details                    |
 
-> **Note:** Copilot usage metrics (`/orgs/{org}/copilot/metrics`) require the token owner to be an **org owner or billing manager** in the target organisation. The panel shows a helpful error banner if the token lacks sufficient access.
+> **Note:** Copilot usage metrics (`/orgs/{org}/copilot/metrics`) require the token owner to be an **org owner or billing manager** in the target organisation. The panel shows a helpful error banner if the token lacks sufficient access. Personal GitHub accounts are not supported — GitHub does not provide a personal Copilot metrics API.
 
 > **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
 

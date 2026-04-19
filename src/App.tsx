@@ -16,7 +16,7 @@ import {
   Bot,
   FlaskConical,
 } from 'lucide-react'
-import type { DashboardFilter, PullRequest, RepoState } from './types'
+import type { DashboardFilter, PullRequest } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCopilotOrgData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
@@ -31,15 +31,8 @@ import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
 import CopilotMetricsPanel from './components/CopilotMetricsPanel'
 import ConfirmDialog from './components/ConfirmDialog'
-import {
-  DEMO_CURRENT_USER,
-  DEMO_REPOS,
-  demoBranches,
-  demoCopilotOrgData,
-  demoCopilotOrgs,
-  demoPRActivity,
-  demoPullRequests,
-} from './demo-data'
+
+type DemoData = typeof import('./demo-data')
 
 const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true'
 const DEMO_TOKEN = 'demo-mode'
@@ -55,6 +48,8 @@ function applyTheme(theme: Theme, mode: Mode) {
 
 function App() {
   const queryClient = useQueryClient()
+
+  const [demoData, setDemoData] = useState<DemoData | null>(null)
 
   const [token, setToken] = useState(() => isDemoMode ? DEMO_TOKEN : loadToken())
   const [showSettings, setShowSettings] = useState(false)
@@ -72,11 +67,25 @@ function App() {
     applyTheme(theme, mode)
   }, [theme, mode])
 
-  const [initialRepoState] = useState<RepoState>(() =>
-    isDemoMode ? { repos: DEMO_REPOS, selectedRepos: DEMO_REPOS } : loadRepoState([]),
+  // Load demo fixture data lazily so non-demo users don't pay the parse/download cost.
+  useEffect(() => {
+    if (isDemoMode) {
+      void import('./demo-data').then(setDemoData)
+    }
+  }, [])
+
+  const [{ repos: initRepos, selectedRepos: initSelectedRepos }] = useState(() =>
+    isDemoMode ? { repos: [] as string[], selectedRepos: [] as string[] } : loadRepoState([]),
   )
-  const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
-  const [selectedRepos, setSelectedRepos] = useState<string[]>(initialRepoState.selectedRepos)
+  const [repos, setRepos] = useState<string[]>(initRepos)
+  const [selectedRepos, setSelectedRepos] = useState<string[]>(initSelectedRepos)
+  // Populate demo repos once the demo-data module has loaded.
+  useEffect(() => {
+    if (isDemoMode && demoData) {
+      setRepos(demoData.DEMO_REPOS)
+      setSelectedRepos(demoData.DEMO_REPOS)
+    }
+  }, [demoData])
   const [newRepo, setNewRepo] = useState('')
   const [repoError, setRepoError] = useState('')
 
@@ -94,9 +103,9 @@ function App() {
   const currentUserQuery = useQuery({
     queryKey: ['current-user', token],
     queryFn: isDemoMode
-      ? () => Promise.resolve(DEMO_CURRENT_USER)
+      ? () => Promise.resolve(demoData?.DEMO_CURRENT_USER ?? '')
       : () => fetchCurrentUser(token),
-    enabled: !!token,
+    enabled: !!token && (!isDemoMode || demoData !== null),
     staleTime: Infinity,
     retry: false,
   })
@@ -122,14 +131,14 @@ function App() {
       selectedRepos.map((repo) => ({
         queryKey: ['repo-prs', token, repo, currentUser] as const,
         queryFn: isDemoMode
-          ? () => Promise.resolve(demoPullRequests.filter((pr) => pr.repo === repo))
+          ? () => Promise.resolve((demoData?.demoPullRequests ?? []).filter((pr) => pr.repo === repo))
           : () => fetchRepoPullRequests(repo, token, currentUser),
         staleTime: STALE_TIME,
         refetchInterval: isDemoMode ? (false as const) : 5 * 60 * 1000,
         retry: isDemoMode ? 0 : 1,
         enabled: prQueriesReady,
       })),
-    [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME],
+    [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME, demoData],
   )
 
   const repoQueries = useQueries({ queries: prQueryDefs })
@@ -148,13 +157,13 @@ function App() {
       effectiveBranchAnalysisRepos.map((repo) => ({
         queryKey: ['repo-branches', token, repo] as const,
         queryFn: isDemoMode
-          ? () => Promise.resolve(demoBranches.filter((b) => b.repo === repo))
+          ? () => Promise.resolve((demoData?.demoBranches ?? []).filter((b) => b.repo === repo))
           : () => fetchRepoBranches(repo, token),
         staleTime: STALE_TIME,
         retry: isDemoMode ? 0 : 1,
         enabled: !!token && effectiveBranchAnalysisTriggered,
       })),
-    [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME],
+    [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME, demoData],
   )
 
   const branchQueries = useQueries({ queries: branchQueryDefs })
@@ -164,7 +173,7 @@ function App() {
   const { data: userOrgs = [], isPending: orgsIsPending } = useQuery({
     queryKey: ['user-orgs', token],
     queryFn: isDemoMode
-      ? () => Promise.resolve(demoCopilotOrgs)
+      ? () => Promise.resolve(demoData?.demoCopilotOrgs ?? [])
       : () => fetchUserOrgs(token),
     enabled: !!token && activeView === 'copilot',
     staleTime: 10 * 60 * 1000,
@@ -174,13 +183,17 @@ function App() {
   // Return nothing while the org query is still in-flight so personal repo owners
   // don't flash as org candidates. Once settled, prefer API-confirmed org names;
   // fall back to unique repo owners for users with direct org-repo access (not membership).
+  // Exclude the authenticated user's own login — personal accounts are not organisations
+  // and the /orgs/{user}/copilot/metrics endpoint does not exist for them.
   const copilotOrgs = useMemo(() => {
     const fromApi = new Set(userOrgs)
     if (fromApi.size > 0) return [...fromApi].sort()
     if (orgsIsPending) return []
-    const fromRepos = new Set(repos.map((r) => r.split('/')[0]).filter(Boolean))
+    const fromRepos = new Set(
+      repos.map((r) => r.split('/')[0]).filter((owner) => owner && owner !== currentUser),
+    )
     return [...fromRepos].sort()
-  }, [repos, userOrgs, orgsIsPending])
+  }, [repos, userOrgs, orgsIsPending, currentUser])
 
   // Derive effective selected org: fall back to first org if raw selection is invalid
   const selectedCopilotOrg =
@@ -194,14 +207,17 @@ function App() {
         ? [{
             queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
             queryFn: isDemoMode
-              ? () => Promise.resolve(demoCopilotOrgData.find((d) => d.org === selectedCopilotOrg) ?? demoCopilotOrgData[0])
+              ? () => {
+                  const data = demoData?.demoCopilotOrgData ?? []
+                  return Promise.resolve(data.find((d) => d.org === selectedCopilotOrg) ?? data[0])
+                }
               : () => fetchCopilotOrgData(selectedCopilotOrg, token),
             staleTime: STALE_TIME,
             retry: isDemoMode ? 0 : 1,
             enabled: !!token && activeView === 'copilot' && !!selectedCopilotOrg,
           }]
         : [],
-    [selectedCopilotOrg, token, activeView, STALE_TIME],
+    [selectedCopilotOrg, token, activeView, STALE_TIME, demoData],
   )
 
   const copilotQueries = useQueries({ queries: copilotQueryDefs })
@@ -324,7 +340,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-gh-bg text-gh-fg-default">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
         {isDemoMode && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-gh-accent/40 bg-gh-accent/10 px-4 py-2.5 text-sm text-gh-accent-fg">
             <FlaskConical className="h-4 w-4 shrink-0" />
@@ -339,7 +355,7 @@ function App() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <a
-                  href="https://github.com/thinkdj/gh.devcp"
+                  href="https://github.com/thinkdj/prpulse.gh.devcp"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="View source on GitHub"
@@ -350,7 +366,7 @@ function App() {
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                 </a>
-                <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">GitHub Dev Control Panel</h1>
+                <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">PR Pulse – The GitHub Control Panel</h1>
               </div>
               <p className="mt-1 text-sm text-gh-fg-muted">
                 Bird&apos;s-eye view of pull requests and branches across your repositories.
@@ -442,7 +458,7 @@ function App() {
               <div className="mb-4 flex justify-center">
                 <Clipboard className="h-14 w-14 text-gh-accent-fg opacity-60" />
               </div>
-              <h2 className="text-xl font-semibold tracking-tight text-gh-fg">Welcome to GitHub Dev CP</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-gh-fg">Welcome to PR Pulse</h2>
               <p className="mt-2 text-sm text-gh-fg-muted">
                 Monitor pull requests across all your repositories at a glance.
               </p>
@@ -604,7 +620,8 @@ function App() {
                 pr={selectedPR}
                 token={token}
                 currentUser={currentUser}
-                demoActivity={isDemoMode ? (demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
+                isDemoMode={isDemoMode}
+                demoActivity={isDemoMode ? (demoData?.demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
                 onClose={() => setSelectedPR(null)}
                 onPRClosed={() => {
                   setSelectedPR(null)
