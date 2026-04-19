@@ -230,6 +230,7 @@ function App() {
     if (selectedCopilotTargetRaw && copilotTargetsStillResolving) return
     if (selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
       setSelectedCopilotTarget(selectedCopilotTarget.id)
+      if (!isDemoMode) saveCopilotTarget(selectedCopilotTarget.id)
     }
   }, [selectedCopilotTarget, selectedCopilotTargetRaw, selectedTargetExists, copilotTargetsStillResolving, setSelectedCopilotTarget])
 
