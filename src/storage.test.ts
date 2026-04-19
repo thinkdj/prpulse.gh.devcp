@@ -127,10 +127,11 @@ describe('saveToken', () => {
   })
 
   it('does not throw when localStorage throws', async () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
     await expect(saveToken('token')).resolves.toBeUndefined()
+    expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('token')
   })
 })
 

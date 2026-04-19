@@ -35,16 +35,27 @@ function TokenSettingsForm({
   onClose,
 }: Omit<TokenSettingsProps, 'isVisible'>) {
   const [draft, setDraft] = useState(token)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleSave = () => {
-    onSaveToken(draft.trim())
-    onClose()
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await onSaveToken(draft.trim())
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleClear = () => {
+  const handleClear = async () => {
     setDraft('')
-    onSaveToken('')
-    onClose()
+    setIsSaving(true)
+    try {
+      await onSaveToken('')
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -55,6 +66,7 @@ function TokenSettingsForm({
           type="button"
           onClick={onClose}
           aria-label="Close settings"
+          disabled={isSaving}
           className="rounded-md p-1 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
         >
           <X className="h-4 w-4" />
@@ -81,6 +93,7 @@ function TokenSettingsForm({
             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
             className="w-full rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-default outline-none focus:border-gh-accent"
             autoComplete="off"
+            disabled={isSaving}
           />
         </div>
 
@@ -94,14 +107,16 @@ function TokenSettingsForm({
           <button
             type="button"
             onClick={handleSave}
+            disabled={isSaving}
             className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-sm font-medium text-white"
           >
-            Save token
+            {isSaving ? 'Saving…' : 'Save token'}
           </button>
           {token && (
             <button
               type="button"
               onClick={handleClear}
+              disabled={isSaving}
               className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-muted hover:text-gh-danger-fg"
             >
               Clear token
