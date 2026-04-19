@@ -16,7 +16,7 @@ import {
   Bot,
   FlaskConical,
 } from 'lucide-react'
-import type { DashboardFilter, PullRequest, RepoState } from './types'
+import type { DashboardFilter, PullRequest } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCopilotOrgData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
@@ -31,15 +31,8 @@ import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
 import CopilotMetricsPanel from './components/CopilotMetricsPanel'
 import ConfirmDialog from './components/ConfirmDialog'
-import {
-  DEMO_CURRENT_USER,
-  DEMO_REPOS,
-  demoBranches,
-  demoCopilotOrgData,
-  demoCopilotOrgs,
-  demoPRActivity,
-  demoPullRequests,
-} from './demo-data'
+
+type DemoData = typeof import('./demo-data')
 
 const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true'
 const DEMO_TOKEN = 'demo-mode'
@@ -55,6 +48,8 @@ function applyTheme(theme: Theme, mode: Mode) {
 
 function App() {
   const queryClient = useQueryClient()
+
+  const [demoData, setDemoData] = useState<DemoData | null>(null)
 
   const [token, setToken] = useState(() => isDemoMode ? DEMO_TOKEN : loadToken())
   const [showSettings, setShowSettings] = useState(false)
@@ -72,11 +67,22 @@ function App() {
     applyTheme(theme, mode)
   }, [theme, mode])
 
-  const [initialRepoState] = useState<RepoState>(() =>
-    isDemoMode ? { repos: DEMO_REPOS, selectedRepos: DEMO_REPOS } : loadRepoState([]),
-  )
-  const [repos, setRepos] = useState<string[]>(initialRepoState.repos)
-  const [selectedRepos, setSelectedRepos] = useState<string[]>(initialRepoState.selectedRepos)
+  // Load demo fixture data lazily so non-demo users don't pay the parse/download cost.
+  useEffect(() => {
+    if (isDemoMode) {
+      void import('./demo-data').then(setDemoData)
+    }
+  }, [])
+
+  const [repos, setRepos] = useState<string[]>(() => isDemoMode ? [] : loadRepoState([]).repos)
+  const [selectedRepos, setSelectedRepos] = useState<string[]>(() => isDemoMode ? [] : loadRepoState([]).selectedRepos)
+  // Populate demo repos once the demo-data module has loaded.
+  useEffect(() => {
+    if (isDemoMode && demoData) {
+      setRepos(demoData.DEMO_REPOS)
+      setSelectedRepos(demoData.DEMO_REPOS)
+    }
+  }, [demoData])
   const [newRepo, setNewRepo] = useState('')
   const [repoError, setRepoError] = useState('')
 
@@ -94,9 +100,9 @@ function App() {
   const currentUserQuery = useQuery({
     queryKey: ['current-user', token],
     queryFn: isDemoMode
-      ? () => Promise.resolve(DEMO_CURRENT_USER)
+      ? () => Promise.resolve(demoData?.DEMO_CURRENT_USER ?? '')
       : () => fetchCurrentUser(token),
-    enabled: !!token,
+    enabled: !!token && (!isDemoMode || demoData !== null),
     staleTime: Infinity,
     retry: false,
   })
@@ -122,14 +128,14 @@ function App() {
       selectedRepos.map((repo) => ({
         queryKey: ['repo-prs', token, repo, currentUser] as const,
         queryFn: isDemoMode
-          ? () => Promise.resolve(demoPullRequests.filter((pr) => pr.repo === repo))
+          ? () => Promise.resolve((demoData?.demoPullRequests ?? []).filter((pr) => pr.repo === repo))
           : () => fetchRepoPullRequests(repo, token, currentUser),
         staleTime: STALE_TIME,
         refetchInterval: isDemoMode ? (false as const) : 5 * 60 * 1000,
         retry: isDemoMode ? 0 : 1,
         enabled: prQueriesReady,
       })),
-    [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME],
+    [selectedRepos, token, currentUser, prQueriesReady, STALE_TIME, demoData],
   )
 
   const repoQueries = useQueries({ queries: prQueryDefs })
@@ -148,13 +154,13 @@ function App() {
       effectiveBranchAnalysisRepos.map((repo) => ({
         queryKey: ['repo-branches', token, repo] as const,
         queryFn: isDemoMode
-          ? () => Promise.resolve(demoBranches.filter((b) => b.repo === repo))
+          ? () => Promise.resolve((demoData?.demoBranches ?? []).filter((b) => b.repo === repo))
           : () => fetchRepoBranches(repo, token),
         staleTime: STALE_TIME,
         retry: isDemoMode ? 0 : 1,
         enabled: !!token && effectiveBranchAnalysisTriggered,
       })),
-    [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME],
+    [effectiveBranchAnalysisRepos, token, effectiveBranchAnalysisTriggered, STALE_TIME, demoData],
   )
 
   const branchQueries = useQueries({ queries: branchQueryDefs })
@@ -164,7 +170,7 @@ function App() {
   const { data: userOrgs = [], isPending: orgsIsPending } = useQuery({
     queryKey: ['user-orgs', token],
     queryFn: isDemoMode
-      ? () => Promise.resolve(demoCopilotOrgs)
+      ? () => Promise.resolve(demoData?.demoCopilotOrgs ?? [])
       : () => fetchUserOrgs(token),
     enabled: !!token && activeView === 'copilot',
     staleTime: 10 * 60 * 1000,
@@ -198,14 +204,14 @@ function App() {
         ? [{
             queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
             queryFn: isDemoMode
-              ? () => Promise.resolve(demoCopilotOrgData.find((d) => d.org === selectedCopilotOrg) ?? demoCopilotOrgData[0])
+              ? () => Promise.resolve((demoData?.demoCopilotOrgData ?? []).find((d) => d.org === selectedCopilotOrg) ?? (demoData?.demoCopilotOrgData ?? [])[0])
               : () => fetchCopilotOrgData(selectedCopilotOrg, token),
             staleTime: STALE_TIME,
             retry: isDemoMode ? 0 : 1,
             enabled: !!token && activeView === 'copilot' && !!selectedCopilotOrg,
           }]
         : [],
-    [selectedCopilotOrg, token, activeView, STALE_TIME],
+    [selectedCopilotOrg, token, activeView, STALE_TIME, demoData],
   )
 
   const copilotQueries = useQueries({ queries: copilotQueryDefs })
@@ -328,7 +334,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-gh-bg text-gh-fg-default">
-      <div className="mx-auto max-w-[1552px] px-4 py-8 md:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
         {isDemoMode && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-gh-accent/40 bg-gh-accent/10 px-4 py-2.5 text-sm text-gh-accent-fg">
             <FlaskConical className="h-4 w-4 shrink-0" />
@@ -608,7 +614,8 @@ function App() {
                 pr={selectedPR}
                 token={token}
                 currentUser={currentUser}
-                demoActivity={isDemoMode ? (demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
+                isDemoMode={isDemoMode}
+                demoActivity={isDemoMode ? (demoData?.demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
                 onClose={() => setSelectedPR(null)}
                 onPRClosed={() => {
                   setSelectedPR(null)
