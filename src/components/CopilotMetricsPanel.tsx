@@ -416,9 +416,10 @@ function aggregatePersonalUsage(
   usage: CopilotBillingUsageItem[],
   premiumRequests: CopilotBillingUsageItem[],
 ): AggregatedPersonalUsage {
-  const readUsageQuantity = (item: CopilotBillingUsageItem): number =>
+  const getUsageQuantityWithFallback = (item: CopilotBillingUsageItem): number =>
     item.quantity ?? item.grossQuantity ?? item.netQuantity ?? item.discountQuantity ?? 0
-  const readPremiumRequestQuantity = (item: CopilotBillingUsageItem): number =>
+  // Premium-request reports commonly provide billable totals in grossQuantity even when netQuantity is zero.
+  const getPremiumRequestQuantityWithFallback = (item: CopilotBillingUsageItem): number =>
     item.grossQuantity ?? item.quantity ?? item.netQuantity ?? item.discountQuantity ?? 0
 
   const productMap = new Map<string, { quantity: number; netAmount: number; unitType: string }>()
@@ -430,7 +431,7 @@ function aggregatePersonalUsage(
   let totalNetAmount = 0
 
   for (const item of usage) {
-    const quantity = readUsageQuantity(item)
+    const quantity = getUsageQuantityWithFallback(item)
     totalUsageQuantity += quantity
     totalNetAmount += item.netAmount ?? 0
 
@@ -449,7 +450,7 @@ function aggregatePersonalUsage(
   }
 
   for (const item of premiumRequests) {
-    const quantity = readPremiumRequestQuantity(item)
+    const quantity = getPremiumRequestQuantityWithFallback(item)
     totalPremiumRequests += quantity
     totalNetAmount += item.netAmount ?? 0
     const key = item.model ? `${item.product} · ${item.model}` : `${item.product} · ${item.sku}`

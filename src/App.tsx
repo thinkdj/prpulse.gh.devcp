@@ -223,15 +223,15 @@ function App() {
     if (selectedCopilotTargetRaw && copilotTargetsStillResolving) return null
     return copilotTargets[0] ?? null
   }, [copilotTargets, selectedCopilotTargetRaw, copilotTargetsStillResolving])
-  const hasSelectedCopilotTargetRaw = copilotTargets.some((target) => target.id === selectedCopilotTargetRaw)
+  const selectedTargetExists = copilotTargets.some((target) => target.id === selectedCopilotTargetRaw)
 
   useEffect(() => {
-    if (!selectedCopilotTarget || hasSelectedCopilotTargetRaw) return
+    if (!selectedCopilotTarget || selectedTargetExists) return
     if (selectedCopilotTargetRaw && copilotTargetsStillResolving) return
     if (selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
       setSelectedCopilotTarget(selectedCopilotTarget.id)
     }
-  }, [selectedCopilotTarget, selectedCopilotTargetRaw, hasSelectedCopilotTargetRaw, copilotTargetsStillResolving, setSelectedCopilotTarget])
+  }, [selectedCopilotTarget, selectedCopilotTargetRaw, selectedTargetExists, copilotTargetsStillResolving, setSelectedCopilotTarget])
 
   const handleCopilotTargetChange = useCallback((target: string) => {
     setSelectedCopilotTarget(target)
