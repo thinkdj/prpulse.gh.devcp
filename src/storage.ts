@@ -7,28 +7,6 @@ const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
-// One-time migration: move data from old gh.devcp keys to the new prpulse.gh.devcp keys.
-;(function migrateStorageKeys() {
-  const migrations: [string, string][] = [
-    ['gh.devcp.dashboard.repositories', REPO_STORAGE_KEY],
-    ['gh.devcp.dashboard.token', TOKEN_STORAGE_KEY],
-    ['gh.devcp.dashboard.theme', THEME_STORAGE_KEY],
-    ['gh.devcp.dashboard.mode', MODE_STORAGE_KEY],
-    ['gh.devcp.dashboard.copilotTarget', COPILOT_TARGET_STORAGE_KEY],
-  ]
-  try {
-    for (const [oldKey, newKey] of migrations) {
-      const oldValue = localStorage.getItem(oldKey)
-      if (oldValue !== null && localStorage.getItem(newKey) === null) {
-        localStorage.setItem(newKey, oldValue)
-        localStorage.removeItem(oldKey)
-      }
-    }
-  } catch {
-    // no-op: localStorage can be unavailable in restricted browser contexts
-  }
-})()
-
 const fallbackHashToken = (token: string): string => {
   let h = 2166136261 >>> 0
   for (let i = 0; i < token.length; i += 1) {
