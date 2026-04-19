@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 
 type TokenSettingsProps = {
   token: string
-  onSaveToken: (token: string) => void
+  onSaveToken: (token: string) => void | Promise<void>
   currentUser: string
   isVisible: boolean
   onClose: () => void
