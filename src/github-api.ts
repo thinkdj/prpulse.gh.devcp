@@ -687,8 +687,10 @@ export async function fetchCopilotOrgData(
   }
 }
 
+const COPILOT_BILLING_PATTERN = /(?:^|[\s._-])copilot(?:$|[\s._-])/i
+
 function isCopilotBillingItem(item: Pick<CopilotBillingUsageItem, 'product' | 'sku'>): boolean {
-  return /copilot/i.test(item.product ?? '') || /copilot/i.test(item.sku ?? '')
+  return COPILOT_BILLING_PATTERN.test(item.product ?? '') || COPILOT_BILLING_PATTERN.test(item.sku ?? '')
 }
 
 function filterCopilotBillingItems(items: CopilotBillingUsageItem[]): CopilotBillingUsageItem[] {
