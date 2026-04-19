@@ -29,6 +29,7 @@ type PRDetailPanelProps = {
   pr: PullRequest
   token: string
   currentUser: string
+  isDemoMode: boolean
   demoActivity?: PRComment[]
   onClose: () => void
   onPRClosed?: () => void
@@ -84,8 +85,8 @@ function reviewStateLabel(state?: string): string {
   return 'Review'
 }
 
-export default function PRDetailPanel({ pr, token, currentUser, demoActivity, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
-  const isDemo = demoActivity !== undefined
+export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demoActivity, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
+  const isDemo = isDemoMode
   const queryClient = useQueryClient()
   const [commentBody, setCommentBody] = useState('')
   const [showPresets, setShowPresets] = useState(false)
@@ -99,7 +100,6 @@ export default function PRDetailPanel({ pr, token, currentUser, demoActivity, on
     queryFn: () => fetchPRActivity(pr.repo, pr.id, token),
     enabled: !!token && !isDemo,
     staleTime: 60 * 1000,
-    placeholderData: isDemo ? demoActivity : undefined,
   })
 
   const displayedActivity = isDemo ? demoActivity : activity
