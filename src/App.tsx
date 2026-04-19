@@ -17,7 +17,7 @@ import {
   FlaskConical,
 } from 'lucide-react'
 import type { CopilotAccountData, CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
-import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
+import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode, loadCopilotTarget, saveCopilotTarget } from './storage'
 import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCopilotOrgData, fetchCopilotPersonalData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
 import { formatAgeAgoFromMs } from './utils'
@@ -62,7 +62,9 @@ function App() {
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
   const [branchAnalysisTriggered, setBranchAnalysisTriggered] = useState(false)
   const [branchAnalysisRepos, setBranchAnalysisRepos] = useState<string[]>([])
-  const [selectedCopilotTargetRaw, setSelectedCopilotTarget] = useState('')
+  const [selectedCopilotTargetRaw, setSelectedCopilotTarget] = useState(() =>
+    isDemoMode ? '' : loadCopilotTarget(),
+  )
   useEffect(() => {
     applyTheme(theme, mode)
   }, [theme, mode])
@@ -197,11 +199,6 @@ function App() {
 
   const copilotTargets = useMemo<CopilotAnalyticsTarget[]>(
     () => [
-      ...copilotOrgs.map((org) => ({
-        id: `org:${org}`,
-        label: `${org} (Organization)`,
-        type: 'organization' as const,
-      })),
       ...(!isDemoMode && currentUser
         ? [{
             id: `personal:${currentUser}`,
@@ -209,6 +206,11 @@ function App() {
             type: 'personal' as const,
           }]
         : []),
+      ...copilotOrgs.map((org) => ({
+        id: `org:${org}`,
+        label: `${org} (Organization)`,
+        type: 'organization' as const,
+      })),
     ],
     [copilotOrgs, currentUser],
   )
@@ -216,6 +218,17 @@ function App() {
   const selectedCopilotTarget = copilotTargets.find((target) => target.id === selectedCopilotTargetRaw)
     ?? copilotTargets[0]
     ?? null
+
+  useEffect(() => {
+    if (selectedCopilotTarget && selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
+      setSelectedCopilotTarget(selectedCopilotTarget.id)
+    }
+  }, [selectedCopilotTarget, selectedCopilotTargetRaw])
+
+  const handleCopilotTargetChange = useCallback((target: string) => {
+    setSelectedCopilotTarget(target)
+    if (!isDemoMode) saveCopilotTarget(target)
+  }, [])
 
   const copilotQuery = useQuery<CopilotAccountData | null>({
     queryKey: ['copilot-account', token, selectedCopilotTarget?.id],
@@ -618,7 +631,7 @@ function App() {
                 targetsLoading={copilotTargetsLoading}
                 targets={copilotTargets}
                 selectedTarget={selectedCopilotTarget?.id ?? ''}
-                onTargetChange={setSelectedCopilotTarget}
+                onTargetChange={handleCopilotTargetChange}
                 error={copilotError ? (copilotError instanceof Error ? copilotError.message : 'Failed to fetch Copilot data') : null}
               />
             ) : (

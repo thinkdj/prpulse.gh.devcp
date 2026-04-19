@@ -31,6 +31,7 @@ import type { Mock } from 'vitest'
 
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
 const REPOS_KEY = 'prpulse.gh.devcp.dashboard.repositories'
+const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 const defaultRepos = Array.from(new Set(seedPullRequests.map((pr) => pr.repo)))
 
@@ -1030,7 +1031,19 @@ describe('PR Pulse – The GitHub Control Panel', () => {
             quantity: 12,
           },
         ],
-        premiumRequests: [],
+        premiumRequests: [
+          {
+            product: 'Copilot',
+            sku: 'Copilot Premium Request',
+            unitType: 'requests',
+            pricePerUnit: 0.04,
+            grossAmount: 0.96,
+            discountAmount: 0.96,
+            netAmount: 0,
+            grossQuantity: 24,
+            netQuantity: 0,
+          },
+        ],
         error: undefined,
       })
 
@@ -1051,20 +1064,55 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       await screen.findByTestId('copilot-metrics-panel')
 
       await waitFor(() => {
-        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
+        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
       })
 
       const selector = screen.getByLabelText(/account/i)
       expect(within(selector).getByRole('option', { name: /some-org \(organization\)/i })).toBeInTheDocument()
       expect(within(selector).getByRole('option', { name: /test-user \(personal\)/i })).toBeInTheDocument()
+      expect((selector as HTMLSelectElement).value).toBe('personal:test-user')
+      expect(screen.getByText('24')).toBeInTheDocument()
 
-      fireEvent.change(selector, { target: { value: 'personal:test-user' } })
+      fireEvent.change(selector, { target: { value: 'org:some-org' } })
 
       await waitFor(() => {
-        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
       })
-      expect(screen.getByText(/billable units/i)).toBeInTheDocument()
-      expect(screen.getByText(/from personal billing usage/i)).toBeInTheDocument()
+      expect(localStorage.getItem(COPILOT_TARGET_KEY)).toBe('org:some-org')
+    })
+
+    it('uses the last saved Copilot target when available', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData, fetchCopilotPersonalData: mockCopilotPersonalData } = await import('./github-api')
+
+      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        type: 'organization',
+        target: 'org:some-org',
+        org: 'some-org',
+        billing: null,
+        metrics: [],
+        error: undefined,
+      })
+
+      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(
+        REPOS_KEY,
+        JSON.stringify({
+          repos: ['test-user/my-project', 'some-org/their-repo'],
+          selectedRepos: ['test-user/my-project', 'some-org/their-repo'],
+        }),
+      )
+      localStorage.setItem(COPILOT_TARGET_KEY, 'org:some-org')
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+      await screen.findByTestId('copilot-metrics-panel')
+
+      await waitFor(() => {
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
+      })
+      expect(mockCopilotPersonalData).not.toHaveBeenCalled()
     })
 
     it('shows usage bars and summary cards when metrics data is available', async () => {
