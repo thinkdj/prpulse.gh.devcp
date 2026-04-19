@@ -16,7 +16,7 @@ import {
   Bot,
   FlaskConical,
 } from 'lucide-react'
-import type { CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
+import type { CopilotAccountData, CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
 import { clearApiCache, fetchCopilotOrgData, fetchCopilotPersonalData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
@@ -217,7 +217,7 @@ function App() {
     ?? copilotTargets[0]
     ?? null
 
-  const copilotQuery = useQuery({
+  const copilotQuery = useQuery<CopilotAccountData | null>({
     queryKey: ['copilot-account', token, selectedCopilotTarget?.id],
     queryFn: isDemoMode
       ? () => {

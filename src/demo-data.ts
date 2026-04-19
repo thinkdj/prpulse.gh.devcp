@@ -763,6 +763,8 @@ export const demoCopilotMetrics = DEMO_METRICS_BASE.map(([date, active, engaged,
 
 export const demoCopilotOrgData: CopilotOrgData[] = [
   {
+    type: 'organization',
+    target: 'org:acme-corp',
     org: 'acme-corp',
     billing: {
       seat_breakdown: {

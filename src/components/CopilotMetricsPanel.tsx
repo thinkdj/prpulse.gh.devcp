@@ -836,7 +836,7 @@ export default function CopilotMetricsPanel({
                   className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
                   data-testid="copilot-no-metrics"
                 >
-                  No personal Copilot billing usage was returned for <span className="font-medium text-gh-fg">{accountData.account}</span>.
+                  No personal Copilot billing usage was returned for <span className="font-medium text-gh-fg">{accountData?.account ?? 'this account'}</span>.
                   GitHub usually shows this data in your billing settings after usage has been processed.
                 </div>
               )}

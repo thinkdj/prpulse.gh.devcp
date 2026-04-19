@@ -1063,7 +1063,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       await waitFor(() => {
         expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
       })
-      expect(screen.getByText('12')).toBeInTheDocument()
+      expect(screen.getByText(/billable units/i)).toBeInTheDocument()
+      expect(screen.getByText(/from personal billing usage/i)).toBeInTheDocument()
     })
 
     it('shows usage bars and summary cards when metrics data is available', async () => {
