@@ -4,6 +4,7 @@ const REPO_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.token'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
+const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 // One-time migration: move data from old gh.devcp keys to the new prpulse.gh.devcp keys.
 ;(function migrateStorageKeys() {
@@ -12,6 +13,7 @@ const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
     ['gh.devcp.dashboard.token', TOKEN_STORAGE_KEY],
     ['gh.devcp.dashboard.theme', THEME_STORAGE_KEY],
     ['gh.devcp.dashboard.mode', MODE_STORAGE_KEY],
+    ['gh.devcp.dashboard.copilotTarget', COPILOT_TARGET_STORAGE_KEY],
   ]
   try {
     for (const [oldKey, newKey] of migrations) {
@@ -125,6 +127,26 @@ export const loadMode = (): Mode => {
 export const saveMode = (mode: Mode) => {
   try {
     localStorage.setItem(MODE_STORAGE_KEY, mode)
+  } catch {
+    // no-op
+  }
+}
+
+export const loadCopilotTarget = (): string => {
+  try {
+    return localStorage.getItem(COPILOT_TARGET_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+export const saveCopilotTarget = (target: string) => {
+  try {
+    if (target) {
+      localStorage.setItem(COPILOT_TARGET_STORAGE_KEY, target)
+    } else {
+      localStorage.removeItem(COPILOT_TARGET_STORAGE_KEY)
+    }
   } catch {
     // no-op
   }

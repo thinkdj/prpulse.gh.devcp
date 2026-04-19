@@ -8,12 +8,15 @@ import {
   saveTheme,
   loadMode,
   saveMode,
+  loadCopilotTarget,
+  saveCopilotTarget,
 } from './storage'
 
 const REPO_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
 const THEME_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_KEY = 'prpulse.gh.devcp.dashboard.mode'
+const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
 
 afterEach(() => {
   localStorage.clear()
@@ -244,6 +247,46 @@ describe('saveMode', () => {
   })
 })
 
+/* ── loadCopilotTarget ── */
+describe('loadCopilotTarget', () => {
+  it('returns empty string when nothing is stored', () => {
+    expect(loadCopilotTarget()).toBe('')
+  })
+
+  it('returns the stored copilot target', () => {
+    localStorage.setItem(COPILOT_TARGET_KEY, 'personal:test-user')
+    expect(loadCopilotTarget()).toBe('personal:test-user')
+  })
+
+  it('returns empty string when localStorage throws', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('security error')
+    })
+    expect(loadCopilotTarget()).toBe('')
+  })
+})
+
+/* ── saveCopilotTarget ── */
+describe('saveCopilotTarget', () => {
+  it('writes the selected copilot target to localStorage', () => {
+    saveCopilotTarget('org:thinkdj')
+    expect(localStorage.getItem(COPILOT_TARGET_KEY)).toBe('org:thinkdj')
+  })
+
+  it('removes the key when given an empty string', () => {
+    localStorage.setItem(COPILOT_TARGET_KEY, 'org:thinkdj')
+    saveCopilotTarget('')
+    expect(localStorage.getItem(COPILOT_TARGET_KEY)).toBeNull()
+  })
+
+  it('does not throw when localStorage throws', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
+    expect(() => saveCopilotTarget('org:thinkdj')).not.toThrow()
+  })
+})
+
 /* ── Round-trip integration ── */
 describe('storage round-trips', () => {
   it('can save and reload a token', () => {
@@ -265,5 +308,10 @@ describe('storage round-trips', () => {
     const state = { repos: ['org/repo-a', 'org/repo-b'], selectedRepos: ['org/repo-a'] }
     saveRepoState(state)
     expect(loadRepoState([])).toEqual(state)
+  })
+
+  it('can save and reload copilot target', () => {
+    saveCopilotTarget('personal:test-user')
+    expect(loadCopilotTarget()).toBe('personal:test-user')
   })
 })
