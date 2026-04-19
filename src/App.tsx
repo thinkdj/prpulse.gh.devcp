@@ -303,8 +303,8 @@ function App() {
   }
 
   const handleSaveToken = async (newToken: string) => {
-    await saveToken(newToken)
     setToken(newToken)
+    await saveToken(newToken)
     clearApiCache()
     setBranchAnalysisTriggered(false)
     setBranchAnalysisRepos([])

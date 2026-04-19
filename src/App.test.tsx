@@ -55,7 +55,7 @@ const renderApp = () => {
   )
 }
 
-/** Set up localStorage so the app boots in "authenticated" mode with seed repos */
+/** Seed authenticated boot state: raw token in sessionStorage, fingerprint + repos in localStorage. */
 function seedAuthenticatedState() {
   localStorage.setItem(TOKEN_KEY, 'fnv1a32:deadc0de')
   sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_test_token')
