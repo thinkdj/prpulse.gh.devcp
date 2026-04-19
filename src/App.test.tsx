@@ -976,6 +976,66 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       expect(screen.getByTestId('copilot-metrics-panel')).toBeInTheDocument()
     })
 
+    it('excludes authenticated user login from copilot org candidates when all repos are personal and fetchUserOrgs returns empty', async () => {
+      // All repos owned by 'test-user' (the authenticated user mock value).
+      // fetchUserOrgs returns [] (default mock), so the fallback derivation from
+      // repo owners must NOT include 'test-user' → empty org list → empty state shown.
+      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+
+      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(
+        REPOS_KEY,
+        JSON.stringify({ repos: ['test-user/my-project', 'test-user/another-repo'], selectedRepos: ['test-user/my-project'] }),
+      )
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+
+      // Empty state should appear because 'test-user' is filtered out of org candidates.
+      expect(await screen.findByTestId('copilot-empty-state')).toBeInTheDocument()
+
+      // fetchCopilotOrgData must never have been called — no org to query.
+      expect(mockCopilotOrgData).not.toHaveBeenCalled()
+    })
+
+    it('includes org owners but not authenticated user login when repos are a mix of personal and org repos', async () => {
+      // 'test-user/my-project' is personal; 'some-org/their-repo' belongs to an org.
+      // fetchUserOrgs returns [] so fallback derivation runs.
+      // Only 'some-org' should end up in copilotOrgs; 'test-user' must be excluded.
+      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+
+      ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        org: 'some-org',
+        billing: null,
+        metrics: [],
+        error: undefined,
+      })
+
+      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(
+        REPOS_KEY,
+        JSON.stringify({
+          repos: ['test-user/my-project', 'some-org/their-repo'],
+          selectedRepos: ['test-user/my-project', 'some-org/their-repo'],
+        }),
+      )
+
+      renderApp()
+      await screen.findByRole('heading', { name: 'PR Pulse – The GitHub Control Panel' })
+
+      fireEvent.click(getCopilotTabBtn())
+
+      await screen.findByTestId('copilot-metrics-panel')
+
+      // The org selector should show 'some-org' but not 'test-user'.
+      await waitFor(() => {
+        expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
+        expect(mockCopilotOrgData).not.toHaveBeenCalledWith('test-user', expect.any(String))
+      })
+    })
+
     it('shows usage bars and summary cards when metrics data is available', async () => {
       const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
       const { fetchUserOrgs: mockUserOrgs } = await import('./github-api')
