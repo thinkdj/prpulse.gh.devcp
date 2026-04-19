@@ -218,12 +218,17 @@ function App() {
   const selectedCopilotTarget = copilotTargets.find((target) => target.id === selectedCopilotTargetRaw)
     ?? copilotTargets[0]
     ?? null
+  const hasSelectedCopilotTargetRaw = copilotTargets.some((target) => target.id === selectedCopilotTargetRaw)
+  const copilotTargetsStillResolving =
+    orgsIsPending || (!isDemoMode && !!token && activeView === 'copilot' && currentUserQuery.isLoading)
 
   useEffect(() => {
-    if (selectedCopilotTarget && selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
+    if (!selectedCopilotTarget || hasSelectedCopilotTargetRaw) return
+    if (selectedCopilotTargetRaw && copilotTargetsStillResolving) return
+    if (selectedCopilotTargetRaw !== selectedCopilotTarget.id) {
       setSelectedCopilotTarget(selectedCopilotTarget.id)
     }
-  }, [selectedCopilotTarget, selectedCopilotTargetRaw])
+  }, [selectedCopilotTarget, selectedCopilotTargetRaw, hasSelectedCopilotTargetRaw, copilotTargetsStillResolving])
 
   const handleCopilotTargetChange = useCallback((target: string) => {
     setSelectedCopilotTarget(target)
@@ -253,7 +258,7 @@ function App() {
   const copilotError = copilotQuery.error ?? null
   const copilotDataUpdatedAt = copilotQuery.dataUpdatedAt
   const copilotTargetsLoading =
-    orgsIsPending || (!isDemoMode && !!token && activeView === 'copilot' && currentUserQuery.isLoading)
+    copilotTargetsStillResolving
 
   const prIsLoading = repoQueries.some((q) => q.isLoading)
   const prError = repoQueries.find((q) => q.error)?.error ?? null
