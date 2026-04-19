@@ -22,7 +22,8 @@ vi.mock('./github-api', () => ({
   fetchUserOrgs: vi.fn().mockResolvedValue([]),
   fetchCopilotMetrics: vi.fn().mockResolvedValue([]),
   fetchCopilotBilling: vi.fn().mockResolvedValue(null),
-  fetchCopilotOrgData: vi.fn().mockResolvedValue({ org: 'test-org', billing: null, metrics: [], error: undefined }),
+  fetchCopilotOrgData: vi.fn().mockResolvedValue({ type: 'organization', target: 'org:test-org', org: 'test-org', billing: null, metrics: [], error: undefined }),
+  fetchCopilotPersonalData: vi.fn().mockResolvedValue({ type: 'personal', target: 'personal:test-user', account: 'test-user', usage: [], premiumRequests: [], error: undefined }),
 }))
 
 import { clearApiCache, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests } from './github-api'
@@ -959,6 +960,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
     it('shows the no-metrics empty state when org has no metrics data', async () => {
       const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
       ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        type: 'organization',
+        target: 'org:thinkdj',
         org: 'thinkdj',
         billing: null,
         metrics: [],
@@ -976,11 +979,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
       expect(screen.getByTestId('copilot-metrics-panel')).toBeInTheDocument()
     })
 
-    it('excludes authenticated user login from copilot org candidates when all repos are personal and fetchUserOrgs returns empty', async () => {
-      // All repos owned by 'test-user' (the authenticated user mock value).
-      // fetchUserOrgs returns [] (default mock), so the fallback derivation from
-      // repo owners must NOT include 'test-user' → empty org list → empty state shown.
-      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+    it('shows personal Copilot analytics when all tracked repos belong to the authenticated user', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData, fetchCopilotPersonalData: mockCopilotPersonalData } = await import('./github-api')
 
       localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
       localStorage.setItem(
@@ -993,23 +993,44 @@ describe('PR Pulse – The GitHub Control Panel', () => {
 
       fireEvent.click(getCopilotTabBtn())
 
-      // Empty state should appear because 'test-user' is filtered out of org candidates.
-      expect(await screen.findByTestId('copilot-empty-state')).toBeInTheDocument()
+      expect(await screen.findByTestId('copilot-metrics-panel')).toBeInTheDocument()
 
-      // fetchCopilotOrgData must never have been called — no org to query.
+      await waitFor(() => {
+        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
+      })
       expect(mockCopilotOrgData).not.toHaveBeenCalled()
+
+      expect(screen.getByText(/personal copilot pro accounts/i)).toBeInTheDocument()
     })
 
-    it('includes org owners but not authenticated user login when repos are a mix of personal and org repos', async () => {
-      // 'test-user/my-project' is personal; 'some-org/their-repo' belongs to an org.
-      // fetchUserOrgs returns [] so fallback derivation runs.
-      // Only 'some-org' should end up in copilotOrgs; 'test-user' must be excluded.
-      const { fetchCopilotOrgData: mockCopilotOrgData } = await import('./github-api')
+    it('lets the user switch between organization and personal Copilot analytics', async () => {
+      const { fetchCopilotOrgData: mockCopilotOrgData, fetchCopilotPersonalData: mockCopilotPersonalData } = await import('./github-api')
 
       ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        type: 'organization',
+        target: 'org:some-org',
         org: 'some-org',
         billing: null,
         metrics: [],
+        error: undefined,
+      })
+      ;(mockCopilotPersonalData as Mock).mockResolvedValueOnce({
+        type: 'personal',
+        target: 'personal:test-user',
+        account: 'test-user',
+        usage: [
+          {
+            product: 'GitHub Copilot',
+            sku: 'copilot_pro',
+            unitType: 'requests',
+            pricePerUnit: 0,
+            grossAmount: 0,
+            discountAmount: 0,
+            netAmount: 0,
+            quantity: 12,
+          },
+        ],
+        premiumRequests: [],
         error: undefined,
       })
 
@@ -1029,11 +1050,21 @@ describe('PR Pulse – The GitHub Control Panel', () => {
 
       await screen.findByTestId('copilot-metrics-panel')
 
-      // The org selector should show 'some-org' but not 'test-user'.
       await waitFor(() => {
         expect(mockCopilotOrgData).toHaveBeenCalledWith('some-org', expect.any(String))
-        expect(mockCopilotOrgData).not.toHaveBeenCalledWith('test-user', expect.any(String))
       })
+
+      const selector = screen.getByLabelText(/account/i)
+      expect(within(selector).getByRole('option', { name: /some-org \(organization\)/i })).toBeInTheDocument()
+      expect(within(selector).getByRole('option', { name: /test-user \(personal\)/i })).toBeInTheDocument()
+
+      fireEvent.change(selector, { target: { value: 'personal:test-user' } })
+
+      await waitFor(() => {
+        expect(mockCopilotPersonalData).toHaveBeenCalledWith('test-user', expect.any(String))
+      })
+      expect(screen.getByText(/billable units/i)).toBeInTheDocument()
+      expect(screen.getByText(/from personal billing usage/i)).toBeInTheDocument()
     })
 
     it('shows usage bars and summary cards when metrics data is available', async () => {
@@ -1042,6 +1073,8 @@ describe('PR Pulse – The GitHub Control Panel', () => {
 
       ;(mockUserOrgs as Mock).mockResolvedValueOnce(['thinkdj'])
       ;(mockCopilotOrgData as Mock).mockResolvedValueOnce({
+        type: 'organization',
+        target: 'org:thinkdj',
         org: 'thinkdj',
         billing: {
           seat_breakdown: { total: 10, added_this_cycle: 2, pending_invitation: 1, pending_cancellation: 0, active_this_cycle: 8, inactive_this_cycle: 2 },

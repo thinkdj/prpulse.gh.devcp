@@ -16,10 +16,10 @@ import {
   Bot,
   FlaskConical,
 } from 'lucide-react'
-import type { DashboardFilter, PullRequest } from './types'
+import type { CopilotAccountData, CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode } from './storage'
 import type { Theme, Mode } from './storage'
-import { clearApiCache, fetchCopilotOrgData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
+import { clearApiCache, fetchCopilotOrgData, fetchCopilotPersonalData, fetchCurrentUser, fetchRepoBranches, fetchRepoPullRequests, fetchUserOrgs, fetchUserRepos } from './github-api'
 import { formatAgeAgoFromMs } from './utils'
 import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
@@ -62,7 +62,7 @@ function App() {
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
   const [branchAnalysisTriggered, setBranchAnalysisTriggered] = useState(false)
   const [branchAnalysisRepos, setBranchAnalysisRepos] = useState<string[]>([])
-  const [selectedCopilotOrgRaw, setSelectedCopilotOrg] = useState('')
+  const [selectedCopilotTargetRaw, setSelectedCopilotTarget] = useState('')
   useEffect(() => {
     applyTheme(theme, mode)
   }, [theme, mode])
@@ -195,36 +195,52 @@ function App() {
     return [...fromRepos].sort()
   }, [repos, userOrgs, orgsIsPending, currentUser])
 
-  // Derive effective selected org: fall back to first org if raw selection is invalid
-  const selectedCopilotOrg =
-    selectedCopilotOrgRaw && copilotOrgs.includes(selectedCopilotOrgRaw)
-      ? selectedCopilotOrgRaw
-      : (copilotOrgs[0] ?? '')
-
-  const copilotQueryDefs = useMemo(
-    () =>
-      selectedCopilotOrg
+  const copilotTargets = useMemo<CopilotAnalyticsTarget[]>(
+    () => [
+      ...copilotOrgs.map((org) => ({
+        id: `org:${org}`,
+        label: `${org} (Organization)`,
+        type: 'organization' as const,
+      })),
+      ...(!isDemoMode && currentUser
         ? [{
-            queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
-            queryFn: isDemoMode
-              ? () => {
-                  const data = demoData?.demoCopilotOrgData ?? []
-                  return Promise.resolve(data.find((d) => d.org === selectedCopilotOrg) ?? data[0])
-                }
-              : () => fetchCopilotOrgData(selectedCopilotOrg, token),
-            staleTime: STALE_TIME,
-            retry: isDemoMode ? 0 : 1,
-            enabled: !!token && activeView === 'copilot' && !!selectedCopilotOrg,
+            id: `personal:${currentUser}`,
+            label: `${currentUser} (Personal)`,
+            type: 'personal' as const,
           }]
-        : [],
-    [selectedCopilotOrg, token, activeView, STALE_TIME, demoData],
+        : []),
+    ],
+    [copilotOrgs, currentUser],
   )
 
-  const copilotQueries = useQueries({ queries: copilotQueryDefs })
-  const copilotOrgData = copilotQueries.flatMap((q) => (q.data ? [q.data] : []))
-  const copilotIsLoading = copilotQueries.some((q) => q.isLoading)
-  const copilotError = copilotQueries.find((q) => q.error)?.error ?? null
-  const copilotDataUpdatedAt = Math.max(0, ...copilotQueries.map((q) => q.dataUpdatedAt))
+  const selectedCopilotTarget = copilotTargets.find((target) => target.id === selectedCopilotTargetRaw)
+    ?? copilotTargets[0]
+    ?? null
+
+  const copilotQuery = useQuery<CopilotAccountData | null>({
+    queryKey: ['copilot-account', token, selectedCopilotTarget?.id],
+    queryFn: isDemoMode
+      ? () => {
+          const data = demoData?.demoCopilotOrgData ?? []
+          return Promise.resolve(data.find((d) => d.target === selectedCopilotTarget?.id || d.org === selectedCopilotTarget?.id.replace('org:', '')) ?? data[0] ?? null)
+        }
+      : () => {
+          if (!selectedCopilotTarget) return Promise.resolve(null)
+          return selectedCopilotTarget.type === 'personal'
+            ? fetchCopilotPersonalData(currentUser, token)
+            : fetchCopilotOrgData(selectedCopilotTarget.id.replace('org:', ''), token)
+        },
+    staleTime: STALE_TIME,
+    retry: isDemoMode ? 0 : 1,
+    enabled: !!token && activeView === 'copilot' && (!!selectedCopilotTarget || isDemoMode),
+  })
+
+  const copilotData = copilotQuery.data ?? null
+  const copilotIsLoading = copilotQuery.isLoading
+  const copilotError = copilotQuery.error ?? null
+  const copilotDataUpdatedAt = copilotQuery.dataUpdatedAt
+  const copilotTargetsLoading =
+    orgsIsPending || (!isDemoMode && !!token && activeView === 'copilot' && currentUserQuery.isLoading)
 
   const prIsLoading = repoQueries.some((q) => q.isLoading)
   const prError = repoQueries.find((q) => q.error)?.error ?? null
@@ -295,7 +311,7 @@ function App() {
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
     void queryClient.invalidateQueries({ queryKey: ['user-repos'] })
-    void queryClient.invalidateQueries({ queryKey: ['copilot-org'] })
+    void queryClient.invalidateQueries({ queryKey: ['copilot-account'] })
     void queryClient.invalidateQueries({ queryKey: ['user-orgs'] })
   }
 
@@ -308,7 +324,7 @@ function App() {
     clearApiCache()
     void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
     void queryClient.invalidateQueries({ queryKey: ['repo-branches'] })
-    void queryClient.invalidateQueries({ queryKey: ['copilot-org'] })
+    void queryClient.invalidateQueries({ queryKey: ['copilot-account'] })
     setBranchAnalysisTriggered(false)
   }
 
@@ -597,12 +613,12 @@ function App() {
               />
             ) : activeView === 'copilot' ? (
               <CopilotMetricsPanel
-                orgData={copilotOrgData}
+                accountData={copilotData}
                 isLoading={copilotIsLoading}
-                orgsLoading={orgsIsPending}
-                orgs={copilotOrgs}
-                selectedOrg={selectedCopilotOrg}
-                onOrgChange={setSelectedCopilotOrg}
+                targetsLoading={copilotTargetsLoading}
+                targets={copilotTargets}
+                selectedTarget={selectedCopilotTarget?.id ?? ''}
+                onTargetChange={setSelectedCopilotTarget}
                 error={copilotError ? (copilotError instanceof Error ? copilotError.message : 'Failed to fetch Copilot data') : null}
               />
             ) : (
