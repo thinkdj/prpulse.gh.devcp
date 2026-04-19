@@ -10,10 +10,10 @@ import {
   saveMode,
 } from './storage'
 
-const REPO_KEY = 'gh.devcp.dashboard.repositories'
-const TOKEN_KEY = 'gh.devcp.dashboard.token'
-const THEME_KEY = 'gh.devcp.dashboard.theme'
-const MODE_KEY = 'gh.devcp.dashboard.mode'
+const REPO_KEY = 'prpulse.gh.devcp.dashboard.repositories'
+const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
+const THEME_KEY = 'prpulse.gh.devcp.dashboard.theme'
+const MODE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 
 afterEach(() => {
   localStorage.clear()
