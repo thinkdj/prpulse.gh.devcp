@@ -74,8 +74,11 @@ function App() {
     }
   }, [])
 
-  const [repos, setRepos] = useState<string[]>(() => isDemoMode ? [] : loadRepoState([]).repos)
-  const [selectedRepos, setSelectedRepos] = useState<string[]>(() => isDemoMode ? [] : loadRepoState([]).selectedRepos)
+  const [{ repos: initRepos, selectedRepos: initSelectedRepos }] = useState(() =>
+    isDemoMode ? { repos: [] as string[], selectedRepos: [] as string[] } : loadRepoState([]),
+  )
+  const [repos, setRepos] = useState<string[]>(initRepos)
+  const [selectedRepos, setSelectedRepos] = useState<string[]>(initSelectedRepos)
   // Populate demo repos once the demo-data module has loaded.
   useEffect(() => {
     if (isDemoMode && demoData) {
@@ -204,7 +207,10 @@ function App() {
         ? [{
             queryKey: ['copilot-org', token, selectedCopilotOrg] as const,
             queryFn: isDemoMode
-              ? () => Promise.resolve((demoData?.demoCopilotOrgData ?? []).find((d) => d.org === selectedCopilotOrg) ?? (demoData?.demoCopilotOrgData ?? [])[0])
+              ? () => {
+                  const data = demoData?.demoCopilotOrgData ?? []
+                  return Promise.resolve(data.find((d) => d.org === selectedCopilotOrg) ?? data[0])
+                }
               : () => fetchCopilotOrgData(selectedCopilotOrg, token),
             staleTime: STALE_TIME,
             retry: isDemoMode ? 0 : 1,
