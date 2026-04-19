@@ -1098,7 +1098,7 @@ describe('PR Pulse – The GitHub Control Panel', () => {
         error: undefined,
       })
 
-      localStorage.setItem(TOKEN_KEY, 'ghp_test_token')
+      localStorage.setItem(TOKEN_KEY, 'fnv1a32:5b5a9c12')
       localStorage.setItem(
         REPOS_KEY,
         JSON.stringify({
