@@ -4,7 +4,6 @@ const REPO_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.token'
 const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
 const TOKEN_PERSISTENT_KEY = 'prpulse.gh.devcp.dashboard.token.encrypted'
-const TOKEN_PERSISTENT_LEGACY_KEY = 'prpulse.gh.devcp.dashboard.token.raw'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
@@ -38,7 +37,7 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
 
 const base64ToBytes = (value: string): Uint8Array => {
   const binary = atob(value)
-  const bytes = new Uint8Array(binary.length)
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length))
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i)
   }
@@ -57,7 +56,7 @@ const deriveTokenKey = async (): Promise<CryptoKey> => {
 }
 
 const encryptToken = async (token: string): Promise<string> => {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const iv = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(12)))
   const key = await deriveTokenKey()
   const ciphertext = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
@@ -76,9 +75,9 @@ const decryptToken = async (payload: string): Promise<string> => {
 
   const key = await deriveTokenKey()
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: base64ToBytes(ivBase64) },
+    { name: 'AES-GCM', iv: base64ToBytes(ivBase64) as Uint8Array<ArrayBuffer> },
     key,
-    base64ToBytes(dataBase64),
+    base64ToBytes(dataBase64) as Uint8Array<ArrayBuffer>,
   )
 
   return new TextDecoder().decode(plaintext)
@@ -137,13 +136,6 @@ export const loadToken = async (): Promise<string> => {
       return persistentToken
     }
 
-    const legacyRawToken = localStorage.getItem(TOKEN_PERSISTENT_LEGACY_KEY) ?? ''
-    if (legacyRawToken) {
-      await saveToken(legacyRawToken)
-      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
-      return legacyRawToken
-    }
-
     return ''
   } catch {
     localStorage.removeItem(TOKEN_PERSISTENT_KEY)
@@ -156,12 +148,10 @@ export const saveToken = async (token: string): Promise<void> => {
     if (token) {
       sessionStorage.setItem(TOKEN_SESSION_KEY, token)
       localStorage.setItem(TOKEN_PERSISTENT_KEY, await encryptToken(token))
-      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
       localStorage.setItem(TOKEN_STORAGE_KEY, await hashToken(token))
     } else {
       sessionStorage.removeItem(TOKEN_SESSION_KEY)
       localStorage.removeItem(TOKEN_PERSISTENT_KEY)
-      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
       localStorage.removeItem(TOKEN_STORAGE_KEY)
     }
   } catch {
