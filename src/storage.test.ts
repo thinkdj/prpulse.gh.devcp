@@ -15,6 +15,8 @@ import {
 const REPO_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_KEY = 'prpulse.gh.devcp.dashboard.token'
 const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
+const TOKEN_PERSISTENT_KEY = 'prpulse.gh.devcp.dashboard.token.encrypted'
+const TOKEN_PERSISTENT_LEGACY_KEY = 'prpulse.gh.devcp.dashboard.token.raw'
 const THEME_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
@@ -95,37 +97,60 @@ describe('saveRepoState', () => {
 
 /* ── loadToken ── */
 describe('loadToken', () => {
-  it('returns empty string when nothing is stored', () => {
-    expect(loadToken()).toBe('')
+  it('returns empty string when nothing is stored', async () => {
+    await expect(loadToken()).resolves.toBe('')
   })
 
-  it('returns the stored token', () => {
+  it('returns the stored session token', async () => {
     sessionStorage.setItem(TOKEN_SESSION_KEY, 'ghp_abc123')
-    expect(loadToken()).toBe('ghp_abc123')
+    await expect(loadToken()).resolves.toBe('ghp_abc123')
   })
 
-  it('returns empty string when localStorage throws', () => {
+  it('falls back to encrypted localStorage token and hydrates sessionStorage', async () => {
+    await saveToken('ghp_persisted')
+    sessionStorage.removeItem(TOKEN_SESSION_KEY)
+
+    await expect(loadToken()).resolves.toBe('ghp_persisted')
+    expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('ghp_persisted')
+  })
+
+  it('migrates legacy raw token to encrypted storage', async () => {
+    localStorage.setItem(TOKEN_PERSISTENT_LEGACY_KEY, 'ghp_legacy')
+
+    await expect(loadToken()).resolves.toBe('ghp_legacy')
+    expect(localStorage.getItem(TOKEN_PERSISTENT_LEGACY_KEY)).toBeNull()
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).toMatch(/^v1:/)
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).not.toBe('ghp_legacy')
+  })
+
+  it('returns empty string when localStorage throws', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('security error')
     })
-    expect(loadToken()).toBe('')
+    await expect(loadToken()).resolves.toBe('')
   })
 })
 
 /* ── saveToken ── */
 describe('saveToken', () => {
-  it('saves a non-empty token to sessionStorage and stores only a hash in localStorage', async () => {
+  it('saves a non-empty token to sessionStorage and localStorage, plus a hash fingerprint', async () => {
     await saveToken('ghp_test')
     expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBe('ghp_test')
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).toMatch(/^v1:/)
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).not.toBe('ghp_test')
     expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
     expect(localStorage.getItem(TOKEN_KEY)).not.toBe('ghp_test')
   })
 
   it('removes the token key when given an empty string', async () => {
     localStorage.setItem(TOKEN_KEY, 'old_token')
+    localStorage.setItem(TOKEN_PERSISTENT_KEY, 'v1:old:token')
+    localStorage.setItem(TOKEN_PERSISTENT_LEGACY_KEY, 'old_token')
     sessionStorage.setItem(TOKEN_SESSION_KEY, 'old_token')
     await saveToken('')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).toBeNull()
+    expect(localStorage.getItem(TOKEN_PERSISTENT_LEGACY_KEY)).toBeNull()
     expect(sessionStorage.getItem(TOKEN_SESSION_KEY)).toBeNull()
   })
 
@@ -268,7 +293,9 @@ describe('saveCopilotTarget', () => {
 describe('storage round-trips', () => {
   it('can save and reload a token', async () => {
     await saveToken('ghp_roundtrip')
-    expect(loadToken()).toBe('ghp_roundtrip')
+    sessionStorage.removeItem(TOKEN_SESSION_KEY)
+    await expect(loadToken()).resolves.toBe('ghp_roundtrip')
+    expect(localStorage.getItem(TOKEN_PERSISTENT_KEY)).toMatch(/^v1:/)
     expect(localStorage.getItem(TOKEN_KEY)).toMatch(/^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/)
   })
 
