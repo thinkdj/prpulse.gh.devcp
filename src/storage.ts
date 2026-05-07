@@ -3,9 +3,12 @@ import type { RepoState } from './types'
 const REPO_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.repositories'
 const TOKEN_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.token'
 const TOKEN_SESSION_KEY = 'prpulse.gh.devcp.dashboard.token.session'
+const TOKEN_PERSISTENT_KEY = 'prpulse.gh.devcp.dashboard.token.encrypted'
+const TOKEN_PERSISTENT_LEGACY_KEY = 'prpulse.gh.devcp.dashboard.token.raw'
 const THEME_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.theme'
 const MODE_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.mode'
 const COPILOT_TARGET_STORAGE_KEY = 'prpulse.gh.devcp.dashboard.copilotTarget'
+const TOKEN_ENCRYPTION_CONTEXT = 'prpulse.gh.devcp.dashboard.token.v1'
 
 const fallbackHashToken = (token: string): string => {
   let h = 2166136261 >>> 0
@@ -25,6 +28,60 @@ const hashToken = async (token: string): Promise<string> => {
   } catch {
     return fallbackHashToken(token)
   }
+}
+
+const bytesToBase64 = (bytes: Uint8Array): string => {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary)
+}
+
+const base64ToBytes = (value: string): Uint8Array => {
+  const binary = atob(value)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
+}
+
+const deriveTokenKey = async (): Promise<CryptoKey> => {
+  if (!crypto?.subtle) {
+    throw new Error('Web Crypto API unavailable')
+  }
+
+  const keyMaterialSource = `${TOKEN_ENCRYPTION_CONTEXT}|${window.location.origin}|${navigator.userAgent}`
+  const keyMaterialBytes = new TextEncoder().encode(keyMaterialSource)
+  const keyHash = await crypto.subtle.digest('SHA-256', keyMaterialBytes)
+  return crypto.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+}
+
+const encryptToken = async (token: string): Promise<string> => {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await deriveTokenKey()
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(token),
+  )
+
+  return `v1:${bytesToBase64(iv)}:${bytesToBase64(new Uint8Array(ciphertext))}`
+}
+
+const decryptToken = async (payload: string): Promise<string> => {
+  const [version, ivBase64, dataBase64] = payload.split(':')
+  if (version !== 'v1' || !ivBase64 || !dataBase64) {
+    throw new Error('Unsupported encrypted token payload')
+  }
+
+  const key = await deriveTokenKey()
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: base64ToBytes(ivBase64) },
+    key,
+    base64ToBytes(dataBase64),
+  )
+
+  return new TextDecoder().decode(plaintext)
 }
 
 /** Visual palette theme (accent colours, surface tones). */
@@ -67,10 +124,29 @@ export const saveRepoState = (state: RepoState) => {
   }
 }
 
-export const loadToken = (): string => {
+export const loadToken = async (): Promise<string> => {
   try {
-    return sessionStorage.getItem(TOKEN_SESSION_KEY) ?? ''
+    const sessionToken = sessionStorage.getItem(TOKEN_SESSION_KEY)
+    if (sessionToken) return sessionToken
+
+    const encryptedToken = localStorage.getItem(TOKEN_PERSISTENT_KEY) ?? ''
+    if (encryptedToken) {
+      const persistentToken = await decryptToken(encryptedToken)
+      // Keep session storage in sync so existing code paths continue to work.
+      sessionStorage.setItem(TOKEN_SESSION_KEY, persistentToken)
+      return persistentToken
+    }
+
+    const legacyRawToken = localStorage.getItem(TOKEN_PERSISTENT_LEGACY_KEY) ?? ''
+    if (legacyRawToken) {
+      await saveToken(legacyRawToken)
+      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
+      return legacyRawToken
+    }
+
+    return ''
   } catch {
+    localStorage.removeItem(TOKEN_PERSISTENT_KEY)
     return ''
   }
 }
@@ -79,9 +155,13 @@ export const saveToken = async (token: string): Promise<void> => {
   try {
     if (token) {
       sessionStorage.setItem(TOKEN_SESSION_KEY, token)
+      localStorage.setItem(TOKEN_PERSISTENT_KEY, await encryptToken(token))
+      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
       localStorage.setItem(TOKEN_STORAGE_KEY, await hashToken(token))
     } else {
       sessionStorage.removeItem(TOKEN_SESSION_KEY)
+      localStorage.removeItem(TOKEN_PERSISTENT_KEY)
+      localStorage.removeItem(TOKEN_PERSISTENT_LEGACY_KEY)
       localStorage.removeItem(TOKEN_STORAGE_KEY)
     }
   } catch {

@@ -56,7 +56,7 @@ src/
     └── setup.ts          # Vitest setup
 ```
 
-- **Storage:** `localStorage` for repo selection/theme plus one-way token fingerprint; raw token stays in `sessionStorage`
+- **Storage:** `localStorage` for repo selection/theme and encrypted token persistence (plus one-way token fingerprint)
 - **Data fetching:** GitHub REST API via `fetch` with TanStack Query for caching, refetch, and error handling
 - **UI:** GitHub-inspired styling with Tailwind CSS; in-memory response cache (~3 min TTL) for GETs
 
@@ -132,8 +132,8 @@ The **Copilot Analytics** tab supports two data sources:
 
 > **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
 
-> **Security note:** The token is stored in your browser's `sessionStorage` (tab-scoped) and cleared when the tab/window session ends.
-> `localStorage` keeps only a one-way token fingerprint for state tracking.
+> **Security note:** The token is stored encrypted in your browser's `localStorage` and remains until you clear it from PR Pulse settings or browser storage.
+> `localStorage` also keeps a one-way token fingerprint for state tracking.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
 > (read-only access to pull requests, checks, and repository metadata). Avoid classic tokens with broad
 > scopes. If you suspect your browser environment may be compromised, use a short-lived token or clear

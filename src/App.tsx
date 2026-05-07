@@ -51,7 +51,8 @@ function App() {
 
   const [demoData, setDemoData] = useState<DemoData | null>(null)
 
-  const [token, setToken] = useState(() => isDemoMode ? DEMO_TOKEN : loadToken())
+  const [token, setToken] = useState(() => isDemoMode ? DEMO_TOKEN : '')
+  const [tokenHydrated, setTokenHydrated] = useState(() => isDemoMode)
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [activeView, setActiveView] = useState<'pull_requests' | 'my_actions' | 'branches' | 'copilot'>('pull_requests')
@@ -73,6 +74,22 @@ function App() {
   useEffect(() => {
     if (isDemoMode) {
       void import('./demo-data').then(setDemoData)
+    }
+  }, [])
+
+  // Token decryption uses Web Crypto and is async, so hydrate once on startup.
+  useEffect(() => {
+    if (isDemoMode) return
+    let cancelled = false
+
+    void loadToken().then((loadedToken) => {
+      if (cancelled) return
+      setToken(loadedToken)
+      setTokenHydrated(true)
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -489,7 +506,7 @@ function App() {
           </div>
         )}
 
-        {!token && !isDemoMode ? (
+        {!tokenHydrated && !isDemoMode ? null : !token && !isDemoMode ? (
           /* ── Empty state: no token configured ── */
           <section className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
             <div className="mx-auto max-w-md">
