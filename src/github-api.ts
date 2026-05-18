@@ -511,6 +511,36 @@ export async function fetchPRActivity(
   return comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 }
 
+export type PRStats = {
+  additions: number
+  deletions: number
+  changedFiles: number
+}
+
+/**
+ * Fetch diff statistics for a pull request (additions, deletions, changed files).
+ * Uses the individual PR endpoint which includes these counts.
+ */
+export async function fetchPRStats(
+  repoFullName: string,
+  prNumber: number,
+  token: string,
+): Promise<PRStats> {
+  const [owner, repo] = repoFullName.split('/')
+  if (!owner || !repo) throw new Error('Invalid repository name')
+
+  const pr = await githubFetch<{ additions: number; deletions: number; changed_files: number }>(
+    `/repos/${owner}/${repo}/pulls/${prNumber}`,
+    token,
+  )
+
+  return {
+    additions: pr.additions,
+    deletions: pr.deletions,
+    changedFiles: pr.changed_files,
+  }
+}
+
 /**
  * Close a pull request by setting its state to "closed".
  * Requires the token to have write access.
