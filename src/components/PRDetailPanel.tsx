@@ -87,6 +87,8 @@ function reviewStateLabel(state?: string): string {
   return 'Review'
 }
 
+const DEMO_PR_STATS = { changedFiles: 12, additions: 340, deletions: 85 }
+
 export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demoActivity, onClose, onPRClosed, onBranchDeleted }: PRDetailPanelProps) {
   const isDemo = isDemoMode
   const queryClient = useQueryClient()
@@ -337,16 +339,19 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                 <div className="col-span-2">
                   <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Diff</dt>
                   <dd className="mt-1 flex items-center gap-3 text-xs">
-                    <span className="flex items-center gap-1 text-gh-fg-muted">
-                      <FileText className="h-3.5 w-3.5" />
-                      {isDemo ? 12 : prStats!.changedFiles} file{(isDemo ? 12 : prStats!.changedFiles) !== 1 ? 's' : ''}
-                    </span>
-                    <span className="font-medium text-gh-success-fg">
-                      +{isDemo ? 340 : prStats!.additions}
-                    </span>
-                    <span className="font-medium text-gh-danger-fg">
-                      −{isDemo ? 85 : prStats!.deletions}
-                    </span>
+                    {(() => {
+                      const stats = isDemo ? DEMO_PR_STATS : prStats!
+                      return (
+                        <>
+                          <span className="flex items-center gap-1 text-gh-fg-muted">
+                            <FileText className="h-3.5 w-3.5" />
+                            {stats.changedFiles} file{stats.changedFiles !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-medium text-gh-success-fg">+{stats.additions}</span>
+                          <span className="font-medium text-gh-danger-fg">−{stats.deletions}</span>
+                        </>
+                      )
+                    })()}
                   </dd>
                 </div>
               )}
