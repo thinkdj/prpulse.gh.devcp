@@ -17,9 +17,11 @@ import {
   Bot,
   ChevronDown,
   ChevronUp,
+  FileText,
 } from 'lucide-react'
 import type { PRComment, PullRequest } from '../types'
-import { fetchPRActivity, postPRComment, closePR, deleteBranch } from '../github-api'
+import { fetchPRActivity, fetchPRStats, postPRComment, closePR, deleteBranch } from '../github-api'
+import type { PRStats } from '../github-api'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
 import CommentMarkdown from './CommentMarkdown'
@@ -100,6 +102,13 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
     queryFn: () => fetchPRActivity(pr.repo, pr.id, token),
     enabled: !!token && !isDemo,
     staleTime: 60 * 1000,
+  })
+
+  const { data: prStats } = useQuery<PRStats>({
+    queryKey: ['pr-stats', pr.repo, pr.id, token],
+    queryFn: () => fetchPRStats(pr.repo, pr.id, token),
+    enabled: !!token && !isDemo,
+    staleTime: 5 * 60 * 1000,
   })
 
   const displayedActivity = isDemo ? (demoActivity ?? []) : activity
@@ -197,8 +206,8 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                 </span>
               )}
             </div>
-            <h2 className="mt-1 text-base font-semibold leading-snug text-gh-fg">
-              <a href={pr.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-gh-accent-fg hover:underline">
+            <h2 className="mt-1 text-base font-semibold leading-snug">
+              <a href={pr.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-gh-accent-fg hover:opacity-80">
                 {pr.title}
                 <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" />
               </a>
@@ -324,6 +333,23 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                   {displayedCommentCount} comment{displayedCommentCount !== 1 ? 's' : ''}
                 </span>
               </div>
+              {(prStats || isDemo) && (
+                <div className="col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Diff</dt>
+                  <dd className="mt-1 flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1 text-gh-fg-muted">
+                      <FileText className="h-3.5 w-3.5" />
+                      {isDemo ? 12 : prStats!.changedFiles} file{(isDemo ? 12 : prStats!.changedFiles) !== 1 ? 's' : ''}
+                    </span>
+                    <span className="font-medium text-gh-success-fg">
+                      +{isDemo ? 340 : prStats!.additions}
+                    </span>
+                    <span className="font-medium text-gh-danger-fg">
+                      −{isDemo ? 85 : prStats!.deletions}
+                    </span>
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
 
