@@ -36,6 +36,16 @@ const filterLabels: { value: DashboardFilter; label: string }[] = [
   { value: 'blocked', label: 'Blocked' },
 ]
 
+// Friendly names for the per-column text filters, used to label active-filter chips.
+const columnFilterLabels: Record<string, string> = {
+  repo: 'Repo',
+  title: 'Search',
+  author: 'Author',
+  checksStatus: 'Checks',
+  copilotReview: 'Copilot',
+  mergeSafety: 'Merge',
+}
+
 // Varying widths so skeleton rows read as placeholder titles rather than a rigid grid.
 const SKELETON_ROW_WIDTHS = ['w-64', 'w-44', 'w-52', 'w-72', 'w-40', 'w-56']
 
@@ -458,7 +468,7 @@ export default function PullRequestTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
             hideDrafts ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
           }`}>
             <input
@@ -470,7 +480,7 @@ export default function PullRequestTable({
             Hide drafts
           </label>
 
-          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
             hideCopilot ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
           }`}>
             <input
@@ -482,7 +492,7 @@ export default function PullRequestTable({
             Hide Copilot
           </label>
 
-          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
             hideDependabot ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
           }`}>
             <input
@@ -495,7 +505,7 @@ export default function PullRequestTable({
           </label>
 
           {currentUser && (
-            <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+            <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
               hideMine ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
             }`}>
               <input
@@ -517,16 +527,45 @@ export default function PullRequestTable({
             </span>
           )}
 
-          {(hasActiveFilters || filter !== 'all') && (
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              className="ml-auto inline-flex items-center gap-1 rounded-full border border-gh-border px-2.5 py-1 text-xs font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg-default"
-            >
-              <X className="h-3 w-3" /> Clear filters
-            </button>
-          )}
         </div>
+
+        {/* Active column/search filters — makes clicking a repo, label, or author visibly "stick" */}
+        {(globalFilter || hasActiveColumnFilters || filter !== 'all') && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium text-gh-fg-muted">Filtering by:</span>
+            {filter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => onFilterChange('all')}
+                className="inline-flex items-center gap-1 rounded-full bg-gh-accent/15 px-2.5 py-1 text-xs font-medium text-gh-accent-fg transition-colors hover:bg-gh-accent/25"
+              >
+                Status: {filterLabels.find((f) => f.value === filter)?.label ?? filter}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {globalFilter && (
+              <button
+                type="button"
+                onClick={() => setGlobalFilter('')}
+                className="inline-flex items-center gap-1 rounded-full bg-gh-accent/15 px-2.5 py-1 text-xs font-medium text-gh-accent-fg transition-colors hover:bg-gh-accent/25"
+              >
+                Search: {globalFilter}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {columnFilters.map((cf) => (
+              <button
+                key={cf.id}
+                type="button"
+                onClick={() => table.getColumn(cf.id)?.setFilterValue(undefined)}
+                className="inline-flex items-center gap-1 rounded-full bg-gh-accent/15 px-2.5 py-1 text-xs font-medium text-gh-accent-fg transition-colors hover:bg-gh-accent/25"
+              >
+                {columnFilterLabels[cf.id] ?? cf.id}: {String(cf.value)}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Status filter buttons */}
@@ -538,7 +577,7 @@ export default function PullRequestTable({
             type="button"
             aria-pressed={filter === value}
             onClick={() => onFilterChange(value)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
               filter === value
                 ? 'bg-gh-accent text-white shadow-sm'
                 : 'bg-gh-border/50 text-gh-fg-muted hover:bg-gh-border/70 hover:text-gh-fg-default'
@@ -550,6 +589,15 @@ export default function PullRequestTable({
         <span className="ml-auto text-xs text-gh-fg-muted">
           {rows.length} {rows.length === 1 ? 'PR' : 'PRs'}
         </span>
+        {(hasActiveFilters || filter !== 'all') && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 rounded-md border border-gh-border px-2.5 py-1 text-xs font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg-default"
+          >
+            <X className="h-3 w-3" /> Clear filters
+          </button>
+        )}
       </div>
 
       {isLoading && rows.length === 0 ? (
@@ -636,23 +684,13 @@ export default function PullRequestTable({
                     <tr
                       key={row.id}
                       aria-selected={isRowSelected}
-                      className={`cursor-pointer border-t border-gh-border transition-colors hover:bg-gh-overlay ${
+                      className={`border-t border-gh-border transition-colors hover:bg-gh-overlay ${
                         isRowSelected
                           ? 'bg-gh-accent/15 ring-1 ring-inset ring-gh-accent/45'
                           : pr.needsYourReview
                             ? 'bg-gh-warning/8'
                             : ''
                       }`}
-                      onClick={(event) => {
-                        // Don't open panel if click landed on an interactive element inside a cell
-                        const target = event.target as HTMLElement
-                        if (
-                          target.closest(
-                            'button, a, input, select, textarea, [role="button"], [role="link"]',
-                          )
-                        ) return
-                        onPRSelect?.(pr)
-                      }}
                     >
                       {row.getVisibleCells().map((cell) => {
                         const isLast = cell.column.id === 'commentCount'

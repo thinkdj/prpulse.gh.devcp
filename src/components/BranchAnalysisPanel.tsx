@@ -165,7 +165,7 @@ export default function BranchAnalysisPanel({
               const checked = localRepos.includes(repo)
               return (
                 <li key={repo}>
-                  <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                     checked
                       ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
                       : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
@@ -233,7 +233,7 @@ export default function BranchAnalysisPanel({
             key={item.value}
             type="button"
             onClick={() => setFilter(item.value)}
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${
+            className={`rounded-md px-3 py-1 text-sm font-medium transition-all ${
               filter === item.value
                 ? 'bg-gh-accent text-white shadow-sm'
                 : 'border border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'

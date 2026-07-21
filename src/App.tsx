@@ -455,7 +455,7 @@ function App() {
                   <h1 className="text-2xl font-bold leading-tight tracking-tight text-gh-fg md:text-[1.75rem]">PR Pulse</h1>
                 </div>
               </div>
-              <p className="mt-2 max-w-lg text-sm text-gh-fg-muted">
+              <p className="mt-2 text-sm text-gh-fg-muted">
                 Live pull request status, branch health, and Copilot usage for every repo you track.
               </p>
             </div>
@@ -512,7 +512,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setShowSettings(!showSettings)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold shadow-sm transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-semibold shadow-sm transition-colors ${
                       token
                         ? 'bg-gh-success/15 text-gh-success-fg hover:bg-gh-success/25'
                         : 'bg-gh-warning/15 text-gh-warning hover:bg-gh-warning/25'
@@ -615,7 +615,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('pull_requests')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'pull_requests'
                     ? 'bg-gh-accent text-white shadow-sm'
                     : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
@@ -626,7 +626,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('my_actions')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'my_actions'
                     ? 'bg-gh-accent text-white shadow-sm'
                     : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
@@ -642,7 +642,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('branches')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'branches'
                     ? 'bg-gh-accent text-white shadow-sm'
                     : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
@@ -653,7 +653,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('copilot')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'copilot'
                     ? 'bg-gh-accent text-white shadow-sm'
                     : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from '@phosphor-icons/react'
+import { X, ArrowSquareOut } from '@phosphor-icons/react'
 
 type TokenSettingsProps = {
   token: string
@@ -84,7 +84,15 @@ function TokenSettingsForm({
             account billing usage access and organization analytics may require a classic PAT with{' '}
             <code>read:org</code> or <code>manage_billing:copilot</code>. Token is stored encrypted in this
             browser profile&apos;s localStorage and remains until you clear it; a one-way fingerprint is
-            also stored for state tracking.
+            also stored for state tracking.{' '}
+            <a
+              href="https://github.com/settings/personal-access-tokens/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 font-medium text-gh-accent-fg transition-colors hover:text-gh-accent hover:underline"
+            >
+              Create a token <ArrowSquareOut className="h-3 w-3" />
+            </a>
           </p>
           <input
             id="github-token"

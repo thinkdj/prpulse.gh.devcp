@@ -502,11 +502,11 @@ describe('PR Pulse', () => {
         expect(screen.getByText('5 PRs')).toBeInTheDocument()
       })
 
-      // Click on the <tr> element (not on an interactive child)
+      // Click the PR title (rows themselves are no longer clickable)
       const table = screen.getByTestId('pr-table')
       const firstRow = table.querySelector('tbody tr')
       expect(firstRow).not.toBeNull()
-      fireEvent.click(firstRow!)
+      fireEvent.click(within(firstRow as HTMLElement).getByRole('button', { name: /View details for/i }))
 
       expect(await screen.findByRole('dialog', { name: 'Pull request details' })).toBeInTheDocument()
     })
@@ -521,7 +521,7 @@ describe('PR Pulse', () => {
 
       const table = screen.getByTestId('pr-table')
       const firstRow = table.querySelector('tbody tr')
-      fireEvent.click(firstRow!)
+      fireEvent.click(within(firstRow as HTMLElement).getByRole('button', { name: /View details for/i }))
 
       await screen.findByRole('dialog', { name: 'Pull request details' })
 
@@ -540,7 +540,7 @@ describe('PR Pulse', () => {
 
       const table = screen.getByTestId('pr-table')
       const firstRow = table.querySelector('tbody tr')
-      fireEvent.click(firstRow!)
+      fireEvent.click(within(firstRow as HTMLElement).getByRole('button', { name: /View details for/i }))
 
       await screen.findByRole('dialog', { name: 'Pull request details' })
 
@@ -754,7 +754,7 @@ describe('PR Pulse', () => {
       })
       const table = screen.getByTestId('pr-table')
       const firstRow = table.querySelector('tbody tr')
-      fireEvent.click(firstRow!)
+      fireEvent.click(within(firstRow as HTMLElement).getByRole('button', { name: /View details for/i }))
       return screen.findByRole('dialog', { name: 'Pull request details' })
     }
 

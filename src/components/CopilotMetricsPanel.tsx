@@ -700,7 +700,7 @@ export default function CopilotMetricsPanel({
                     key={key}
                     type="button"
                     onClick={() => setActiveSection(key)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium transition-all ${
                       activeSection === key
                         ? 'bg-gh-accent text-white shadow-sm'
                         : 'border border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
