@@ -1,10 +1,10 @@
-# gh.devcp Codebase Agent
+# PR Pulse Codebase Agent
 
-You are a specialized coding agent for the **gh.devcp** repository — a lightweight GitHub-style dashboard for monitoring pull requests across multiple repositories. You have deep knowledge of the project's architecture, conventions, and tooling.
+You are a specialized coding agent for the **PR Pulse** (`prpulse.gh.devcp`) repository — a lightweight GitHub control panel for monitoring pull requests, branches, and Copilot analytics across multiple repositories. You have deep knowledge of the project's architecture, conventions, and tooling.
 
 ## Project Overview
 
-gh.devcp is a **TypeScript + React + Tailwind CSS v4 + TanStack Query** single-page application built with Vite. It provides a bird's-eye view of open PRs across selectable GitHub repositories using a fine-grained Personal Access Token (PAT). There is no backend — all state is stored in `localStorage` and data is fetched directly from the GitHub REST API.
+PR Pulse is a **TypeScript + React + Tailwind CSS v4 + TanStack Query + TanStack Table** single-page application built with Vite. It provides a bird's-eye view of open PRs across selectable GitHub repositories using a fine-grained Personal Access Token (PAT). There is no backend — all state lives in `localStorage` and data is fetched directly from the GitHub REST API. A demo mode (`?demo=true`) renders the full dashboard from synthetic fixtures with no token.
 
 ## Tech Stack
 
@@ -19,31 +19,43 @@ gh.devcp is a **TypeScript + React + Tailwind CSS v4 + TanStack Query** single-p
 | Vitest | v4 | Unit testing with jsdom environment |
 | ESLint | v9 | Linting (flat config) |
 
+`react-markdown` + `remark-gfm` render PR comment bodies; `@phosphor-icons/react` supplies icons.
+
 ## Repository Structure
 
 ```
 src/
-├── types.ts              # Shared type definitions (PullRequest, RepoState, DashboardFilter, etc.)
-├── github-api.ts         # GitHub REST API client with in-memory cache (3-min TTL)
-├── storage.ts            # localStorage helpers for repos, token, and theme
-├── utils.ts              # Formatters (formatReview, formatSafety, formatChecks) and relativeTime
-├── seed-data.ts          # Seed PullRequest[] data used by tests
-├── App.tsx               # Root dashboard component — orchestrates state, queries, and layout
-├── App.test.tsx          # Integration tests (Vitest + Testing Library)
+├── types.ts              # Shared type definitions (PullRequest, BranchAnalysis, Copilot metrics, etc.)
+├── github-api.ts         # GitHub REST API client with in-memory GET cache (3-min TTL)
+├── storage.ts            # localStorage helpers (repos, theme/mode, encrypted token)
+├── utils.ts              # Formatters (formatReview, formatSafety, formatChecks) and relative-time
+├── seed-data.ts          # Seed PullRequest[] / BranchAnalysis[] used by tests
+├── demo-data.ts          # Synthetic fixtures for demo mode (?demo=true), lazy-loaded
+├── App.tsx               # Root dashboard — orchestrates state, queries, and layout
 ├── main.tsx              # Entry point (ReactDOM.createRoot)
 ├── index.css             # Theme tokens (CSS custom properties) + Tailwind v4 @theme inline
+├── hooks/
+│   └── useCopyFeedback.ts    # Copy-to-clipboard feedback state
 ├── test/
-│   └── setup.ts          # Vitest setup file
+│   └── setup.ts              # Vitest setup file
 ├── components/
-│   ├── PullRequestTable.tsx  # PR table with search, column filters, sort, hide-drafts
-│   ├── RepoSelector.tsx      # Repo chips: toggle, remove, add manually
-│   ├── RepoPickerModal.tsx   # Modal to browse & select repos from GitHub API
+│   ├── PullRequestTable.tsx  # PR table: search, column filters, sort, hide toggles
 │   ├── SummaryWidgets.tsx    # Clickable summary cards (Open, Needs Review, Safe, Blocked)
-│   ├── StatusBadge.tsx       # Color-coded status pill (checks, copilot, merge)
-│   └── TokenSettings.tsx     # PAT input panel
+│   ├── RepoSelector.tsx      # Repo chips: toggle, remove, add manually
+│   ├── RepoPickerModal.tsx   # Modal to browse & select repos from the GitHub API
+│   ├── BranchAnalysisPanel.tsx   # Stale/merged/active branch analysis per repo
+│   ├── ActionRequiredPanel.tsx   # "My actions" — reviews requested + your at-risk PRs
+│   ├── CopilotMetricsPanel.tsx   # Org + personal Copilot analytics
+│   ├── PRDetailPanel.tsx     # PR side panel: metadata, diff stats, activity, comment/close
+│   ├── TokenSettings.tsx     # PAT input + encryption/privacy notice
+│   ├── StatusBadge.tsx       # Color-coded status pill (checks, Copilot, merge)
+│   ├── ConfirmDialog.tsx     # Reusable confirm modal
+│   ├── CommentMarkdown.tsx   # Markdown renderer for PR comments
+│   └── CopyClipboardIconButton.tsx
+└── *.test.ts(x)          # Vitest + Testing Library suites, beside the code they cover
 .github/
-└── workflows/
-    └── deploy-gh-pages.yml   # CI/CD: lint → test → build → deploy to GitHub Pages
+├── agents/codebase-agent.md    # This file
+└── workflows/deploy-gh-pages.yml   # CI/CD: lint → test → build → deploy to GitHub Pages
 ```
 
 ## Commands
@@ -60,60 +72,51 @@ src/
 
 ### State Management
 - **No Redux or Zustand** — the app uses React `useState` + `useEffect` for local state.
-- **TanStack Query** (`useQueries`) handles server state with per-repo query keys: `['repo-prs', token, repo, currentUser]`.
-- **localStorage** persists: token (`gh.devcp.dashboard.token`), repo state (`gh.devcp.dashboard.repositories`), and theme (`gh.devcp.dashboard.theme`).
+- **TanStack Query** (`useQueries`) handles server state with per-repo query keys, e.g. `['repo-prs', token, repo, currentUser]`.
+- **localStorage** persists (all keys prefixed `prpulse.gh.devcp.dashboard.`): `repositories`, `theme`, `mode`, `copilotTarget`, an encrypted token (`token.encrypted`), and a one-way token fingerprint (`token`). The decrypted token is mirrored to `sessionStorage` (`token.session`) for the session.
+
+### Token Storage (`storage.ts`)
+- The PAT is encrypted with **AES-GCM via the Web Crypto API** before being written to `localStorage`; the key is derived from a fixed context string plus origin/user-agent. There is no backend — the token is only ever sent to GitHub's API.
+- A one-way SHA-256 fingerprint is stored for state tracking (never the raw token).
 
 ### API Layer (`github-api.ts`)
-- All requests go through `githubFetch<T>()` which wraps `fetch()` with auth headers, error handling, and an in-memory `Map`-based cache with a 3-minute TTL.
-- `clearApiCache()` wipes the cache for manual refresh.
-- `fetchRepoPullRequests()` fetches open PRs then enriches each with reviews (for Copilot review + merge safety) and check-runs (for CI status) via `Promise.all`.
-- `fetchUserRepos()` paginates through `GET /user/repos` and filters out archived repos.
-- Copilot bot reviews are identified by matching login against `COPILOT_BOT_LOGINS` array.
+- All requests go through a `githubFetch` wrapper around `fetch()` with auth headers, error handling, and an in-memory `Map` cache with a 3-minute TTL. `clearApiCache()` wipes it for manual refresh.
+- `fetchRepoPullRequests()` fetches open PRs then enriches each with reviews (Copilot review + merge safety) and check-runs (CI status).
+- Copilot analytics: `fetchCopilotOrgData()` (org metrics/billing) and `fetchCopilotPersonalData()` (personal billing + premium-request usage).
+- Write actions used by the PR detail panel: `postPRComment()` (Issues comments endpoint), `closePR()` (pulls PATCH), `deleteBranch()` (git refs DELETE) — all require write access.
 
 ### Theming
-- **Dark mode is the default.** Theme tokens are CSS custom properties defined in `:root` (dark) and `.light` class (light) in `index.css`.
-- Colors use a Notion-inspired warm neutral palette: `#191919` bg (dark), `#ffffff` bg (light), `#2383e2` accent (Notion blue).
-- Tokens are registered for Tailwind v4 via `@theme inline` block in `index.css`.
-- `applyTheme()` toggles the `.light` class on `document.documentElement`.
+- Six palettes defined as CSS custom properties in `index.css`: **Azure (default)**, Warm, Slate, Ocean, Ember, Zinc — each with dark and light values. A separate light/dark **mode** applies on top. The default is **Azure + light**.
+- `applyTheme()` toggles palette/`.light` classes on `document.documentElement`.
 - Use `bg-gh-*`, `text-gh-*`, `border-gh-*` utility classes — never raw hex colors.
 
-### Component Conventions
-- Components are **function components** using hooks.
-- Props types are defined inline (e.g., `type PullRequestTableProps = { ... }`).
-- Components are the **default export** from their files.
-- No prop spreading — all props are explicitly destructured.
-- Event handlers are named `handle*` in the parent and `on*` in props.
+### Views / Tabs
+- **Pull requests** (table + summary widgets), **My actions** (reviews requested + your at-risk PRs), **Branch analysis** (on-demand per-repo run), **Copilot** (org + personal analytics).
 
 ### Filtering Architecture
-- **Dashboard-level filter** (`DashboardFilter`: `'all' | 'needs_review' | 'safe' | 'blocked'`) is applied in `PullRequestTable` via `useMemo` before data reaches the table.
-- **Column-level filters** (Author, PR title/labels, Checks, Copilot, Merge) use TanStack Table's `ColumnFiltersState`.
-- **Global search** uses TanStack Table's `globalFilter` with `'includesString'` filter function.
-- **SummaryWidgets** cards are clickable buttons that set the `DashboardFilter`.
+- **Dashboard-level filter** (`DashboardFilter`: `'all' | 'needs_review' | 'safe' | 'blocked'`) is applied before data reaches the table.
+- **Column-level filters** use TanStack Table's `ColumnFiltersState`; **global search** uses `globalFilter`. Quick-hide toggles cover drafts, Copilot, Dependabot, and your own PRs.
 
 ## Testing Conventions
 
-- **Test file**: `src/App.test.tsx` — integration tests using Vitest + React Testing Library.
-- **Mock strategy**: The `./github-api` module is fully mocked with `vi.mock()`. `fetchRepoPullRequests` returns seed data filtered by repo name.
-- **Seed data**: `src/seed-data.ts` provides 5 realistic `PullRequest` objects across 3 repos (`thinkdj/gh.devcp`, `thinkdj/internal-tools`, `thinkdj/website`).
-- **Auth setup**: `seedAuthenticatedState()` sets `TOKEN_KEY` and `REPOS_KEY` in `localStorage` before `renderApp()`.
-- **Query client**: Each test creates a fresh `QueryClient` with `retry: false`.
-- **Cleanup**: `afterEach` calls `cleanup()`, `localStorage.clear()`, and `vi.restoreAllMocks()`.
-- Tests cover: welcome state, settings panel, summary widgets, repo toggle/removal, localStorage persistence, filter buttons, search, column filters, label display, theme toggle, draft hiding, clear filters, and refresh.
+- **Framework**: Vitest + React Testing Library (jsdom). Suites live beside the code they cover (`*.test.ts` / `*.test.tsx`).
+- **Integration**: `src/App.test.tsx` mocks the `./github-api` module with `vi.mock()`; `fetchRepoPullRequests` returns seed data filtered by repo name.
+- **Seed data**: `src/seed-data.ts` provides 5 `PullRequest` objects across 3 sample repos (`thinkdj/prpulse.gh.devcp`, `acme/internal-tools`, `acme/website`) plus branch fixtures. Sample repo owners other than this repo are fictional placeholders.
+- **Auth setup**: `seedAuthenticatedState()` seeds token + repo keys in `localStorage` before `renderApp()`.
+- **Cleanup**: `afterEach` runs `cleanup()`, clears storage, and restores mocks.
 
 ## Coding Style & Conventions
 
-1. **TypeScript strict mode** — no `any` types; use explicit generics for API responses.
+1. **TypeScript strict mode** — avoid `any`; use explicit generics for API responses.
 2. **Functional components only** — no class components.
-3. **No comments unless necessary** — the codebase uses minimal comments; code is self-documenting.
-4. **Empty `catch` blocks** use `catch { }` (no parameter) for intentional no-ops.
-5. **Tailwind utility classes** — all styling is via Tailwind. No CSS modules, styled-components, or inline styles.
-6. **Use theme tokens** — always use `bg-gh-*`, `text-gh-*`, `border-gh-*` rather than arbitrary colors.
-7. **Named exports** for utility functions; **default exports** for components.
-8. **No semicolons** — the codebase omits semicolons (ESLint does not enforce them).
-9. **Single quotes** for strings.
-10. **Trailing commas** in multi-line arrays, objects, and function parameters.
-11. **2-space indentation**.
-12. **Import order**: React hooks → third-party → local types → local modules → components.
+3. **Comments** explain non-obvious intent or constraints; don't narrate what the code already says.
+4. **Empty `catch` blocks** use `catch { }` (no parameter) for intentional no-ops (e.g. restricted `localStorage`).
+5. **Tailwind utility classes** for all styling — no CSS modules, styled-components, or inline styles.
+6. **Theme tokens** — always `bg-gh-*`, `text-gh-*`, `border-gh-*` rather than arbitrary colors.
+7. **Named exports** for utilities; **default exports** for components.
+8. **No semicolons**; **single quotes**; **2-space indentation**; **trailing commas** in multi-line literals.
+9. **Inline props types** (e.g. `type PullRequestTableProps = { ... }`), explicitly destructured — no prop spreading.
+10. **Event handlers** named `handle*` in the parent, `on*` in props.
 
 ## CI/CD Pipeline
 
@@ -121,22 +124,14 @@ The GitHub Actions workflow (`.github/workflows/deploy-gh-pages.yml`) runs on pu
 1. `npm ci` — install dependencies
 2. `npm run lint` — ESLint
 3. `npm run test` — Vitest
-4. `npm run build -- --base=/<repo-name>/` — production build with base path
+4. `npm run build` — production build (base path via the `VITE_BASE_PATH` env var; defaults to `/`, which suits the custom domain `prpulse.32mb.dev`)
 5. Deploy `dist/` to GitHub Pages
-
-## Roadmap (from ROADMAP.md)
-
-Planned features include:
-- **Q2 2026**: Keyboard shortcuts, notification badges, column visibility, PR age warnings, pagination, mobile layout
-- **Q3 2026**: Review timeline, CI details panel, activity heatmap, bulk actions, saved filters, CSV export
-- **Q4 2026**: Team views, multi-account, Cloudflare D1/KV backend, webhooks, Slack/Discord alerts, shared dashboards
 
 ## Key Patterns to Follow
 
-- When adding a new component, create it in `src/components/` with a default export and inline props type.
-- When adding API functionality, add the function to `github-api.ts` using the existing `githubFetch` wrapper.
-- When adding new state that should persist, add a key constant and load/save functions to `storage.ts`.
-- When adding new theme colors, add CSS vars to both `:root` and `.light` in `index.css`, then register in `@theme inline`.
-- When writing tests, follow the pattern in `App.test.tsx`: mock the API, seed authenticated state, use `waitFor` with test IDs.
-- Always validate repo names as `owner/repo` format (exactly one `/`).
-- The dashboard shows a clean welcome state when no token is configured — never show dummy/seed data in production.
+- New component → `src/components/` with a default export and inline props type; add a `*.test.tsx` beside it.
+- New API call → add to `github-api.ts` using the existing `githubFetch` wrapper.
+- New persisted state → add a key constant and load/save functions to `storage.ts`.
+- New theme color → add CSS vars to every palette (and its `.light` variant) in `index.css`, then register in `@theme inline`.
+- Always validate repo names as `owner/repo` (exactly one `/`).
+- The dashboard shows a clean welcome/empty state when no token is configured — never show dummy/seed data in production.

@@ -24,7 +24,7 @@ export const seedPullRequests: PullRequest[] = [
   },
   {
     id: 1015,
-    repo: 'thinkdj/internal-tools',
+    repo: 'acme/internal-tools',
     title: 'fix: audit export race condition',
     author: 'kevin-ops',
     authorAvatar: '',
@@ -45,7 +45,7 @@ export const seedPullRequests: PullRequest[] = [
   },
   {
     id: 998,
-    repo: 'thinkdj/website',
+    repo: 'acme/website',
     title: 'chore: migrate issue templates',
     author: 'nora-web',
     authorAvatar: '',
@@ -66,7 +66,7 @@ export const seedPullRequests: PullRequest[] = [
   },
   {
     id: 1004,
-    repo: 'thinkdj/internal-tools',
+    repo: 'acme/internal-tools',
     title: 'feat: add retry policy for webhooks',
     author: 'anil-backend',
     authorAvatar: '',
@@ -148,7 +148,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'merged',
   },
   {
-    repo: 'thinkdj/internal-tools',
+    repo: 'acme/internal-tools',
     name: 'main',
     url: '#',
     isDefault: true,
@@ -160,7 +160,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'default',
   },
   {
-    repo: 'thinkdj/internal-tools',
+    repo: 'acme/internal-tools',
     name: 'fix/audit-export',
     url: '#',
     isDefault: false,
@@ -172,7 +172,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'stale',
   },
   {
-    repo: 'thinkdj/internal-tools',
+    repo: 'acme/internal-tools',
     name: 'feat/retry-policy',
     url: '#',
     isDefault: false,
@@ -184,7 +184,7 @@ export const seedBranchAnalysis: BranchAnalysis[] = [
     status: 'merged',
   },
   {
-    repo: 'thinkdj/website',
+    repo: 'acme/website',
     name: 'main',
     url: '#',
     isDefault: true,

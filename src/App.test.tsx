@@ -135,7 +135,7 @@ describe('PR Pulse', () => {
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
-      fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
+      fireEvent.click(screen.getByRole('button', { name: 'acme/website' }))
 
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
@@ -146,7 +146,7 @@ describe('PR Pulse', () => {
       localStorage.setItem(
         REPOS_KEY,
         JSON.stringify({
-          repos: ['thinkdj/prpulse.gh.devcp', 'thinkdj/website'],
+          repos: ['thinkdj/prpulse.gh.devcp', 'acme/website'],
           selectedRepos: ['thinkdj/prpulse.gh.devcp'],
         }),
       )
@@ -181,7 +181,7 @@ describe('PR Pulse', () => {
       })
 
       setItemSpy.mockClear()
-      fireEvent.click(screen.getByRole('button', { name: 'thinkdj/website' }))
+      fireEvent.click(screen.getByRole('button', { name: 'acme/website' }))
 
       await waitFor(() => {
         expect(setItemSpy).toHaveBeenCalled()
@@ -195,8 +195,8 @@ describe('PR Pulse', () => {
         repos?: string[]
         selectedRepos?: string[]
       }
-      expect(payload.repos).toContain('thinkdj/website')
-      expect(payload.selectedRepos).not.toContain('thinkdj/website')
+      expect(payload.repos).toContain('acme/website')
+      expect(payload.selectedRepos).not.toContain('acme/website')
     })
 
     it('filters visible PRs using the filter buttons', async () => {
@@ -228,7 +228,7 @@ describe('PR Pulse', () => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('5')
       })
 
-      fireEvent.click(screen.getByRole('button', { name: 'Remove thinkdj/website' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove acme/website' }))
 
       // Confirm the removal in the custom dialog
       await waitFor(() => {
@@ -239,7 +239,7 @@ describe('PR Pulse', () => {
       await waitFor(() => {
         expect(screen.getByTestId('summary-total')).toHaveTextContent('4')
       })
-      expect(screen.queryByRole('button', { name: 'thinkdj/website' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'acme/website' })).not.toBeInTheDocument()
     })
 
     it('shows validation error for invalid repo format', async () => {
@@ -440,7 +440,7 @@ describe('PR Pulse', () => {
       fireEvent.click(screen.getByRole('button', { name: /Branch analysis/i }))
 
       const panel = await screen.findByTestId('branch-analysis-panel')
-      const websiteBox = within(panel).getByRole('checkbox', { name: /thinkdj\/website/i })
+      const websiteBox = within(panel).getByRole('checkbox', { name: /acme\/website/i })
       expect(websiteBox).toBeChecked()
       fireEvent.click(websiteBox)
       expect(websiteBox).not.toBeChecked()
@@ -449,7 +449,7 @@ describe('PR Pulse', () => {
       expect(within(panel).getByRole('checkbox', { name: /thinkdj\/prpulse\.gh\.devcp/i })).not.toBeChecked()
 
       fireEvent.click(within(panel).getByRole('button', { name: 'All' }))
-      expect(within(panel).getByRole('checkbox', { name: /thinkdj\/website/i })).toBeChecked()
+      expect(within(panel).getByRole('checkbox', { name: /acme\/website/i })).toBeChecked()
     })
 
     it('filters branch analysis to stale branches', async () => {
