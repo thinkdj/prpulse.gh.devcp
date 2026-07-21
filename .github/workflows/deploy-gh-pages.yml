@@ -39,7 +39,7 @@ jobs:
 
       - name: Build site
         # Custom domain (prpulse.32mb.dev) serves from the root, so base stays '/'.
-        # The public/CNAME file is copied into dist/ and keeps the domain bound across deploys.
+        # The domain itself is bound in the repo's Pages settings (Settings → Pages).
         run: npm run build
 
       - name: Setup Pages
