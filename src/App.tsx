@@ -2,20 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Settings,
-  RefreshCw,
+  Gear,
+  ArrowsClockwise,
   Sun,
   Moon,
   Key,
-  Clipboard,
+  Pulse,
   CheckCircle,
   GitBranch,
   Tag,
   GitPullRequest,
-  Zap,
-  Bot,
-  FlaskConical,
-} from 'lucide-react'
+  Lightning,
+  Robot,
+  Flask,
+  WarningCircle,
+} from '@phosphor-icons/react'
 import type { CopilotAccountData, CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
 import { loadRepoState, loadToken, loadTheme, loadMode, saveRepoState, saveToken, saveTheme, saveMode, loadCopilotTarget, saveCopilotTarget } from './storage'
 import type { Theme, Mode } from './storage'
@@ -34,16 +35,24 @@ import ConfirmDialog from './components/ConfirmDialog'
 
 type DemoData = typeof import('./demo-data')
 
-const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true'
+// Deployed builds (e.g. GitHub Pages) can set VITE_DEFAULT_DEMO=true so visitors land straight
+// in demo mode; `?demo=false` still opts back out to the real welcome/token screen.
+const demoParam = new URLSearchParams(window.location.search).get('demo')
+const isDemoMode = demoParam === 'true' || (import.meta.env.VITE_DEFAULT_DEMO === 'true' && demoParam !== 'false')
 const DEMO_TOKEN = 'demo-mode'
+// Keeps the header's loading bar visible for a minimum stretch on boot, even when data
+// (e.g. demo fixtures) is ready instantly — it's the project's one loading indicator.
+// Skipped under Vitest so tests don't have to wait out a real timer.
+const BOOT_WINDOW_MS = import.meta.env.MODE === 'test' ? 0 : 2500
 
 function applyTheme(theme: Theme, mode: Mode) {
-  document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember', 'zinc')
+  document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember', 'zinc', 'azure')
   if (mode === 'light') document.documentElement.classList.add('light')
   if (theme === 'slate') document.documentElement.classList.add('slate')
   if (theme === 'ocean') document.documentElement.classList.add('ocean')
   if (theme === 'ember') document.documentElement.classList.add('ember')
   if (theme === 'zinc') document.documentElement.classList.add('zinc')
+  if (theme === 'azure') document.documentElement.classList.add('azure')
 }
 
 function App() {
@@ -66,9 +75,18 @@ function App() {
   const [selectedCopilotTargetRaw, setSelectedCopilotTarget] = useState(() =>
     isDemoMode ? '' : loadCopilotTarget(),
   )
+  const [bootWindowElapsed, setBootWindowElapsed] = useState(BOOT_WINDOW_MS === 0)
   useEffect(() => {
     applyTheme(theme, mode)
   }, [theme, mode])
+
+  // Keeps the header loading bar on screen for a minimum stretch on boot instead of an instant
+  // flash straight to data (most noticeable in demo mode, where fixtures load immediately).
+  useEffect(() => {
+    if (BOOT_WINDOW_MS === 0) return
+    const timer = setTimeout(() => setBootWindowElapsed(true), BOOT_WINDOW_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Load demo fixture data lazily so non-demo users don't pay the parse/download cost.
   useEffect(() => {
@@ -297,6 +315,16 @@ function App() {
   const error = accountError ?? viewError
   const dataUpdatedAt = activeView === 'branches' ? branchDataUpdatedAt : activeView === 'copilot' ? copilotDataUpdatedAt : prDataUpdatedAt
 
+  // Drives the header's top loading bar — the project's one loading indicator. True while any
+  // background fetch is in flight (initial load, manual refresh, auto-refresh, tab switch), and
+  // held true through the initial boot window so it's visible even when data resolves instantly.
+  const isFetchingAny =
+    !bootWindowElapsed ||
+    repoQueries.some((q) => q.isFetching) ||
+    branchQueries.some((q) => q.isFetching) ||
+    copilotQuery.isFetching ||
+    currentUserQuery.isFetching
+
   useEffect(() => {
     if (!isDemoMode) saveRepoState({ repos, selectedRepos })
   }, [repos, selectedRepos])
@@ -397,92 +425,111 @@ function App() {
     <main className="min-h-screen bg-gh-bg text-gh-fg-default">
       <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
         {isDemoMode && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-gh-accent/40 bg-gh-accent/10 px-4 py-2.5 text-sm text-gh-accent-fg">
-            <FlaskConical className="h-4 w-4 shrink-0" />
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-gh-accent/30 bg-gh-accent/10 px-4 py-3 text-sm text-gh-accent-fg shadow-sm">
+            <Flask className="h-4 w-4 shrink-0" />
             <span>
-              <strong>Demo mode</strong> — exploring with sample data. No GitHub token required.{' '}
-              <a href="/" className="underline hover:no-underline">Exit demo</a>
+              <strong>Demo mode.</strong> Exploring with sample data, no GitHub token required.{' '}
+              <a href="?demo=false" className="underline hover:no-underline">Exit demo</a>
             </span>
           </div>
         )}
-        <header className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <header className="relative mb-6 overflow-hidden rounded-md border border-gh-border bg-gh-surface shadow-sm">
+          {/* Signature masthead treatment: soft azure wash — distinct from the flat cards below */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-gh-accent/[0.07] via-transparent to-transparent" aria-hidden="true" />
+          {/* Top strip doubles as a real loading indicator: transparent at rest, an indeterminate
+              sweep while any query is in flight — instead of a purely decorative static bar. */}
+          <div className="absolute inset-x-0 top-0 h-[3px] overflow-hidden" aria-hidden="true">
+            {isFetchingAny && (
+              <div className="loading-bar-sweep h-full w-1/3 bg-gradient-to-r from-transparent via-gh-accent to-transparent" />
+            )}
+          </div>
+
+          <div className="relative flex flex-wrap items-start justify-between gap-4 p-5 md:p-6">
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gh-accent/10">
+                  <Pulse className="pulse-mark h-5 w-5 text-gh-accent-fg" weight="bold" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gh-fg-muted">GitHub control panel</p>
+                  <h1 className="text-2xl font-bold leading-tight tracking-tight text-gh-fg md:text-[1.75rem]">PR Pulse</h1>
+                </div>
+              </div>
+              <p className="mt-2 max-w-lg text-sm text-gh-fg-muted">
+                Live pull request status, branch health, and Copilot usage for every repo you track.
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <a
                   href="https://github.com/thinkdj/prpulse.gh.devcp"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="View source on GitHub"
                   title="View source on GitHub"
-                  className="shrink-0 text-gh-fg-muted hover:text-gh-accent-fg transition-colors"
+                  className="shrink-0 rounded-full p-2 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-accent-fg"
                 >
-                  <svg height="22" width="22" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+                  <svg height="18" width="18" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                 </a>
-                <h1 className="text-2xl font-semibold tracking-tight text-gh-fg">PR Pulse – The GitHub Control Panel</h1>
+                {/* Theme palette selector */}
+                <label htmlFor="theme-select" className="sr-only">Theme</label>
+                <select
+                  id="theme-select"
+                  value={theme}
+                  onChange={(e) => changeTheme(e.target.value as Theme)}
+                  aria-label="Theme"
+                  className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-xs font-medium text-gh-fg-default transition-colors hover:border-gh-border-hover focus:border-gh-accent focus:outline-none"
+                >
+                  <option value="azure">Azure</option>
+                  <option value="slate">Slate</option>
+                  <option value="warm">Warm</option>
+                  <option value="ocean">Ocean</option>
+                  <option value="ember">Ember</option>
+                  <option value="zinc">Zinc</option>
+                </select>
+                {/* Light/dark mode toggle */}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="rounded-full p-2 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-fg-default"
+                >
+                  {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="rounded-full p-2 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-fg-default"
+                  title="Refresh data"
+                  aria-label="Refresh data"
+                >
+                  <ArrowsClockwise className="h-4 w-4" />
+                </button>
+                {!isDemoMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold shadow-sm transition-colors ${
+                      token
+                        ? 'bg-gh-success/15 text-gh-success-fg hover:bg-gh-success/25'
+                        : 'bg-gh-warning/15 text-gh-warning hover:bg-gh-warning/25'
+                    }`}
+                  >
+                    <Gear className="h-3.5 w-3.5" />
+                    {token ? 'Connected' : 'Set token'}
+                  </button>
+                )}
               </div>
-              <p className="mt-1 text-sm text-gh-fg-muted">
-                Bird&apos;s-eye view of pull requests and branches across your repositories.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Theme palette selector */}
-              <label htmlFor="theme-select" className="sr-only">Theme</label>
-              <select
-                id="theme-select"
-                value={theme}
-                onChange={(e) => changeTheme(e.target.value as Theme)}
-                aria-label="Theme"
-                className="rounded-md border border-gh-border bg-gh-overlay px-2 py-1.5 text-xs text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
-              >
-                <option value="slate">Slate</option>
-                <option value="warm">Warm</option>
-                <option value="ocean">Ocean</option>
-                <option value="ember">Ember</option>
-                <option value="zinc">Zinc</option>
-              </select>
-              {/* Light/dark mode toggle */}
-              <button
-                type="button"
-                onClick={toggleMode}
-                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="rounded-md border border-gh-border bg-gh-overlay p-1.5 text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
-              >
-                {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
               {dataUpdatedAt > 0 && (
                 <span
-                  className="text-xs text-gh-fg-muted"
+                  className="text-xs tabular-nums text-gh-fg-muted"
                   title={new Date(dataUpdatedAt).toLocaleString()}
                 >
                   Updated {formatAgeAgoFromMs(dataUpdatedAt)}
                 </span>
-              )}
-              <button
-                type="button"
-                onClick={handleRefresh}
-                className="rounded-md border border-gh-border bg-gh-overlay p-1.5 text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
-                title="Refresh data"
-                aria-label="Refresh data"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-              {!isDemoMode && (
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(!showSettings)}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                    token
-                      ? 'border-gh-success/40 bg-gh-success/10 text-gh-success-fg'
-                      : 'border-gh-warning/40 bg-gh-warning/10 text-gh-warning'
-                  }`}
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  {token ? 'Connected' : 'Set token'}
-                </button>
               )}
             </div>
           </div>
@@ -497,50 +544,67 @@ function App() {
         />
 
         {error && (
-          <div className="mb-6 rounded-md border border-gh-danger/40 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
-            {error instanceof Error
-              ? error.message
-              : activeView === 'pull_requests'
-                ? 'Failed to fetch pull requests.'
-                : 'Failed to fetch branch analysis.'}
+          <div className="mb-6 flex items-start gap-2 rounded-md border border-gh-danger/30 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg shadow-sm">
+            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              {error instanceof Error
+                ? error.message
+                : activeView === 'pull_requests'
+                  ? 'Failed to fetch pull requests.'
+                  : 'Failed to fetch branch analysis.'}
+            </span>
           </div>
         )}
 
         {!tokenHydrated && !isDemoMode ? null : !token && !isDemoMode ? (
           /* ── Empty state: no token configured ── */
-          <section className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center" data-testid="welcome-state">
-            <div className="mx-auto max-w-md">
-              <div className="mb-4 flex justify-center">
-                <Clipboard className="h-14 w-14 text-gh-accent-fg opacity-60" />
+          <section className="rounded-md border border-gh-border bg-gh-surface px-6 py-16 text-center shadow-sm md:py-20" data-testid="welcome-state">
+            <div className="mx-auto max-w-lg">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gh-accent/10">
+                <Pulse className="h-9 w-9 text-gh-accent-fg" weight="bold" />
               </div>
-              <h2 className="text-xl font-semibold tracking-tight text-gh-fg">Welcome to PR Pulse</h2>
-              <p className="mt-2 text-sm text-gh-fg-muted">
-                Monitor pull requests across all your repositories at a glance.
+              <h2 className="text-2xl font-bold tracking-tight text-gh-fg">Welcome to PR Pulse</h2>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-gh-fg-muted">
+                Connect a token to get a live, filterable view of pull requests, branch health, and
+                Copilot usage across every repository you track.
               </p>
-              <ul className="mx-auto mt-4 max-w-xs space-y-1.5 text-left text-sm text-gh-fg-muted">
-                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gh-success-fg shrink-0" /> See PR status, reviews &amp; CI checks</li>
-                <li className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-gh-fg-muted shrink-0" /> Spot stale or fully merged branches</li>
-                <li className="flex items-center gap-2"><Tag className="h-4 w-4 text-gh-fg-muted shrink-0" /> Filter by author, label, status</li>
-                <li className="flex items-center gap-2"><GitPullRequest className="h-4 w-4 text-gh-fg-muted shrink-0" /> Track draft PRs and push counts</li>
-                <li className="flex items-center gap-2"><Zap className="h-4 w-4 text-gh-fg-muted shrink-0" /> Auto-refreshes every 5 minutes</li>
+              <ul className="mx-auto mt-6 grid max-w-md grid-cols-1 gap-2 text-left text-sm text-gh-fg-muted sm:grid-cols-2">
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <CheckCircle className="h-4 w-4 text-gh-success-fg shrink-0" /> PR status, reviews &amp; CI checks
+                </li>
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <GitBranch className="h-4 w-4 text-gh-fg-muted shrink-0" /> Stale and merged branches
+                </li>
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <Tag className="h-4 w-4 text-gh-fg-muted shrink-0" /> Filter by author, label, status
+                </li>
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <GitPullRequest className="h-4 w-4 text-gh-fg-muted shrink-0" /> Draft PRs &amp; push counts
+                </li>
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <Robot className="h-4 w-4 text-gh-fg-muted shrink-0" /> Copilot review &amp; usage analytics
+                </li>
+                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
+                  <Lightning className="h-4 w-4 text-gh-fg-muted shrink-0" /> Auto-refreshes every 5 minutes
+                </li>
               </ul>
-              <div className="mt-6 flex flex-col items-center gap-3">
+              <div className="mt-7 flex flex-col items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setShowSettings(true)}
-                  className="inline-flex items-center gap-2 rounded-md border border-gh-accent bg-gh-accent px-5 py-2 text-sm font-medium text-white"
+                  className="inline-flex items-center gap-2 rounded-md bg-gh-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
                 >
                   <Key className="h-4 w-4" /> Connect GitHub Token
                 </button>
                 <a
                   href="?demo=true"
-                  className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-5 py-2 text-sm font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg"
+                  className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-5 py-2.5 text-sm font-semibold text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg"
                 >
-                  <FlaskConical className="h-4 w-4" /> Try demo
+                  <Flask className="h-4 w-4" /> Try demo
                 </a>
               </div>
               <p className="mt-3 text-xs text-gh-fg-muted">
-                Use a fine-grained PAT with read-only pull request access.
+                Works with a fine-grained PAT scoped to read-only pull request access.
               </p>
             </div>
           </section>
@@ -551,10 +615,10 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('pull_requests')}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'pull_requests'
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                    ? 'bg-gh-accent text-white shadow-sm'
+                    : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
                 }`}
               >
                 <GitPullRequest className="h-3.5 w-3.5" /> Pull requests
@@ -562,13 +626,13 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('my_actions')}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'my_actions'
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                    ? 'bg-gh-accent text-white shadow-sm'
+                    : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
                 }`}
               >
-                <Zap className="h-3.5 w-3.5" /> My actions
+                <Lightning className="h-3.5 w-3.5" /> My actions
                 {summary.needsReview > 0 && (
                   <span className="ml-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gh-warning px-1 text-[10px] font-semibold text-white">
                     {summary.needsReview}
@@ -578,10 +642,10 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('branches')}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'branches'
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                    ? 'bg-gh-accent text-white shadow-sm'
+                    : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
                 }`}
               >
                 <GitBranch className="h-3.5 w-3.5" /> Branch analysis
@@ -589,13 +653,13 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveView('copilot')}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
                   activeView === 'copilot'
-                    ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                    : 'border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover'
+                    ? 'bg-gh-accent text-white shadow-sm'
+                    : 'border border-gh-border bg-gh-surface text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default'
                 }`}
               >
-                <Bot className="h-3.5 w-3.5" /> Copilot
+                <Robot className="h-3.5 w-3.5" /> Copilot
               </button>
             </section>
 
@@ -607,6 +671,7 @@ function App() {
                 blocked={summary.blocked}
                 activeFilter={filter}
                 onFilterClick={setFilter}
+                isLoading={prIsLoading}
               />
             )}
 
@@ -614,6 +679,7 @@ function App() {
               <RepoSelector
                 repos={repos}
                 selectedRepos={selectedRepos}
+                isLoading={isLoading}
                 newRepo={newRepo}
                 repoError={repoError}
                 onNewRepoChange={handleNewRepoChange}

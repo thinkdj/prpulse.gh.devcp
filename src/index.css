@@ -7,7 +7,8 @@
  *   • .slate         → Slate/GitHub theme variables (dark mode)
  *   • .ocean         → Ocean theme variables (dark mode)
  *   • .ember         → Ember theme variables (dark mode)
- *   • .slate.light / .ocean.light / .ember.light override light values for each theme
+ *   • .azure         → Azure theme variables (dark mode) — default theme
+ *   • .slate.light / .ocean.light / .ember.light / .azure.light override light values for each theme
  *
  * Applied classes on <html>:  [theme?] [light?]
  *   dark Warm    → (no extra classes)
@@ -18,6 +19,8 @@
  *   light Ocean  → .ocean .light
  *   dark Ember   → .ember
  *   light Ember  → .ember .light
+ *   dark Azure   → .azure
+ *   light Azure  → .azure .light   (default: azure + light)
  */
 
 /* ── Warm theme: dark mode (default) ── */
@@ -251,6 +254,52 @@
   --gh-purple: #7c3aed;
 }
 
+/* ── Azure theme: dark mode (deep cool navy, vivid sky-blue accent) ── */
+.azure {
+  color-scheme: dark;
+
+  --gh-bg: #0b1220;
+  --gh-surface: #121b2e;
+  --gh-overlay: #1b2740;
+  --gh-border: #253352;
+  --gh-border-hover: #314268;
+  --gh-fg: #f1f5f9;
+  --gh-fg-default: #cbd5e1;
+  --gh-fg-muted: #8b99b0;
+  --gh-fg-placeholder: #566178;
+  --gh-accent: #0ea5e9;
+  --gh-accent-fg: #38bdf8;
+  --gh-success: #34d399;
+  --gh-success-fg: #4ade80;
+  --gh-danger: #fb7185;
+  --gh-danger-fg: #f87171;
+  --gh-warning: #fbbf24;
+  --gh-purple: #a78bfa;
+}
+
+/* ── Azure theme: light mode (bright, card-forward — default look) ── */
+.azure.light {
+  color-scheme: light;
+
+  --gh-bg: #f7f9fc;
+  --gh-surface: #ffffff;
+  --gh-overlay: #eff3f9;
+  --gh-border: #e2e8f0;
+  --gh-border-hover: #cbd5e1;
+  --gh-fg: #0f172a;
+  --gh-fg-default: #334155;
+  --gh-fg-muted: #64748b;
+  --gh-fg-placeholder: #94a3b8;
+  --gh-accent: #0284c7;
+  --gh-accent-fg: #0369a1;
+  --gh-success: #16a34a;
+  --gh-success-fg: #15803d;
+  --gh-danger: #e11d48;
+  --gh-danger-fg: #be123c;
+  --gh-warning: #d97706;
+  --gh-purple: #7c3aed;
+}
+
 
 @theme inline {
   --color-gh-bg: var(--gh-bg);
@@ -280,4 +329,74 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Header top strip: an indeterminate sweep while a fetch is in flight, transparent at rest. */
+@keyframes loading-bar-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.loading-bar-sweep {
+  animation: loading-bar-sweep 1.3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar-sweep {
+    animation-duration: 2.6s;
+  }
+}
+
+/* Brand mark: a slow, quiet pulse — literal nod to the product name, not a loading spinner. */
+@keyframes pulse-mark {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.pulse-mark {
+  animation: pulse-mark 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-mark {
+    animation: none;
+  }
+}
+
+/* Tailwind's preflight resets native buttons to `cursor: default` — restore the
+   hand cursor app-wide (disabled buttons keep their explicit not-allowed cursor,
+   since that utility class is more specific than this bare element selector). */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Baseline focus ring for anything that doesn't define its own focus treatment.
+   Lower specificity than any element-level `focus:` utility, so it never fights
+   a component's explicit focus style — it only fills the gaps. */
+:focus-visible {
+  outline: 2px solid var(--gh-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--gh-accent) 30%, transparent);
+  color: var(--gh-fg);
+}
+
+/* Thin, theme-tinted scrollbars for the horizontally/vertically scrollable panels */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gh-border-hover) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--gh-border-hover);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }

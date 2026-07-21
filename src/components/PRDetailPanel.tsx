@@ -5,20 +5,20 @@ import {
   X,
   GitBranch,
   Clock,
-  MessageSquare,
+  ChatCircle,
   CheckCircle,
   XCircle,
   Flag,
-  ExternalLink,
-  AlertCircle,
-  Send,
-  XOctagon,
-  Trash2,
-  Bot,
-  ChevronDown,
-  ChevronUp,
+  ArrowSquareOut,
+  WarningCircle,
+  PaperPlaneTilt,
+  WarningOctagon,
+  Trash,
+  Robot,
+  CaretDown,
+  CaretUp,
   FileText,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import type { PRComment, PullRequest } from '../types'
 import { fetchPRActivity, fetchPRStats, postPRComment, closePR, deleteBranch } from '../github-api'
 import type { PRStats } from '../github-api'
@@ -47,27 +47,27 @@ const COPILOT_PRESETS = [
 ]
 
 const labelColorMap: Record<string, string> = {
-  bug: 'border-gh-danger-fg/60 text-gh-danger-fg bg-gh-danger/10',
-  urgent: 'border-gh-warning/60 text-gh-warning bg-gh-warning/10',
-  critical: 'border-gh-danger-fg/60 text-gh-danger-fg bg-gh-danger/10',
-  enhancement: 'border-gh-accent/60 text-gh-accent-fg bg-gh-accent/10',
-  feature: 'border-gh-accent/60 text-gh-accent-fg bg-gh-accent/10',
-  documentation: 'border-gh-purple/60 text-gh-purple bg-gh-purple/10',
-  docs: 'border-gh-purple/60 text-gh-purple bg-gh-purple/10',
-  chore: 'border-gh-fg-muted/40 text-gh-fg-muted',
-  dependencies: 'border-gh-success-fg/60 text-gh-success-fg bg-gh-success/10',
+  bug: 'bg-gh-danger/15 text-gh-danger-fg',
+  urgent: 'bg-gh-warning/15 text-gh-warning',
+  critical: 'bg-gh-danger/15 text-gh-danger-fg',
+  enhancement: 'bg-gh-accent/15 text-gh-accent-fg',
+  feature: 'bg-gh-accent/15 text-gh-accent-fg',
+  documentation: 'bg-gh-purple/15 text-gh-purple',
+  docs: 'bg-gh-purple/15 text-gh-purple',
+  chore: 'bg-gh-border/60 text-gh-fg-muted',
+  dependencies: 'bg-gh-success/15 text-gh-success-fg',
 }
 
 function getLabelStyle(label: string): string {
-  return labelColorMap[label.toLowerCase()] ?? 'border-gh-border text-gh-fg-muted'
+  return labelColorMap[label.toLowerCase()] ?? 'bg-gh-border/60 text-gh-fg-muted'
 }
 
 function ReviewIcon({ state }: { state?: string }) {
   if (state === 'APPROVED') return <CheckCircle className="h-3 w-3 text-gh-success-fg" />
   if (state === 'CHANGES_REQUESTED') return <XCircle className="h-3 w-3 text-gh-danger-fg" />
-  if (state === 'COMMENTED') return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
+  if (state === 'COMMENTED') return <ChatCircle className="h-3 w-3 text-gh-fg-muted" />
   if (state === 'PENDING') return <Clock className="h-3 w-3 text-gh-warning" />
-  return <MessageSquare className="h-3 w-3 text-gh-fg-muted" />
+  return <ChatCircle className="h-3 w-3 text-gh-fg-muted" />
 }
 
 function reviewStateBadge(state?: string): string {
@@ -182,7 +182,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40"
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -194,7 +194,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
         role="dialog"
         aria-modal="true"
         aria-label="Pull request details"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col bg-gh-surface shadow-2xl outline-none ring-1 ring-gh-border"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col bg-gh-surface shadow-2xl outline-none ring-1 ring-gh-border md:rounded-l-lg"
       >
         {/* Header */}
         <div className="flex items-start gap-3 border-b border-gh-border px-5 py-4">
@@ -203,7 +203,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
               <span className="text-xs font-medium text-gh-fg-muted">{pr.repo}</span>
               <span className="text-xs text-gh-fg-muted">#{pr.id}</span>
               {pr.isDraft && (
-                <span className="rounded-full border border-gh-border bg-gh-border/50 px-2 py-0.5 text-[10px] text-gh-fg-muted">
+                <span className="rounded-full bg-gh-border/60 px-2 py-0.5 text-[10px] font-medium text-gh-fg-muted">
                   Draft
                 </span>
               )}
@@ -211,7 +211,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
             <h2 className="mt-1 text-base font-semibold leading-snug">
               <a href={pr.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-gh-accent-fg hover:opacity-80">
                 {pr.title}
-                <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                <ArrowSquareOut className="h-3.5 w-3.5 shrink-0 opacity-60" />
               </a>
             </h2>
           </div>
@@ -219,7 +219,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
             type="button"
             onClick={onClose}
             aria-label="Close PR detail panel"
-            className="shrink-0 rounded-md p-1.5 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
+            className="shrink-0 rounded-full p-1.5 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-fg-default"
           >
             <X className="h-4 w-4" />
           </button>
@@ -300,10 +300,10 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                     {pr.reviewers.map((r) => (
                       <span
                         key={r}
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
                           r === currentUser
-                            ? 'border-gh-warning/60 bg-gh-warning/10 text-gh-warning'
-                            : 'border-gh-border text-gh-fg-muted'
+                            ? 'bg-gh-warning/15 text-gh-warning'
+                            : 'bg-gh-border/60 text-gh-fg-muted'
                         }`}
                       >
                         {r === currentUser && <Flag className="h-3 w-3" />}
@@ -320,7 +320,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                     {pr.labels.map((label) => (
                       <span
                         key={label}
-                        className={`rounded-full border px-2 py-0.5 text-xs ${getLabelStyle(label)}`}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getLabelStyle(label)}`}
                       >
                         {label}
                       </span>
@@ -331,24 +331,24 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
               <div className="col-span-2 flex gap-4 text-xs text-gh-fg-muted">
                 <span>{pr.pushesAfterOpen} push{pr.pushesAfterOpen !== 1 ? 'es' : ''} after open</span>
                 <span className="flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />
+                  <ChatCircle className="h-3 w-3" />
                   {displayedCommentCount} comment{displayedCommentCount !== 1 ? 's' : ''}
                 </span>
               </div>
               {(prStats || isDemo) && (
                 <div className="col-span-2">
                   <dt className="text-xs uppercase tracking-wide text-gh-fg-muted">Diff</dt>
-                  <dd className="mt-1 flex items-center gap-3 text-xs">
+                  <dd className="mt-1.5 flex items-center gap-2 text-xs">
                     {(() => {
                       const stats = isDemo ? DEMO_PR_STATS : prStats!
                       return (
                         <>
-                          <span className="flex items-center gap-1 text-gh-fg-muted">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-gh-border bg-gh-overlay/60 px-2 py-1 font-medium text-gh-fg-muted">
                             <FileText className="h-3.5 w-3.5" />
                             {stats.changedFiles} file{stats.changedFiles !== 1 ? 's' : ''}
                           </span>
-                          <span className="font-medium text-gh-success-fg">+{stats.additions}</span>
-                          <span className="font-medium text-gh-danger-fg">−{stats.deletions}</span>
+                          <span className="inline-flex items-center rounded-md bg-gh-success/15 px-2 py-1 font-semibold text-gh-success-fg">+{stats.additions}</span>
+                          <span className="inline-flex items-center rounded-md bg-gh-danger/15 px-2 py-1 font-semibold text-gh-danger-fg">−{stats.deletions}</span>
                         </>
                       )
                     })()}
@@ -371,9 +371,9 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                   type="button"
                   onClick={() => setShowCloseConfirm(true)}
                   disabled={closePRMutation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-gh-danger/40 bg-gh-danger/8 px-3 py-1.5 text-xs font-medium text-gh-danger-fg hover:bg-gh-danger/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-gh-danger/12 px-3 py-1.5 text-xs font-semibold text-gh-danger-fg transition-colors hover:bg-gh-danger/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <XOctagon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <WarningOctagon className="h-3.5 w-3.5" aria-hidden="true" />
                   {closePRMutation.isPending ? 'Closing…' : 'Close PR'}
                 </button>
                 {pr.headRef && (
@@ -381,9 +381,9 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                     type="button"
                     onClick={() => setShowDeleteBranchConfirm(true)}
                     disabled={deleteBranchMutation.isPending}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-xs font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:text-gh-fg-default disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Trash className="h-3.5 w-3.5" aria-hidden="true" />
                     {deleteBranchMutation.isPending ? 'Deleting…' : 'Delete branch'}
                   </button>
                 )}
@@ -391,13 +391,13 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
             )}
             {closePRMutation.isError && (
               <p className="mt-2 flex items-center gap-1 text-xs text-gh-danger-fg">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <WarningCircle className="h-3.5 w-3.5 shrink-0" />
                 {closePRMutation.error instanceof Error ? closePRMutation.error.message : 'Failed to close PR.'}
               </p>
             )}
             {deleteBranchMutation.isError && (
               <p className="mt-2 flex items-center gap-1 text-xs text-gh-danger-fg">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <WarningCircle className="h-3.5 w-3.5 shrink-0" />
                 {deleteBranchMutation.error instanceof Error ? deleteBranchMutation.error.message : 'Failed to delete branch.'}
               </p>
             )}
@@ -406,14 +406,14 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
           {/* Comment thread */}
           <div className="px-5 py-4">
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
-              <MessageSquare className="h-3.5 w-3.5" />
+              <ChatCircle className="h-3.5 w-3.5" />
               Activity
             </h3>
             {!isDemo && activityLoading ? (
               <p className="text-sm text-gh-fg-muted">Loading activity…</p>
             ) : !isDemo && activityError ? (
-              <div className="flex items-center gap-2 rounded-lg border border-gh-danger/30 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="flex items-center gap-2 rounded-md border border-gh-danger/30 bg-gh-danger/10 px-4 py-3 text-sm text-gh-danger-fg">
+                <WarningCircle className="h-4 w-4 shrink-0" />
                 Failed to load activity. Check your token permissions.
               </div>
             ) : displayedActivity.length === 0 ? (
@@ -421,7 +421,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
             ) : (
               <ul className="space-y-3">
                 {displayedActivity.map((comment) => (
-                  <li key={`${comment.isReview ? 'r' : 'c'}-${comment.id}`} className="rounded-lg border border-gh-border bg-gh-overlay p-3">
+                  <li key={`${comment.isReview ? 'r' : 'c'}-${comment.id}`} className="rounded-md border border-gh-border bg-gh-overlay p-3.5 shadow-sm">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         {comment.authorAvatar ? (
@@ -462,9 +462,9 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
               onClick={() => setShowPresets(!showPresets)}
               className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gh-fg-muted hover:text-gh-fg-default"
             >
-              <Bot className="h-3.5 w-3.5 text-gh-accent-fg" aria-hidden="true" />
+              <Robot className="h-3.5 w-3.5 text-gh-accent-fg" aria-hidden="true" />
               Copilot prompts
-              {showPresets ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
+              {showPresets ? <CaretUp className="h-3 w-3" aria-hidden="true" /> : <CaretDown className="h-3 w-3" aria-hidden="true" />}
             </button>
             {showPresets && (
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -477,9 +477,9 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
                       setShowPresets(false)
                       textareaRef.current?.focus()
                     }}
-                    className="inline-flex items-center gap-1 rounded-full border border-gh-accent/40 bg-gh-accent/8 px-2.5 py-1 text-[11px] font-medium text-gh-accent-fg hover:border-gh-accent/70 hover:bg-gh-accent/15 transition-colors"
+                    className="inline-flex items-center gap-1 rounded-full bg-gh-accent/12 px-2.5 py-1 text-[11px] font-semibold text-gh-accent-fg transition-colors hover:bg-gh-accent/20"
                   >
-                    <Bot className="h-3 w-3" aria-hidden="true" />
+                    <Robot className="h-3 w-3" aria-hidden="true" />
                     {preset.label}
                   </button>
                 ))}
@@ -489,7 +489,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
 
           {mutation.isError && (
             <div className="mb-2 flex items-center gap-1.5 text-xs text-gh-danger-fg">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <WarningCircle className="h-3.5 w-3.5 shrink-0" />
               {mutation.error instanceof Error ? mutation.error.message : 'Failed to post comment.'}
             </div>
           )}
@@ -502,7 +502,7 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
             aria-label="Comment body"
             disabled={isDemo}
             rows={3}
-            className="w-full resize-none rounded-md border border-gh-border bg-gh-bg px-3 py-2 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full resize-none rounded-md border border-gh-border bg-gh-bg px-3.5 py-2.5 text-sm text-gh-fg-default placeholder-gh-fg-placeholder outline-none transition-colors focus:border-gh-accent focus:ring-2 focus:ring-gh-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-[10px] text-gh-fg-placeholder">{isDemo ? 'Demo mode' : 'Ctrl+Enter to submit'}</span>
@@ -510,9 +510,9 @@ export default function PRDetailPanel({ pr, token, currentUser, isDemoMode, demo
               type="button"
               onClick={handleSubmitComment}
               disabled={isDemo || !commentBody.trim() || mutation.isPending}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-gh-accent px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Send className="h-3.5 w-3.5" />
+              <PaperPlaneTilt className="h-3.5 w-3.5" />
               {mutation.isPending ? 'Posting…' : 'Comment'}
             </button>
           </div>

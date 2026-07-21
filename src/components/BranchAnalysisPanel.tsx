@@ -4,7 +4,7 @@ import { relativeTime } from '../utils'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import StatusBadge from './StatusBadge'
 import CopyClipboardIconButton from './CopyClipboardIconButton'
-import { Play } from 'lucide-react'
+import { Play } from '@phosphor-icons/react'
 
 type BranchAnalysisPanelProps = {
   branches: BranchAnalysis[]
@@ -127,16 +127,16 @@ export default function BranchAnalysisPanel({
 
   if (!hasSelectedRepos && repos.length === 0) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="branch-analysis-panel">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm" data-testid="branch-analysis-panel">
         <p className="text-sm text-gh-fg-muted">Select at least one repository to analyze branches.</p>
       </section>
     )
   }
 
   return (
-    <section className="rounded-lg border border-gh-border bg-gh-surface p-5" data-testid="branch-analysis-panel">
+    <section className="rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm" data-testid="branch-analysis-panel">
       {/* Repo selection + manual trigger */}
-      <div className="mb-5 rounded-lg border border-gh-border bg-gh-overlay p-4">
+      <div className="mb-5 rounded-md border border-gh-border bg-gh-overlay p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-gh-fg">Select repositories to analyze</p>
           <div className="flex items-center gap-2">
@@ -165,10 +165,10 @@ export default function BranchAnalysisPanel({
               const checked = localRepos.includes(repo)
               return (
                 <li key={repo}>
-                  <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
+                  <label className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                     checked
                       ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                      : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
+                      : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
                   }`}>
                     <input
                       type="checkbox"
@@ -187,7 +187,7 @@ export default function BranchAnalysisPanel({
           type="button"
           onClick={() => onRunAnalysis(localRepos)}
           disabled={localRepos.length === 0 || isLoading}
-          className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gh-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5" />
           {isLoading ? 'Analyzing…' : 'Run analysis'}
@@ -195,7 +195,7 @@ export default function BranchAnalysisPanel({
       </div>
 
       {!analysisTriggered ? (
-        <div className="rounded-md border border-gh-border bg-gh-overlay px-4 py-8 text-center text-sm text-gh-fg-muted">
+        <div className="rounded-md border border-gh-border bg-gh-overlay px-4 py-10 text-center text-sm text-gh-fg-muted">
           Select repositories above and click <span className="font-medium text-gh-fg">Run analysis</span> to fetch branch data.
         </div>
       ) : (
@@ -207,22 +207,22 @@ export default function BranchAnalysisPanel({
             Surface stale branches, fully merged work, and active branches across the repos you track.
           </p>
         </div>
-        <div className="grid min-w-[14rem] gap-2 text-right text-sm text-gh-fg-muted sm:grid-cols-2">
-          <div className="rounded-md border border-gh-border bg-gh-overlay px-3 py-2">
+        <div className="grid min-w-[14rem] gap-2.5 text-right text-sm text-gh-fg-muted sm:grid-cols-2">
+          <div className="rounded-md border border-gh-border bg-gh-overlay px-3.5 py-2.5 shadow-sm">
             <div className="text-xs uppercase tracking-wide">Stale</div>
-            <div className="mt-1 text-xl font-semibold text-gh-warning" data-testid="branch-summary-stale">{summary.stale}</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-gh-warning" data-testid="branch-summary-stale">{summary.stale}</div>
           </div>
-          <div className="rounded-md border border-gh-border bg-gh-overlay px-3 py-2">
+          <div className="rounded-md border border-gh-border bg-gh-overlay px-3.5 py-2.5 shadow-sm">
             <div className="text-xs uppercase tracking-wide">Merged</div>
-            <div className="mt-1 text-xl font-semibold text-gh-fg" data-testid="branch-summary-merged">{summary.merged}</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-gh-fg" data-testid="branch-summary-merged">{summary.merged}</div>
           </div>
-          <div className="rounded-md border border-gh-border bg-gh-overlay px-3 py-2">
+          <div className="rounded-md border border-gh-border bg-gh-overlay px-3.5 py-2.5 shadow-sm">
             <div className="text-xs uppercase tracking-wide">Active</div>
-            <div className="mt-1 text-xl font-semibold text-gh-success-fg" data-testid="branch-summary-active">{summary.active}</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-gh-success-fg" data-testid="branch-summary-active">{summary.active}</div>
           </div>
-          <div className="rounded-md border border-gh-border bg-gh-overlay px-3 py-2">
+          <div className="rounded-md border border-gh-border bg-gh-overlay px-3.5 py-2.5 shadow-sm">
             <div className="text-xs uppercase tracking-wide">Default</div>
-            <div className="mt-1 text-xl font-semibold text-gh-accent-fg" data-testid="branch-summary-default">{summary.default}</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-gh-accent-fg" data-testid="branch-summary-default">{summary.default}</div>
           </div>
         </div>
       </div>
@@ -233,17 +233,17 @@ export default function BranchAnalysisPanel({
             key={item.value}
             type="button"
             onClick={() => setFilter(item.value)}
-            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${
               filter === item.value
-                ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
+                ? 'bg-gh-accent text-white shadow-sm'
+                : 'border border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
             }`}
           >
             {item.label}
           </button>
         ))}
 
-        <label className="ml-auto flex min-w-[14rem] items-center gap-2 rounded-md border border-gh-border bg-gh-overlay px-3 py-2 text-sm text-gh-fg-muted">
+        <label className="ml-auto flex min-w-[14rem] items-center gap-2 rounded-md border border-gh-border bg-gh-overlay px-3 py-2 text-sm text-gh-fg-muted transition-colors focus-within:border-gh-accent focus-within:ring-2 focus-within:ring-gh-accent/20">
           <span>Search</span>
           <input
             value={search}
@@ -267,11 +267,11 @@ export default function BranchAnalysisPanel({
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-gh-fg-muted">
-                <th className="border-b border-gh-border px-3 py-2 font-medium">Branch</th>
-                <th className="border-b border-gh-border px-3 py-2 font-medium">Status</th>
-                <th className="border-b border-gh-border px-3 py-2 font-medium">Divergence</th>
-                <th className="border-b border-gh-border px-3 py-2 font-medium">Last commit</th>
+              <tr className="bg-gh-overlay/60 text-left text-xs uppercase tracking-wide text-gh-fg-muted">
+                <th className="border-b border-gh-border px-3 py-2 font-semibold">Branch</th>
+                <th className="border-b border-gh-border px-3 py-2 font-semibold">Status</th>
+                <th className="border-b border-gh-border px-3 py-2 font-semibold">Divergence</th>
+                <th className="border-b border-gh-border px-3 py-2 font-semibold">Last commit</th>
               </tr>
             </thead>
             <tbody>
@@ -302,7 +302,7 @@ export default function BranchAnalysisPanel({
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gh-fg-muted">
                         <span>{branch.repo}</span>
                         {branch.isProtected && (
-                          <span className="rounded-full border border-gh-border px-2 py-0.5">Protected</span>
+                          <span className="rounded-full bg-gh-border/60 px-2 py-0.5 font-medium">Protected</span>
                         )}
                       </div>
                     </div>

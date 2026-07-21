@@ -153,11 +153,11 @@ describe('saveToken', () => {
 
 /* ── loadTheme ── */
 describe('loadTheme', () => {
-  it('returns "slate" when nothing is stored (default)', () => {
-    expect(loadTheme()).toBe('slate')
+  it('returns "azure" when nothing is stored (default)', () => {
+    expect(loadTheme()).toBe('azure')
   })
 
-  it.each(['warm', 'slate', 'ocean', 'ember', 'zinc'] as const)(
+  it.each(['azure', 'warm', 'slate', 'ocean', 'ember', 'zinc'] as const)(
     'returns "%s" when stored',
     (theme) => {
       localStorage.setItem(THEME_KEY, theme)
@@ -165,16 +165,16 @@ describe('loadTheme', () => {
     },
   )
 
-  it('returns "slate" for an unrecognised value', () => {
+  it('returns "azure" for an unrecognised value', () => {
     localStorage.setItem(THEME_KEY, 'totally-unknown')
-    expect(loadTheme()).toBe('slate')
+    expect(loadTheme()).toBe('azure')
   })
 
-  it('returns "slate" when localStorage throws', () => {
+  it('returns "azure" when localStorage throws', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('security error')
     })
-    expect(loadTheme()).toBe('slate')
+    expect(loadTheme()).toBe('azure')
   })
 })
 
@@ -195,8 +195,8 @@ describe('saveTheme', () => {
 
 /* ── loadMode ── */
 describe('loadMode', () => {
-  it('returns "dark" when nothing is stored (default)', () => {
-    expect(loadMode()).toBe('dark')
+  it('returns "light" when nothing is stored (default)', () => {
+    expect(loadMode()).toBe('light')
   })
 
   it('returns "light" when stored', () => {
@@ -209,16 +209,16 @@ describe('loadMode', () => {
     expect(loadMode()).toBe('dark')
   })
 
-  it('returns "dark" for unrecognised mode value', () => {
+  it('returns "light" for unrecognised mode value', () => {
     localStorage.setItem(MODE_KEY, 'neon')
-    expect(loadMode()).toBe('dark')
+    expect(loadMode()).toBe('light')
   })
 
-  it('returns "dark" when localStorage throws', () => {
+  it('returns "light" when localStorage throws', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('security error')
     })
-    expect(loadMode()).toBe('dark')
+    expect(loadMode()).toBe('light')
   })
 })
 

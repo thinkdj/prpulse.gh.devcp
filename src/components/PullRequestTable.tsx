@@ -7,7 +7,7 @@ import {
   flexRender,
 } from '@tanstack/react-table'
 import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table'
-import { RefreshCw, X, MessageSquare } from 'lucide-react'
+import { ArrowsClockwise, X, ChatCircle, ArrowSquareOut } from '@phosphor-icons/react'
 import type { PullRequest, DashboardFilter } from '../types'
 import { formatAgeAgoFromMs, relativeTime } from '../utils'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
@@ -36,20 +36,23 @@ const filterLabels: { value: DashboardFilter; label: string }[] = [
   { value: 'blocked', label: 'Blocked' },
 ]
 
+// Varying widths so skeleton rows read as placeholder titles rather than a rigid grid.
+const SKELETON_ROW_WIDTHS = ['w-64', 'w-44', 'w-52', 'w-72', 'w-40', 'w-56']
+
 const labelColorMap: Record<string, string> = {
-  bug: 'border-gh-danger-fg/60 text-gh-danger-fg',
-  urgent: 'border-gh-warning/60 text-gh-warning',
-  critical: 'border-gh-danger-fg/60 text-gh-danger-fg',
-  enhancement: 'border-gh-accent/60 text-gh-accent-fg',
-  feature: 'border-gh-accent/60 text-gh-accent-fg',
-  documentation: 'border-gh-purple/60 text-gh-purple',
-  docs: 'border-gh-purple/60 text-gh-purple',
-  chore: 'border-gh-fg-muted/40 text-gh-fg-muted',
-  dependencies: 'border-gh-success-fg/60 text-gh-success-fg',
+  bug: 'bg-gh-danger/15 text-gh-danger-fg',
+  urgent: 'bg-gh-warning/15 text-gh-warning',
+  critical: 'bg-gh-danger/15 text-gh-danger-fg',
+  enhancement: 'bg-gh-accent/15 text-gh-accent-fg',
+  feature: 'bg-gh-accent/15 text-gh-accent-fg',
+  documentation: 'bg-gh-purple/15 text-gh-purple',
+  docs: 'bg-gh-purple/15 text-gh-purple',
+  chore: 'bg-gh-border/60 text-gh-fg-muted',
+  dependencies: 'bg-gh-success/15 text-gh-success-fg',
 }
 
 function getLabelStyle(label: string): string {
-  return labelColorMap[label.toLowerCase()] ?? 'border-gh-border text-gh-fg-muted'
+  return labelColorMap[label.toLowerCase()] ?? 'bg-gh-border/60 text-gh-fg-muted'
 }
 
 function ageColor(dateString: string): string {
@@ -61,7 +64,7 @@ function ageColor(dateString: string): string {
 }
 
 const columnFilterInputStyle =
-  'mt-1 w-full rounded border border-gh-border bg-gh-surface px-1.5 py-0.5 text-[10px] text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none'
+  'mt-1 w-full rounded-md border border-gh-border bg-gh-surface px-1.5 py-0.5 text-[10px] text-gh-fg-default placeholder-gh-fg-placeholder outline-none transition-colors focus:border-gh-accent'
 
 export default function PullRequestTable({
   pullRequests,
@@ -179,24 +182,36 @@ export default function PullRequestTable({
                 />
               )}
               <div className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => onPRSelect?.(pr)}
-                  aria-label={`View details for PR #${pr.id}: ${pr.title}`}
-                  className="text-left font-medium text-gh-accent-fg hover:underline"
-                >
-                  #{pr.id} {pr.title}
-                </button>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onPRSelect?.(pr)}
+                    aria-label={`View details for PR #${pr.id}: ${pr.title}`}
+                    className="text-left font-semibold text-gh-accent-fg transition-colors hover:text-gh-accent hover:underline"
+                  >
+                    #{pr.id} {pr.title}
+                  </button>
+                  <a
+                    href={pr.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open on GitHub"
+                    aria-label={`Open PR #${pr.id} on GitHub`}
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-accent-fg"
+                  >
+                    <ArrowSquareOut className="h-3 w-3" />
+                  </a>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {pr.isDraft && (
-                    <span className="rounded-full border border-gh-border bg-gh-border/50 px-1.5 py-0 text-[10px] text-gh-fg-muted">
+                    <span className="rounded-full bg-gh-border/60 px-2 py-0.5 text-[10px] font-medium text-gh-fg-muted">
                       Draft
                     </span>
                   )}
                   {pr.labels.map((label) => (
                     <span
                       key={label}
-                      className={`inline-flex cursor-pointer items-center rounded-full border px-1.5 py-0 text-[10px] hover:opacity-80 ${getLabelStyle(label)}`}
+                      className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[10px] font-medium transition-opacity hover:opacity-75 ${getLabelStyle(label)}`}
                       title={`Filter by label: ${label}`}
                       role="button"
                       tabIndex={0}
@@ -261,10 +276,10 @@ export default function PullRequestTable({
                   {pr.reviewers.slice(0, 3).map((r) => (
                     <span
                       key={r}
-                      className={`rounded-full border px-1.5 py-0 text-[9px] ${
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
                         r === currentUser
-                          ? 'border-gh-warning/60 text-gh-warning'
-                          : 'border-gh-border/60 text-gh-fg-placeholder'
+                          ? 'bg-gh-warning/15 text-gh-warning'
+                          : 'bg-gh-border/50 text-gh-fg-placeholder'
                       }`}
                       title={`Reviewer: ${r}`}
                     >
@@ -357,8 +372,10 @@ export default function PullRequestTable({
           const pr = row.original
           return (
             <span
-              className={`text-sm ${
-                pr.pushesAfterOpen >= 3 ? 'font-medium text-gh-warning' : 'text-gh-fg-muted'
+              className={`inline-flex min-w-[1.75rem] items-center justify-center rounded-md border px-2 py-1 text-xs font-semibold ${
+                pr.pushesAfterOpen >= 3
+                  ? 'border-gh-warning/30 bg-gh-warning/10 text-gh-warning'
+                  : 'border-gh-border bg-gh-overlay/60 text-gh-fg-muted'
               }`}
             >
               {pr.pushesAfterOpen}
@@ -372,13 +389,15 @@ export default function PullRequestTable({
         header: () => (
           <span className="inline-flex items-center">
             <span className="sr-only">Comments</span>
-            <MessageSquare className="h-3.5 w-3.5 text-gh-fg-muted" aria-hidden="true" />
+            <ChatCircle className="h-3.5 w-3.5 text-gh-fg-muted" aria-hidden="true" />
           </span>
         ),
         size: 48,
         enableColumnFilter: false,
         cell: ({ row }) => (
-          <span className="text-xs text-gh-fg-muted">{row.original.commentCount}</span>
+          <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-md border border-gh-border bg-gh-overlay/60 px-2 py-1 text-xs font-semibold text-gh-fg-muted">
+            {row.original.commentCount}
+          </span>
         ),
       },
   ]
@@ -413,9 +432,9 @@ export default function PullRequestTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-gh-border bg-gh-surface">
+    <section className="overflow-hidden rounded-md border border-gh-border bg-gh-surface shadow-sm">
       {/* Toolbar: search, facets, refresh */}
-      <div className="space-y-2 border-b border-gh-border px-3 py-2.5">
+      <div className="space-y-2.5 border-b border-gh-border px-3 py-3">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -423,23 +442,25 @@ export default function PullRequestTable({
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder="Search PRs by title, author, or #number…"
             aria-label="Search pull requests"
-            className="flex-1 rounded-md border border-gh-border bg-gh-surface py-1.5 pl-3 pr-3 text-sm text-gh-fg-default placeholder-gh-fg-placeholder focus:border-gh-accent focus:outline-none"
+            className="flex-1 rounded-md border border-gh-border bg-gh-surface py-2 pl-3.5 pr-3.5 text-sm text-gh-fg-default outline-none transition-colors placeholder-gh-fg-placeholder focus:border-gh-accent focus:ring-2 focus:ring-gh-accent/20"
           />
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
-              className="shrink-0 rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover"
+              className="shrink-0 rounded-md border border-gh-border bg-gh-overlay px-3 py-2 text-sm text-gh-fg-default transition-colors hover:border-gh-border-hover hover:bg-gh-border/40"
               title="Refresh data (clears cache)"
               aria-label="Refresh data"
             >
-              <RefreshCw className="h-4 w-4" />
+              <ArrowsClockwise className="h-4 w-4" />
             </button>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+            hideDrafts ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
+          }`}>
             <input
               type="checkbox"
               checked={hideDrafts}
@@ -449,7 +470,9 @@ export default function PullRequestTable({
             Hide drafts
           </label>
 
-          <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+            hideCopilot ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
+          }`}>
             <input
               type="checkbox"
               checked={hideCopilot}
@@ -459,7 +482,9 @@ export default function PullRequestTable({
             Hide Copilot
           </label>
 
-          <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+          <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+            hideDependabot ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
+          }`}>
             <input
               type="checkbox"
               checked={hideDependabot}
@@ -470,7 +495,9 @@ export default function PullRequestTable({
           </label>
 
           {currentUser && (
-            <label className="flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gh-border px-2 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover">
+            <label className={`flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              hideMine ? 'border-gh-accent/40 bg-gh-accent/10 text-gh-accent-fg' : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
+            }`}>
               <input
                 type="checkbox"
                 checked={hideMine}
@@ -494,7 +521,7 @@ export default function PullRequestTable({
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-gh-border px-2 py-1 text-xs text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default"
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-gh-border px-2.5 py-1 text-xs font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg-default"
             >
               <X className="h-3 w-3" /> Clear filters
             </button>
@@ -503,7 +530,7 @@ export default function PullRequestTable({
       </div>
 
       {/* Status filter buttons */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-gh-border px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gh-border px-3 py-2.5">
         <span className="text-xs font-medium text-gh-fg-muted">Status:</span>
         {filterLabels.map(({ value, label }) => (
           <button
@@ -511,10 +538,10 @@ export default function PullRequestTable({
             type="button"
             aria-pressed={filter === value}
             onClick={() => onFilterChange(value)}
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               filter === value
-                ? 'bg-gh-accent text-white'
-                : 'bg-gh-border/50 text-gh-fg-muted hover:text-gh-fg-default'
+                ? 'bg-gh-accent text-white shadow-sm'
+                : 'bg-gh-border/50 text-gh-fg-muted hover:bg-gh-border/70 hover:text-gh-fg-default'
             }`}
           >
             {label}
@@ -526,8 +553,16 @@ export default function PullRequestTable({
       </div>
 
       {isLoading && rows.length === 0 ? (
-        <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
-          Loading pull requests…
+        <div aria-hidden="true">
+          {SKELETON_ROW_WIDTHS.map((titleWidth, i) => (
+            <div key={i} className="flex items-center gap-4 border-t border-gh-border px-4 py-3.5 first:border-t-0">
+              <div className="h-2.5 w-20 shrink-0 animate-pulse rounded bg-gh-overlay" />
+              <div className={`h-2.5 shrink-0 animate-pulse rounded bg-gh-overlay ${titleWidth}`} />
+              <div className="ml-auto h-2.5 w-14 shrink-0 animate-pulse rounded bg-gh-overlay" />
+              <div className="h-5 w-14 shrink-0 animate-pulse rounded-full bg-gh-overlay" />
+              <div className="h-5 w-14 shrink-0 animate-pulse rounded-full bg-gh-overlay" />
+            </div>
+          ))}
         </div>
       ) : !hasToken ? (
         <div className="px-4 py-12 text-center text-sm text-gh-fg-muted">
@@ -540,7 +575,7 @@ export default function PullRequestTable({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm" data-testid="pr-table">
-            <thead className="bg-gh-surface text-xs uppercase tracking-wide text-gh-fg-muted">
+            <thead className="bg-gh-overlay/60 text-xs font-semibold uppercase tracking-wide text-gh-fg-muted">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
@@ -605,7 +640,7 @@ export default function PullRequestTable({
                         isRowSelected
                           ? 'bg-gh-accent/15 ring-1 ring-inset ring-gh-accent/45'
                           : pr.needsYourReview
-                            ? 'bg-gh-warning/5'
+                            ? 'bg-gh-warning/8'
                             : ''
                       }`}
                       onClick={(event) => {

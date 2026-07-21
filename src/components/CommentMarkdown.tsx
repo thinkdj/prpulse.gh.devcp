@@ -86,7 +86,7 @@ const mdComponents: Components = {
     }
     return (
       <code
-        className="rounded bg-gh-border/50 px-1 py-0.5 font-mono text-[11px] text-gh-accent-fg"
+        className="rounded-md bg-gh-overlay px-1.5 py-0.5 font-mono text-[11px] text-gh-accent-fg"
         {...props}
       >
         {children}

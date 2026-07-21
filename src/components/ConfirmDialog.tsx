@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { Warning } from '@phosphor-icons/react'
 
 type ConfirmDialogProps = {
   isOpen: boolean
@@ -28,7 +28,7 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -36,10 +36,12 @@ export default function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel()
       }}
     >
-      <div className="w-full max-w-sm rounded-lg border border-gh-border bg-gh-surface p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-lg border border-gh-border bg-gh-surface p-6 shadow-2xl">
         <div className="mb-4 flex items-start gap-3">
           {variant === 'danger' && (
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gh-danger-fg" aria-hidden="true" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gh-danger/12">
+              <Warning className="h-5 w-5 text-gh-danger-fg" aria-hidden="true" />
+            </div>
           )}
           <div>
             <h2 id={titleId} className="text-sm font-semibold text-gh-fg">
@@ -52,17 +54,17 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-gh-border bg-gh-overlay px-3 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover hover:text-gh-fg"
+            className="rounded-md border border-gh-border bg-gh-overlay px-3.5 py-1.5 text-sm font-medium text-gh-fg-default transition-colors hover:border-gh-border-hover hover:text-gh-fg"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
+            className={`rounded-md px-3.5 py-1.5 text-sm font-semibold shadow-sm transition ${
               variant === 'danger'
-                ? 'border-gh-danger/40 bg-gh-danger/10 text-gh-danger-fg hover:bg-gh-danger/20'
-                : 'border-gh-accent bg-gh-accent text-white hover:opacity-90'
+                ? 'bg-gh-danger/15 text-gh-danger-fg hover:bg-gh-danger/25'
+                : 'bg-gh-accent text-white hover:shadow-md hover:brightness-110'
             }`}
           >
             {confirmLabel}

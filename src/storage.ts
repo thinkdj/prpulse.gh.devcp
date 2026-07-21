@@ -84,7 +84,7 @@ const decryptToken = async (payload: string): Promise<string> => {
 }
 
 /** Visual palette theme (accent colours, surface tones). */
-export type Theme = 'warm' | 'slate' | 'ocean' | 'ember' | 'zinc'
+export type Theme = 'azure' | 'warm' | 'slate' | 'ocean' | 'ember' | 'zinc'
 
 /** Brightness mode — applied on top of the active theme. */
 export type Mode = 'dark' | 'light'
@@ -162,11 +162,11 @@ export const saveToken = async (token: string): Promise<void> => {
 export const loadTheme = (): Theme => {
   try {
     const raw = localStorage.getItem(THEME_STORAGE_KEY)
-    if (raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember' || raw === 'zinc') return raw
+    if (raw === 'azure' || raw === 'warm' || raw === 'slate' || raw === 'ocean' || raw === 'ember' || raw === 'zinc') return raw
   } catch {
     // fall through
   }
-  return 'slate'
+  return 'azure'
 }
 
 export const saveTheme = (theme: Theme) => {
@@ -184,7 +184,7 @@ export const loadMode = (): Mode => {
   } catch {
     // fall through
   }
-  return 'dark'
+  return 'light'
 }
 
 export const saveMode = (mode: Mode) => {

@@ -10,20 +10,20 @@ import type { BranchAnalysis, CopilotOrgData, PRComment, PullRequest } from './t
 export const DEMO_CURRENT_USER = 'alex-dev'
 
 export const DEMO_REPOS = [
-  'acme-corp/dashboard',
-  'acme-corp/api-server',
-  'acme-corp/mobile',
-  'acme-corp/infra',
-  'acme-corp/ui-kit',
+  'think-corp/dashboard',
+  'think-corp/api-server',
+  'think-corp/mobile',
+  'think-corp/infra',
+  'think-corp/ui-kit',
 ]
 
 /* ── Pull Requests ── */
 
 export const demoPullRequests: PullRequest[] = [
-  /* ───── acme-corp/dashboard (3 PRs) ───── */
+  /* ───── think-corp/dashboard (3 PRs) ───── */
   {
     id: 142,
-    repo: 'acme-corp/dashboard',
+    repo: 'think-corp/dashboard',
     title: 'feat: add dark mode support with system preference detection',
     author: 'sarah-chen',
     authorAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
@@ -44,7 +44,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 139,
-    repo: 'acme-corp/dashboard',
+    repo: 'think-corp/dashboard',
     title: 'fix: memory leak in real-time data fetcher polling loop',
     author: 'raj-backend',
     authorAvatar: 'https://avatars.githubusercontent.com/u/2?v=4',
@@ -65,7 +65,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 137,
-    repo: 'acme-corp/dashboard',
+    repo: 'think-corp/dashboard',
     title: 'docs: update contributing guide and development setup instructions',
     author: 'alex-dev',
     authorAvatar: 'https://avatars.githubusercontent.com/u/3?v=4',
@@ -85,10 +85,10 @@ export const demoPullRequests: PullRequest[] = [
     commentCount: 0,
   },
 
-  /* ───── acme-corp/api-server (3 PRs) ───── */
+  /* ───── think-corp/api-server (3 PRs) ───── */
   {
     id: 88,
-    repo: 'acme-corp/api-server',
+    repo: 'think-corp/api-server',
     title: 'feat: add distributed rate limiting middleware with Redis backend',
     author: 'marcus-ui',
     authorAvatar: 'https://avatars.githubusercontent.com/u/4?v=4',
@@ -109,7 +109,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 85,
-    repo: 'acme-corp/api-server',
+    repo: 'think-corp/api-server',
     title: 'fix: JWT refresh token rotation vulnerability in auth middleware',
     author: 'priya-security',
     authorAvatar: 'https://avatars.githubusercontent.com/u/5?v=4',
@@ -130,7 +130,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 82,
-    repo: 'acme-corp/api-server',
+    repo: 'think-corp/api-server',
     title: 'chore: bump all dependencies to latest stable versions',
     author: 'bot-dependabot',
     authorAvatar: 'https://avatars.githubusercontent.com/u/6?v=4',
@@ -150,10 +150,10 @@ export const demoPullRequests: PullRequest[] = [
     commentCount: 1,
   },
 
-  /* ───── acme-corp/mobile (2 PRs) ───── */
+  /* ───── think-corp/mobile (2 PRs) ───── */
   {
     id: 56,
-    repo: 'acme-corp/mobile',
+    repo: 'think-corp/mobile',
     title: 'feat: biometric authentication with FaceID and fingerprint fallback',
     author: 'lena-mobile',
     authorAvatar: 'https://avatars.githubusercontent.com/u/7?v=4',
@@ -174,7 +174,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 54,
-    repo: 'acme-corp/mobile',
+    repo: 'think-corp/mobile',
     title: 'fix: Android back button handler crashes on nested navigation stack',
     author: 'tom-android',
     authorAvatar: 'https://avatars.githubusercontent.com/u/8?v=4',
@@ -194,10 +194,10 @@ export const demoPullRequests: PullRequest[] = [
     commentCount: 3,
   },
 
-  /* ───── acme-corp/infra (2 PRs) ───── */
+  /* ───── think-corp/infra (2 PRs) ───── */
   {
     id: 23,
-    repo: 'acme-corp/infra',
+    repo: 'think-corp/infra',
     title: 'feat: provision staging environment with auto-scaling ECS cluster',
     author: 'alex-dev',
     authorAvatar: 'https://avatars.githubusercontent.com/u/3?v=4',
@@ -218,7 +218,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 21,
-    repo: 'acme-corp/infra',
+    repo: 'think-corp/infra',
     title: 'chore: update Terraform AWS provider and module registry versions',
     author: 'devops-ci',
     authorAvatar: 'https://avatars.githubusercontent.com/u/9?v=4',
@@ -238,11 +238,11 @@ export const demoPullRequests: PullRequest[] = [
     commentCount: 7,
   },
 
-  /* ───── acme-corp/ui-kit (3 PRs) ───── */
+  /* ───── think-corp/ui-kit (3 PRs) ───── */
   {
     id: 71,
-    repo: 'acme-corp/ui-kit',
-    title: 'feat: new Button variants — ghost, outline, and gradient styles',
+    repo: 'think-corp/ui-kit',
+    title: 'feat: new Button variants: ghost, outline, and gradient styles',
     author: 'marcus-ui',
     authorAvatar: 'https://avatars.githubusercontent.com/u/4?v=4',
     url: '#',
@@ -262,7 +262,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 68,
-    repo: 'acme-corp/ui-kit',
+    repo: 'think-corp/ui-kit',
     title: 'fix: tooltip z-index regression when rendered inside modal dialogs',
     author: 'sarah-chen',
     authorAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
@@ -283,7 +283,7 @@ export const demoPullRequests: PullRequest[] = [
   },
   {
     id: 65,
-    repo: 'acme-corp/ui-kit',
+    repo: 'think-corp/ui-kit',
     title: 'feat: DatePicker component with range selection and timezone support',
     author: 'alex-dev',
     authorAvatar: 'https://avatars.githubusercontent.com/u/3?v=4',
@@ -307,55 +307,55 @@ export const demoPullRequests: PullRequest[] = [
 /* ── Branch Analysis ── */
 
 export const demoBranches: BranchAnalysis[] = [
-  /* ───── acme-corp/dashboard ───── */
-  { repo: 'acme-corp/dashboard', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T08:00:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
-  { repo: 'acme-corp/dashboard', name: 'feat/dark-mode', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-17T14:30:00Z', aheadBy: 8, behindBy: 2, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/dashboard', name: 'fix/memory-leak-fetcher', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-16T11:45:00Z', aheadBy: 3, behindBy: 5, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/dashboard', name: 'docs/contributing-guide', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-09T16:20:00Z', aheadBy: 1, behindBy: 6, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/dashboard', name: 'chore/remove-old-flags', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-15T10:00:00Z', aheadBy: 2, behindBy: 22, comparisonKnown: true, status: 'stale' },
-  { repo: 'acme-corp/dashboard', name: 'fix/login-redirect', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-01T09:00:00Z', aheadBy: 0, behindBy: 14, comparisonKnown: true, status: 'merged' },
+  /* ───── think-corp/dashboard ───── */
+  { repo: 'think-corp/dashboard', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T08:00:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
+  { repo: 'think-corp/dashboard', name: 'feat/dark-mode', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-17T14:30:00Z', aheadBy: 8, behindBy: 2, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/dashboard', name: 'fix/memory-leak-fetcher', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-16T11:45:00Z', aheadBy: 3, behindBy: 5, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/dashboard', name: 'docs/contributing-guide', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-09T16:20:00Z', aheadBy: 1, behindBy: 6, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/dashboard', name: 'chore/remove-old-flags', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-15T10:00:00Z', aheadBy: 2, behindBy: 22, comparisonKnown: true, status: 'stale' },
+  { repo: 'think-corp/dashboard', name: 'fix/login-redirect', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-01T09:00:00Z', aheadBy: 0, behindBy: 14, comparisonKnown: true, status: 'merged' },
 
-  /* ───── acme-corp/api-server ───── */
-  { repo: 'acme-corp/api-server', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T09:10:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
-  { repo: 'acme-corp/api-server', name: 'feat/rate-limiting', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T09:10:00Z', aheadBy: 5, behindBy: 0, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/api-server', name: 'fix/jwt-rotation', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-15T17:00:00Z', aheadBy: 6, behindBy: 3, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/api-server', name: 'deps/april-2026-bump', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-08T06:00:00Z', aheadBy: 1, behindBy: 8, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/api-server', name: 'feat/graphql-subscriptions', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-02-10T11:00:00Z', aheadBy: 4, behindBy: 30, comparisonKnown: true, status: 'stale' },
-  { repo: 'acme-corp/api-server', name: 'refactor/db-connection-pool', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-20T14:00:00Z', aheadBy: 0, behindBy: 19, comparisonKnown: true, status: 'merged' },
+  /* ───── think-corp/api-server ───── */
+  { repo: 'think-corp/api-server', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T09:10:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
+  { repo: 'think-corp/api-server', name: 'feat/rate-limiting', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T09:10:00Z', aheadBy: 5, behindBy: 0, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/api-server', name: 'fix/jwt-rotation', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-15T17:00:00Z', aheadBy: 6, behindBy: 3, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/api-server', name: 'deps/april-2026-bump', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-08T06:00:00Z', aheadBy: 1, behindBy: 8, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/api-server', name: 'feat/graphql-subscriptions', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-02-10T11:00:00Z', aheadBy: 4, behindBy: 30, comparisonKnown: true, status: 'stale' },
+  { repo: 'think-corp/api-server', name: 'refactor/db-connection-pool', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-20T14:00:00Z', aheadBy: 0, behindBy: 19, comparisonKnown: true, status: 'merged' },
 
-  /* ───── acme-corp/mobile ───── */
-  { repo: 'acme-corp/mobile', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-14T10:30:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
-  { repo: 'acme-corp/mobile', name: 'feat/biometric-auth', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-17T16:20:00Z', aheadBy: 9, behindBy: 4, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/mobile', name: 'fix/android-back-button', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-14T10:30:00Z', aheadBy: 2, behindBy: 1, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/mobile', name: 'feat/push-notifications-v2', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-22T08:00:00Z', aheadBy: 11, behindBy: 40, comparisonKnown: true, status: 'stale' },
-  { repo: 'acme-corp/mobile', name: 'chore/expo-sdk-upgrade', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-10T12:00:00Z', aheadBy: 0, behindBy: 25, comparisonKnown: true, status: 'merged' },
+  /* ───── think-corp/mobile ───── */
+  { repo: 'think-corp/mobile', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-14T10:30:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
+  { repo: 'think-corp/mobile', name: 'feat/biometric-auth', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-17T16:20:00Z', aheadBy: 9, behindBy: 4, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/mobile', name: 'fix/android-back-button', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-14T10:30:00Z', aheadBy: 2, behindBy: 1, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/mobile', name: 'feat/push-notifications-v2', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-22T08:00:00Z', aheadBy: 11, behindBy: 40, comparisonKnown: true, status: 'stale' },
+  { repo: 'think-corp/mobile', name: 'chore/expo-sdk-upgrade', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-10T12:00:00Z', aheadBy: 0, behindBy: 25, comparisonKnown: true, status: 'merged' },
 
-  /* ───── acme-corp/infra ───── */
-  { repo: 'acme-corp/infra', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-12T14:15:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
-  { repo: 'acme-corp/infra', name: 'feat/staging-env', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T08:00:00Z', aheadBy: 4, behindBy: 2, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/infra', name: 'chore/terraform-upgrade', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-12T14:15:00Z', aheadBy: 1, behindBy: 7, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/infra', name: 'feat/cdn-cloudfront', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-30T16:00:00Z', aheadBy: 6, behindBy: 45, comparisonKnown: true, status: 'stale' },
-  { repo: 'acme-corp/infra', name: 'fix/iam-role-permissions', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-25T10:00:00Z', aheadBy: 0, behindBy: 12, comparisonKnown: true, status: 'merged' },
+  /* ───── think-corp/infra ───── */
+  { repo: 'think-corp/infra', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-12T14:15:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
+  { repo: 'think-corp/infra', name: 'feat/staging-env', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T08:00:00Z', aheadBy: 4, behindBy: 2, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/infra', name: 'chore/terraform-upgrade', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-12T14:15:00Z', aheadBy: 1, behindBy: 7, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/infra', name: 'feat/cdn-cloudfront', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-01-30T16:00:00Z', aheadBy: 6, behindBy: 45, comparisonKnown: true, status: 'stale' },
+  { repo: 'think-corp/infra', name: 'fix/iam-role-permissions', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-25T10:00:00Z', aheadBy: 0, behindBy: 12, comparisonKnown: true, status: 'merged' },
 
-  /* ───── acme-corp/ui-kit ───── */
-  { repo: 'acme-corp/ui-kit', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T11:00:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
-  { repo: 'acme-corp/ui-kit', name: 'feat/button-variants', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T11:00:00Z', aheadBy: 5, behindBy: 0, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/ui-kit', name: 'fix/tooltip-z-index', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-13T09:45:00Z', aheadBy: 2, behindBy: 4, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/ui-kit', name: 'feat/date-picker', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-06T13:10:00Z', aheadBy: 1, behindBy: 9, comparisonKnown: true, status: 'active' },
-  { repo: 'acme-corp/ui-kit', name: 'feat/table-virtualization', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-02-03T15:00:00Z', aheadBy: 8, behindBy: 28, comparisonKnown: true, status: 'stale' },
-  { repo: 'acme-corp/ui-kit', name: 'feat/color-tokens-v2', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-14T11:00:00Z', aheadBy: 0, behindBy: 17, comparisonKnown: true, status: 'merged' },
+  /* ───── think-corp/ui-kit ───── */
+  { repo: 'think-corp/ui-kit', name: 'main', url: '#', isDefault: true, isProtected: true, lastCommitAt: '2026-04-18T11:00:00Z', aheadBy: 0, behindBy: 0, comparisonKnown: true, status: 'default' },
+  { repo: 'think-corp/ui-kit', name: 'feat/button-variants', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-18T11:00:00Z', aheadBy: 5, behindBy: 0, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/ui-kit', name: 'fix/tooltip-z-index', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-13T09:45:00Z', aheadBy: 2, behindBy: 4, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/ui-kit', name: 'feat/date-picker', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-04-06T13:10:00Z', aheadBy: 1, behindBy: 9, comparisonKnown: true, status: 'active' },
+  { repo: 'think-corp/ui-kit', name: 'feat/table-virtualization', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-02-03T15:00:00Z', aheadBy: 8, behindBy: 28, comparisonKnown: true, status: 'stale' },
+  { repo: 'think-corp/ui-kit', name: 'feat/color-tokens-v2', url: '#', isDefault: false, isProtected: false, lastCommitAt: '2026-03-14T11:00:00Z', aheadBy: 0, behindBy: 17, comparisonKnown: true, status: 'merged' },
 ]
 
 /* ── PR Activity / Comments ── */
 
 // Keyed as `${repo}/${prId}`
 export const demoPRActivity: Record<string, PRComment[]> = {
-  'acme-corp/dashboard/142': [
+  'think-corp/dashboard/142': [
     {
       id: 10001,
       author: 'marcus-ui',
       authorAvatar: 'https://avatars.githubusercontent.com/u/4?v=4',
-      body: 'Left a few inline comments about the CSS variable naming — should we follow the existing `--color-*` convention or switch to the proposed `--theme-*` prefix? Worth agreeing before we merge.',
+      body: 'Left a few inline comments about the CSS variable naming. Should we follow the existing `--color-*` convention or switch to the proposed `--theme-*` prefix? Worth agreeing before we merge.',
       createdAt: '2026-04-13T10:00:00Z',
       isReview: true,
       reviewState: 'COMMENTED',
@@ -390,7 +390,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
       id: 10005,
       author: 'sarah-chen',
       authorAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
-      body: 'Good point! Added a try/catch in `useThemeStorage.ts` — falls back to in-memory state if storage is blocked.',
+      body: 'Good point! Added a try/catch in `useThemeStorage.ts` that falls back to in-memory state if storage is blocked.',
       createdAt: '2026-04-16T10:00:00Z',
       isReview: false,
     },
@@ -405,7 +405,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/dashboard/139': [
+  'think-corp/dashboard/139': [
     {
       id: 20001,
       author: 'raj-backend',
@@ -427,7 +427,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
       id: 20003,
       author: 'sarah-chen',
       authorAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
-      body: 'Confirmed the issue in production — we\'re seeing ~50MB memory growth per hour on long-lived sessions. This needs to be fixed before the v2.4 release.',
+      body: 'Confirmed the issue in production. We\'re seeing ~50MB memory growth per hour on long-lived sessions, and this needs to be fixed before the v2.4 release.',
       createdAt: '2026-04-12T11:00:00Z',
       isReview: false,
     },
@@ -450,12 +450,12 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/api-server/88': [
+  'think-corp/api-server/88': [
     {
       id: 30001,
       author: 'raj-backend',
       authorAvatar: 'https://avatars.githubusercontent.com/u/2?v=4',
-      body: 'The sliding window algorithm looks correct. My one concern is that using Redis `ZADD` + `ZREMRANGEBYSCORE` in a pipeline is not atomic — we should use a Lua script or `MULTI/EXEC` to avoid race conditions under high concurrency.',
+      body: 'The sliding window algorithm looks correct. My one concern is that using Redis `ZADD` + `ZREMRANGEBYSCORE` in a pipeline is not atomic, so we should use a Lua script or `MULTI/EXEC` to avoid race conditions under high concurrency.',
       createdAt: '2026-04-15T09:00:00Z',
       isReview: true,
       reviewState: 'COMMENTED',
@@ -488,7 +488,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/api-server/85': [
+  'think-corp/api-server/85': [
     {
       id: 40001,
       author: 'priya-security',
@@ -501,7 +501,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
       id: 40002,
       author: 'copilot-pull-request-reviewer[bot]',
       authorAvatar: 'https://avatars.githubusercontent.com/in/29110?v=4',
-      body: '## Copilot Security Review\n\nThis is a sensitive security fix. Findings:\n\n- ✅ Token rotation logic is correctly implemented.\n- ✅ Family invalidation on reuse detection is in place.\n- ⚠️ The `token_family` is stored in plaintext in the database — consider hashing it.\n- ⚠️ The cleanup job for expired families uses a table scan; add an index on `expires_at`.',
+      body: '## Copilot Security Review\n\nThis is a sensitive security fix. Findings:\n\n- ✅ Token rotation logic is correctly implemented.\n- ✅ Family invalidation on reuse detection is in place.\n- ⚠️ The `token_family` is stored in plaintext in the database. Consider hashing it.\n- ⚠️ The cleanup job for expired families uses a table scan; add an index on `expires_at`.',
       createdAt: '2026-04-12T08:00:00Z',
       isReview: true,
       reviewState: 'APPROVED',
@@ -533,7 +533,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/mobile/56': [
+  'think-corp/mobile/56': [
     {
       id: 50001,
       author: 'priya-security',
@@ -547,7 +547,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
       id: 50002,
       author: 'copilot-pull-request-reviewer[bot]',
       authorAvatar: 'https://avatars.githubusercontent.com/in/29110?v=4',
-      body: '## Copilot Review\n\n- ✅ `expo-local-authentication` delegates to the OS biometric stack — keys are in Secure Enclave/Keystore.\n- ⚠️ The fallback PIN code is stored via `AsyncStorage` — consider `expo-secure-store` instead.\n- ⚠️ No jailbreak/root detection. Biometric auth on compromised devices can be bypassed.',
+      body: '## Copilot Review\n\n- ✅ `expo-local-authentication` delegates to the OS biometric stack, with keys in the Secure Enclave/Keystore.\n- ⚠️ The fallback PIN code is stored via `AsyncStorage`. Consider `expo-secure-store` instead.\n- ⚠️ No jailbreak/root detection. Biometric auth on compromised devices can be bypassed.',
       createdAt: '2026-04-14T10:00:00Z',
       isReview: true,
       reviewState: 'COMMENTED',
@@ -570,12 +570,12 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/infra/21': [
+  'think-corp/infra/21': [
     {
       id: 60001,
       author: 'devops-ci',
       authorAvatar: 'https://avatars.githubusercontent.com/u/9?v=4',
-      body: 'Automated PR to upgrade `hashicorp/aws` provider from 4.x to 5.x. Several resources have breaking changes — see the migration guide linked in the description.',
+      body: 'Automated PR to upgrade `hashicorp/aws` provider from 4.x to 5.x. Several resources have breaking changes; see the migration guide linked in the description.',
       createdAt: '2026-04-05T07:30:00Z',
       isReview: false,
     },
@@ -583,7 +583,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
       id: 60002,
       author: 'copilot-pull-request-reviewer[bot]',
       authorAvatar: 'https://avatars.githubusercontent.com/in/29110?v=4',
-      body: '## Copilot Terraform Review\n\n- ⚠️ `aws_s3_bucket_acl` resource is deprecated in v5 — migrate to bucket ownership controls.\n- ⚠️ `aws_iam_role.assume_role_policy` attribute renamed to `assume_role_policy_document`.\n- ❌ `aws_elb` resource removed in v5 — migrate to `aws_lb` (ALB/NLB).\n\nPlease address the breaking changes before merging.',
+      body: '## Copilot Terraform Review\n\n- ⚠️ `aws_s3_bucket_acl` resource is deprecated in v5. Migrate to bucket ownership controls.\n- ⚠️ `aws_iam_role.assume_role_policy` attribute renamed to `assume_role_policy_document`.\n- ❌ `aws_elb` resource removed in v5. Migrate to `aws_lb` (ALB/NLB).\n\nPlease address the breaking changes before merging.',
       createdAt: '2026-04-06T08:00:00Z',
       isReview: true,
       reviewState: 'CHANGES_REQUESTED',
@@ -606,7 +606,7 @@ export const demoPRActivity: Record<string, PRComment[]> = {
     },
   ],
 
-  'acme-corp/ui-kit/71': [
+  'think-corp/ui-kit/71': [
     {
       id: 70001,
       author: 'sarah-chen',
@@ -717,9 +717,9 @@ function makeDay(
     copilot_dotcom_pull_requests: {
       total_engaged_users: Math.round(engagedUsers * 0.25),
       repositories: [
-        { name: 'acme-corp/dashboard', total_engaged_users: Math.round(engagedUsers * 0.1), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.1), total_pr_summaries_created: Math.round(prSummaries * 0.4) }] },
-        { name: 'acme-corp/api-server', total_engaged_users: Math.round(engagedUsers * 0.1), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.1), total_pr_summaries_created: Math.round(prSummaries * 0.35) }] },
-        { name: 'acme-corp/ui-kit', total_engaged_users: Math.round(engagedUsers * 0.05), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.05), total_pr_summaries_created: Math.round(prSummaries * 0.25) }] },
+        { name: 'think-corp/dashboard', total_engaged_users: Math.round(engagedUsers * 0.1), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.1), total_pr_summaries_created: Math.round(prSummaries * 0.4) }] },
+        { name: 'think-corp/api-server', total_engaged_users: Math.round(engagedUsers * 0.1), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.1), total_pr_summaries_created: Math.round(prSummaries * 0.35) }] },
+        { name: 'think-corp/ui-kit', total_engaged_users: Math.round(engagedUsers * 0.05), models: [{ name: 'gpt-4o', is_custom_model: false, custom_model_training_date: null, total_engaged_users: Math.round(engagedUsers * 0.05), total_pr_summaries_created: Math.round(prSummaries * 0.25) }] },
       ],
     },
   }
@@ -764,8 +764,8 @@ export const demoCopilotMetrics = DEMO_METRICS_BASE.map(([date, active, engaged,
 export const demoCopilotOrgData: CopilotOrgData[] = [
   {
     type: 'organization',
-    target: 'org:acme-corp',
-    org: 'acme-corp',
+    target: 'org:think-corp',
+    org: 'think-corp',
     billing: {
       seat_breakdown: {
         total: 30,
@@ -783,4 +783,4 @@ export const demoCopilotOrgData: CopilotOrgData[] = [
   },
 ]
 
-export const demoCopilotOrgs = ['acme-corp']
+export const demoCopilotOrgs = ['think-corp']

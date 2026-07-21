@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Plus, FolderGit2 } from 'lucide-react'
+import { X, Plus, FolderOpen } from '@phosphor-icons/react'
 import type { FormEvent } from 'react'
 import ConfirmDialog from './ConfirmDialog'
 
@@ -15,6 +15,7 @@ type RepoSelectorProps = {
   onSelectAll: () => void
   onDeselectAll: () => void
   onBrowseRepos?: () => void
+  isLoading?: boolean
 }
 
 export default function RepoSelector({
@@ -29,12 +30,13 @@ export default function RepoSelector({
   onSelectAll,
   onDeselectAll,
   onBrowseRepos,
+  isLoading = false,
 }: RepoSelectorProps) {
   const [repoToRemove, setRepoToRemove] = useState<string | null>(null)
 
   const allSelected = repos.length > 0 && selectedRepos.length === repos.length
   return (
-    <section className="mb-6 rounded-lg border border-gh-border bg-gh-surface">
+    <section className="mb-6 rounded-md border border-gh-border bg-gh-surface shadow-sm">
       {/* Header row */}
       <div className="flex flex-wrap items-center gap-2 border-b border-gh-border px-4 py-3">
         <h2 className="mr-auto text-sm font-semibold text-gh-fg">
@@ -51,7 +53,7 @@ export default function RepoSelector({
               <button
                 type="button"
                 onClick={allSelected ? onDeselectAll : onSelectAll}
-                className="inline-flex items-center gap-1 rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-xs text-gh-fg-muted hover:border-gh-border-hover hover:text-gh-fg-default transition-colors"
+                className="inline-flex items-center gap-1 rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-xs font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:text-gh-fg-default"
               >
                 {allSelected ? 'Deselect all' : 'Select all'}
               </button>
@@ -61,7 +63,7 @@ export default function RepoSelector({
             <button
               type="button"
               onClick={onBrowseRepos}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent bg-gh-accent/10 px-3 py-1.5 text-xs font-medium text-gh-accent-fg hover:bg-gh-accent/20 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gh-accent/30 bg-gh-accent/10 px-3 py-1.5 text-xs font-semibold text-gh-accent-fg transition-colors hover:border-gh-accent/50 hover:bg-gh-accent/20"
             >
               <Plus className="h-3.5 w-3.5" /> Browse repos
             </button>
@@ -78,7 +80,7 @@ export default function RepoSelector({
                 placeholder="owner/repo"
                 aria-invalid={!!repoError}
                 aria-describedby={repoError ? 'add-repo-error' : undefined}
-                className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-xs text-gh-fg-default outline-none focus:border-gh-accent"
+                className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-xs text-gh-fg-default outline-none transition-colors focus:border-gh-accent focus:ring-2 focus:ring-gh-accent/20"
               />
               {repoError && (
                 <span id="add-repo-error" className="mt-1 text-xs text-gh-danger-fg">{repoError}</span>
@@ -86,7 +88,7 @@ export default function RepoSelector({
             </div>
             <button
               type="submit"
-              className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
+              className="rounded-md bg-gh-accent px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
             >
               Add
             </button>
@@ -95,14 +97,26 @@ export default function RepoSelector({
       </div>
 
       {/* Repo grid */}
-      {repos.length === 0 ? (
-        <div className="px-4 py-6 text-center">
-          <FolderGit2 className="mx-auto mb-2 h-8 w-8 text-gh-fg-placeholder" />
+      {isLoading && repos.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" aria-hidden="true">
+          {repos.map((repo) => (
+            <div key={repo} className="rounded-md border border-gh-border bg-gh-bg px-3.5 py-3">
+              <div className="mb-2 h-2 w-10 animate-pulse rounded-full bg-gh-overlay" />
+              <div className="h-2.5 w-12 animate-pulse rounded bg-gh-overlay" />
+              <div className="mt-1.5 h-3 w-20 animate-pulse rounded bg-gh-overlay" />
+            </div>
+          ))}
+        </div>
+      ) : repos.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gh-overlay">
+            <FolderOpen className="h-6 w-6 text-gh-fg-placeholder" />
+          </div>
           <p className="text-sm text-gh-fg-muted">No repositories added yet.</p>
-          <p className="mt-1 text-xs text-gh-fg-placeholder">Click &quot;Browse repos&quot; or type <code className="rounded bg-gh-overlay px-1 py-0.5 font-mono text-gh-fg-muted">owner/repo</code> above.</p>
+          <p className="mt-1 text-xs text-gh-fg-placeholder">Click &quot;Browse repos&quot; or type <code className="rounded-md bg-gh-overlay px-1.5 py-0.5 font-mono text-gh-fg-muted">owner/repo</code> above.</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <ul className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {repos.map((repo) => {
             const active = selectedRepos.includes(repo)
             const [owner, repoName] = repo.split('/')
@@ -112,9 +126,9 @@ export default function RepoSelector({
                   type="button"
                   onClick={() => onToggleRepo(repo)}
                   aria-label={repo}
-                  className={`w-full rounded-lg border px-3 py-2.5 text-left transition-all ${
+                  className={`w-full rounded-md border px-3.5 py-3 text-left shadow-sm transition-all motion-safe:hover:-translate-y-0.5 hover:shadow-md ${
                     active
-                      ? 'border-gh-accent bg-gh-accent/10 shadow-sm'
+                      ? 'border-gh-accent bg-gh-accent/10 ring-1 ring-gh-accent/20'
                       : 'border-gh-border bg-gh-bg hover:border-gh-border-hover'
                   }`}
                 >
@@ -143,7 +157,7 @@ export default function RepoSelector({
                   type="button"
                   onClick={() => setRepoToRemove(repo)}
                   aria-label={`Remove ${repo}`}
-                  className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gh-surface text-gh-fg-muted opacity-0 transition-opacity hover:bg-gh-danger/20 hover:text-gh-danger-fg focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-gh-accent focus-visible:ring-offset-1 focus-visible:ring-offset-gh-surface group-hover:opacity-100"
+                  className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gh-surface text-gh-fg-muted opacity-0 shadow-sm transition-opacity hover:bg-gh-danger/20 hover:text-gh-danger-fg focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-gh-accent focus-visible:ring-offset-1 focus-visible:ring-offset-gh-surface group-hover:opacity-100"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>

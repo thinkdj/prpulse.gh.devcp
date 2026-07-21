@@ -1,4 +1,4 @@
-import { Check, X, MessageSquare, Minus, Clock, Circle, Diamond, GitMerge } from 'lucide-react'
+import { Check, X, ChatCircle, Minus, Clock, Circle, Diamond, GitMerge } from '@phosphor-icons/react'
 import type { ComponentType } from 'react'
 import type { BranchStatus, ChecksStatus, CopilotReview, MergeSafety } from '../types'
 import { formatBranchStatus, formatChecks, formatReview, formatSafety } from '../utils'
@@ -11,23 +11,23 @@ type StatusBadgeProps =
 
 const badgeStyles: Record<string, string> = {
   // Copilot review
-  'copilotReview:approved': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
-  'copilotReview:changes_requested': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
-  'copilotReview:commented': 'bg-gh-accent/15 text-gh-accent-fg border-gh-accent/40',
-  'copilotReview:not_run': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
+  'copilotReview:approved': 'bg-gh-success/15 text-gh-success-fg',
+  'copilotReview:changes_requested': 'bg-gh-danger/15 text-gh-danger-fg',
+  'copilotReview:commented': 'bg-gh-accent/15 text-gh-accent-fg',
+  'copilotReview:not_run': 'bg-gh-border/60 text-gh-fg-muted',
   // Merge safety
-  'mergeSafety:safe': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
-  'mergeSafety:blocked': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
-  'mergeSafety:pending': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
+  'mergeSafety:safe': 'bg-gh-success/15 text-gh-success-fg',
+  'mergeSafety:blocked': 'bg-gh-danger/15 text-gh-danger-fg',
+  'mergeSafety:pending': 'bg-gh-warning/15 text-gh-warning',
   // Checks status
-  'checksStatus:passing': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
-  'checksStatus:failing': 'bg-gh-danger/20 text-gh-danger-fg border-gh-danger/40',
-  'checksStatus:pending': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
+  'checksStatus:passing': 'bg-gh-success/15 text-gh-success-fg',
+  'checksStatus:failing': 'bg-gh-danger/15 text-gh-danger-fg',
+  'checksStatus:pending': 'bg-gh-warning/15 text-gh-warning',
   // Branch status
-  'branchStatus:default': 'bg-gh-accent/15 text-gh-accent-fg border-gh-accent/40',
-  'branchStatus:active': 'bg-gh-success/20 text-gh-success-fg border-gh-success/40',
-  'branchStatus:stale': 'bg-gh-warning/20 text-gh-warning border-gh-warning/40',
-  'branchStatus:merged': 'bg-gh-border/50 text-gh-fg-muted border-gh-border',
+  'branchStatus:default': 'bg-gh-accent/15 text-gh-accent-fg',
+  'branchStatus:active': 'bg-gh-success/15 text-gh-success-fg',
+  'branchStatus:stale': 'bg-gh-warning/15 text-gh-warning',
+  'branchStatus:merged': 'bg-gh-border/60 text-gh-fg-muted',
 }
 
 type IconComponent = ComponentType<{ className?: string }>
@@ -35,7 +35,7 @@ type IconComponent = ComponentType<{ className?: string }>
 const statusIcons: Record<string, IconComponent> = {
   'copilotReview:approved': Check,
   'copilotReview:changes_requested': X,
-  'copilotReview:commented': MessageSquare,
+  'copilotReview:commented': ChatCircle,
   'copilotReview:not_run': Minus,
   'mergeSafety:safe': Check,
   'mergeSafety:blocked': X,
@@ -58,13 +58,13 @@ const formatters: Record<string, (v: string) => string> = {
 
 export default function StatusBadge(props: StatusBadgeProps) {
   const key = `${props.kind}:${props.value}`
-  const style = badgeStyles[key] ?? 'bg-gh-border/50 text-gh-fg-muted border-gh-border'
+  const style = badgeStyles[key] ?? 'bg-gh-border/60 text-gh-fg-muted'
   const Icon = statusIcons[key]
   const label = formatters[props.kind]?.(props.value) ?? props.value
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${style}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}
     >
       {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
       {label}

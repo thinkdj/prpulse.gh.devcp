@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { X, Lock, GitFork } from 'lucide-react'
+import { X, Lock, GitFork } from '@phosphor-icons/react'
 import type { GitHubRepo } from '../github-api'
 
 type RepoPickerModalProps = {
@@ -53,12 +53,12 @@ export default function RepoPickerModal({
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Browse repositories" onKeyDown={handleKeyDown}>
-      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl border border-gh-border bg-gh-surface shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Browse repositories" onKeyDown={handleKeyDown}>
+      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-gh-border bg-gh-surface shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gh-border px-4 py-3">
           <h2 className="text-sm font-semibold text-gh-fg">Select Repositories</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default">
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-fg-default">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -72,7 +72,7 @@ export default function RepoPickerModal({
             placeholder="Filter repositories…"
             aria-label="Filter repositories"
             autoFocus
-            className="w-full rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-default placeholder-gh-fg-placeholder outline-none focus:border-gh-accent"
+            className="w-full rounded-md border border-gh-border bg-gh-bg px-3.5 py-2 text-sm text-gh-fg-default placeholder-gh-fg-placeholder outline-none transition-colors focus:border-gh-accent focus:ring-2 focus:ring-gh-accent/20"
           />
         </div>
 
@@ -91,7 +91,7 @@ export default function RepoPickerModal({
                 return (
                   <li key={repo.full_name}>
                     <label
-                      className={`flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-gh-accent/10 ${
+                      className={`flex cursor-pointer items-start gap-3 rounded-md px-2.5 py-2.5 transition-colors hover:bg-gh-accent/10 ${
                         isChecked ? 'bg-gh-accent/5' : ''
                       }`}
                     >
@@ -128,14 +128,14 @@ export default function RepoPickerModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-gh-border px-3 py-1.5 text-sm text-gh-fg-muted hover:text-gh-fg-default"
+              className="rounded-md border border-gh-border px-3.5 py-1.5 text-sm font-medium text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg-default"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-sm font-medium text-white"
+              className="rounded-md bg-gh-accent px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
             >
               Save selection
             </button>

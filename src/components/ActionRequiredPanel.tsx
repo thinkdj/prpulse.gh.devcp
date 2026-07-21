@@ -1,4 +1,4 @@
-import { Flag, XCircle, CheckCircle, CheckCheck } from 'lucide-react'
+import { Flag, XCircle, CheckCircle, Checks } from '@phosphor-icons/react'
 import type { PullRequest } from '../types'
 import { relativeTime } from '../utils'
 import StatusBadge from './StatusBadge'
@@ -33,11 +33,11 @@ function buildActionItems(prs: PullRequest[], currentUser: string): ActionItem[]
     // Your PRs with issues
     if (pr.author === currentUser) {
       if (pr.mergeSafety === 'blocked') {
-        items.push({ pr, priority: 2, actionLabel: 'Blocked — address feedback', actionColor: 'text-gh-danger-fg' })
+        items.push({ pr, priority: 2, actionLabel: 'Blocked: address feedback', actionColor: 'text-gh-danger-fg' })
         continue
       }
       if (pr.checksStatus === 'failing') {
-        items.push({ pr, priority: 2, actionLabel: 'CI failing — fix required', actionColor: 'text-gh-danger-fg' })
+        items.push({ pr, priority: 2, actionLabel: 'CI failing: fix required', actionColor: 'text-gh-danger-fg' })
         continue
       }
       if (pr.mergeSafety === 'safe') {
@@ -56,7 +56,9 @@ function buildActionItems(prs: PullRequest[], currentUser: string): ActionItem[]
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <CheckCheck className="h-12 w-12 text-gh-success-fg" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gh-success/10">
+        <Checks className="h-8 w-8 text-gh-success-fg" />
+      </div>
       <p className="text-sm text-gh-fg-muted">{message}</p>
     </div>
   )
@@ -71,7 +73,7 @@ export default function ActionRequiredPanel({
 }: ActionRequiredPanelProps) {
   if (!hasSelectedRepos) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm">
         <p className="text-sm text-gh-fg-muted">Select at least one repository to see action items.</p>
       </section>
     )
@@ -79,7 +81,7 @@ export default function ActionRequiredPanel({
 
   if (!currentUser) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm">
         <p className="text-sm text-gh-fg-muted">Set up a GitHub token to see personalized action items.</p>
       </section>
     )
@@ -87,7 +89,7 @@ export default function ActionRequiredPanel({
 
   if (isLoading) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm">
         <p className="text-sm text-gh-fg-muted">Loading action items…</p>
       </section>
     )
@@ -100,7 +102,7 @@ export default function ActionRequiredPanel({
   const readyToMerge = items.filter((i) => i.priority === 3)
 
   return (
-    <section className="rounded-lg border border-gh-border bg-gh-surface">
+    <section className="rounded-md border border-gh-border bg-gh-surface shadow-sm">
       <div className="border-b border-gh-border px-5 py-4">
         <h2 className="text-base font-semibold text-gh-fg">My Action Items</h2>
         <p className="mt-1 text-sm text-gh-fg-muted">
@@ -172,7 +174,7 @@ function ActionRow({ pr, actionLabel, actionColor, onPRSelect }: ActionRowProps)
       <button
         type="button"
         onClick={() => onPRSelect(pr)}
-        className="w-full rounded-lg border border-gh-border bg-gh-overlay p-3 text-left hover:border-gh-border-hover hover:bg-gh-overlay/80 transition-colors"
+        className="w-full rounded-md border border-gh-border bg-gh-overlay p-3.5 text-left shadow-sm transition-all hover:border-gh-border-hover hover:shadow-md motion-safe:hover:-translate-y-0.5"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">

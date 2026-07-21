@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 
 type TokenSettingsProps = {
   token: string
@@ -59,15 +59,15 @@ function TokenSettingsForm({
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-gh-border bg-gh-surface p-4">
+    <div className="mb-6 rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-gh-fg">Settings</h2>
+        <h2 className="text-sm font-semibold text-gh-fg">Settings</h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close settings"
           disabled={isSaving}
-          className="rounded-md p-1 text-gh-fg-muted hover:bg-gh-overlay hover:text-gh-fg-default"
+          className="rounded-full p-1.5 text-gh-fg-muted transition-colors hover:bg-gh-overlay hover:text-gh-fg-default"
         >
           <X className="h-4 w-4" />
         </button>
@@ -92,7 +92,7 @@ function TokenSettingsForm({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-            className="w-full rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-default outline-none focus:border-gh-accent"
+            className="w-full rounded-md border border-gh-border bg-gh-bg px-3.5 py-2 text-sm text-gh-fg-default outline-none transition-colors focus:border-gh-accent focus:ring-2 focus:ring-gh-accent/20"
             autoComplete="off"
             disabled={isSaving}
           />
@@ -109,7 +109,7 @@ function TokenSettingsForm({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="rounded-md border border-gh-accent bg-gh-accent px-3 py-1.5 text-sm font-medium text-white"
+            className="rounded-md bg-gh-accent px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? 'Saving…' : 'Save token'}
           </button>
@@ -118,7 +118,7 @@ function TokenSettingsForm({
               type="button"
               onClick={handleClear}
               disabled={isSaving}
-              className="rounded-md border border-gh-border bg-gh-bg px-3 py-1.5 text-sm text-gh-fg-muted hover:text-gh-danger-fg"
+              className="rounded-md border border-gh-border bg-gh-bg px-3.5 py-1.5 text-sm font-medium text-gh-fg-muted transition-colors hover:border-gh-danger/40 hover:bg-gh-danger/8 hover:text-gh-danger-fg disabled:cursor-not-allowed disabled:opacity-60"
             >
               Clear token
             </button>

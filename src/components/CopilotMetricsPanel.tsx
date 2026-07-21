@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  BarChart3,
-  Bot,
+  ChartBar,
+  Robot,
   Code,
-  MessageSquare,
+  ChatCircle,
   GitPullRequest,
   Users,
   Monitor,
   Cpu,
-  TrendingUp,
-  AlertTriangle,
+  TrendUp,
+  Warning,
   Wallet,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import type { CopilotAccountData, CopilotAnalyticsTarget, CopilotBillingUsageItem, CopilotDayMetrics } from '../types'
 
 type CopilotMetricsPanelProps = {
@@ -269,7 +269,7 @@ function UsageBar({ percentage, label }: { percentage: number; label: string }) 
   const barColor = clamped >= 90 ? 'bg-gh-danger-fg' : clamped >= 70 ? 'bg-gh-warning' : 'bg-gh-success-fg'
 
   return (
-    <div className="rounded-lg border border-gh-border bg-gh-surface p-5" data-testid="copilot-usage-bar">
+    <div className="rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm" data-testid="copilot-usage-bar">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold text-gh-fg">{label}</span>
         <span className="text-sm font-semibold text-gh-fg">{clamped.toFixed(1)}%</span>
@@ -286,12 +286,12 @@ function UsageBar({ percentage, label }: { percentage: number; label: string }) 
 
 function SummaryCard({ icon, label, value, sub }: { icon: ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
+    <div className="rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm transition-all hover:shadow-md motion-safe:hover:-translate-y-0.5">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-gh-fg-muted">{icon}</span>
-        <span className="text-xs text-gh-fg-muted">{label}</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gh-accent/10 text-gh-accent-fg">{icon}</span>
+        <span className="text-xs font-medium text-gh-fg-muted">{label}</span>
       </div>
-      <p className="text-2xl font-semibold text-gh-fg">{value}</p>
+      <p className="text-3xl font-bold tabular-nums text-gh-fg">{value}</p>
       {sub && <p className="mt-1 text-xs text-gh-fg-muted">{sub}</p>}
     </div>
   )
@@ -303,9 +303,9 @@ function DailyTrendChart({ data }: { data: AggregatedMetrics['dailyTrend'] }) {
   const maxSuggestions = Math.max(1, ...data.map((d) => d.suggestions))
 
   return (
-    <div className="rounded-lg border border-gh-border bg-gh-surface p-5" data-testid="copilot-daily-trend">
+    <div className="rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm" data-testid="copilot-daily-trend">
       <h3 className="mb-4 text-sm font-semibold text-gh-fg flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-gh-accent-fg" />
+        <TrendUp className="h-4 w-4 text-gh-accent-fg" />
         Daily code completions trend
       </h3>
       <div className="flex items-end gap-[2px] h-32">
@@ -319,11 +319,11 @@ function DailyTrendChart({ data }: { data: AggregatedMetrics['dailyTrend'] }) {
               title={`${day.date}\n${day.suggestions.toLocaleString()} suggestions\n${day.acceptances.toLocaleString()} accepted (${acceptPct.toFixed(0)}%)\n${day.chats.toLocaleString()} chats\n${day.activeUsers} active users`}
             >
               <div
-                className="w-full rounded-t-sm bg-gh-accent/30 transition-colors group-hover:bg-gh-accent/50"
+                className="w-full rounded-t-md bg-gh-accent/30 transition-colors group-hover:bg-gh-accent/50"
                 style={{ height: `${heightPct}%` }}
               >
                 <div
-                  className="w-full rounded-t-sm bg-gh-accent-fg"
+                  className="w-full rounded-t-md bg-gh-accent-fg"
                   style={{ height: `${acceptPct}%` }}
                 />
               </div>
@@ -363,7 +363,7 @@ function BreakdownTable<T extends Record<string, unknown>>({
   if (rows.length === 0) return null
 
   return (
-    <div className="rounded-lg border border-gh-border bg-gh-surface p-5">
+    <div className="rounded-md border border-gh-border bg-gh-surface p-5 shadow-sm">
       <h3 className="mb-3 text-sm font-semibold text-gh-fg flex items-center gap-2">
         {icon}
         {title}
@@ -371,11 +371,11 @@ function BreakdownTable<T extends Record<string, unknown>>({
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-xs uppercase tracking-wide text-gh-fg-muted">
+            <tr className="bg-gh-overlay/60 text-xs uppercase tracking-wide text-gh-fg-muted">
               {columns.map((col) => (
                 <th
                   key={col.header}
-                  className={`border-b border-gh-border px-3 py-2 font-medium ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                  className={`border-b border-gh-border px-3 py-2 font-semibold ${col.align === 'right' ? 'text-right' : 'text-left'}`}
                 >
                   {col.header}
                 </th>
@@ -513,9 +513,9 @@ export default function CopilotMetricsPanel({
 
   if (targetsLoading) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm" data-testid="copilot-metrics-panel">
         <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <Bot className="h-12 w-12 text-gh-accent-fg opacity-40 animate-pulse" />
+          <Robot className="h-12 w-12 text-gh-accent-fg opacity-40 animate-pulse" />
           <p className="text-sm text-gh-fg-muted">Loading Copilot analytics sources…</p>
         </div>
       </section>
@@ -524,9 +524,11 @@ export default function CopilotMetricsPanel({
 
   if (targets.length === 0) {
     return (
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-6" data-testid="copilot-metrics-panel">
+      <section className="rounded-md border border-gh-border bg-gh-surface p-6 shadow-sm" data-testid="copilot-metrics-panel">
         <div className="flex flex-col items-center gap-3 py-10 text-center" data-testid="copilot-empty-state">
-          <Bot className="h-12 w-12 text-gh-accent-fg opacity-60" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gh-accent/10">
+            <Robot className="h-8 w-8 text-gh-accent-fg" />
+          </div>
           <h2 className="text-lg font-semibold text-gh-fg">Copilot Metrics</h2>
           <p className="text-sm text-gh-fg-muted max-w-md">
             No Copilot analytics sources are available for this token yet. Personal analytics use your
@@ -542,10 +544,10 @@ export default function CopilotMetricsPanel({
   return (
     <section className="space-y-4" data-testid="copilot-metrics-panel">
       {/* Account/target selector */}
-        <div className="rounded-lg border border-gh-border bg-gh-surface p-4">
+        <div className="rounded-md border border-gh-border bg-gh-surface p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Bot className="h-5 w-5 text-gh-accent-fg" />
+              <Robot className="h-5 w-5 text-gh-accent-fg" />
               <div>
                 <h2 className="text-base font-semibold text-gh-fg">Copilot Analytics</h2>
                 <p className="text-xs text-gh-fg-muted">Organization metrics plus personal Copilot Pro usage</p>
@@ -557,7 +559,7 @@ export default function CopilotMetricsPanel({
                 id="copilot-target-select"
                 value={selectedTarget}
                 onChange={(e) => onTargetChange(e.target.value)}
-                className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default hover:border-gh-border-hover focus:outline-none focus:border-gh-accent"
+                className="rounded-md border border-gh-border bg-gh-overlay px-2.5 py-1.5 text-sm text-gh-fg-default transition-colors hover:border-gh-border-hover focus:border-gh-accent focus:outline-none"
               >
                 {targets.map((target) => (
                   <option key={target.id} value={target.id}>{target.label}</option>
@@ -570,7 +572,7 @@ export default function CopilotMetricsPanel({
       {/* Error banner */}
       {(error || accountData?.error) && (
         <div className="rounded-md border border-gh-warning/40 bg-gh-warning/10 px-4 py-3 text-sm text-gh-warning flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <Warning className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
             <p className="font-medium">Some data could not be loaded</p>
             <p className="text-xs mt-0.5 opacity-80">{accountData?.error ?? error}</p>
@@ -592,14 +594,14 @@ export default function CopilotMetricsPanel({
       )}
 
       {accountData?.type === 'personal' && (
-        <div className="rounded-lg border border-gh-border bg-gh-surface px-4 py-3 text-sm text-gh-fg-muted">
+        <div className="rounded-md border border-gh-border bg-gh-surface px-4 py-3 text-sm text-gh-fg-muted shadow-sm">
           GitHub does not expose the organization-style Copilot IDE metrics API for personal Copilot Pro
           accounts. This personal view uses your billing usage and premium request analytics instead.
         </div>
       )}
 
       {isLoading && !accountData ? (
-        <div className="rounded-lg border border-gh-border bg-gh-surface px-6 py-16 text-center text-sm text-gh-fg-muted">
+        <div className="rounded-md border border-gh-border bg-gh-surface px-6 py-16 text-center text-sm text-gh-fg-muted shadow-sm">
           Loading Copilot metrics…
         </div>
       ) : (
@@ -651,7 +653,7 @@ export default function CopilotMetricsPanel({
                   sub={`${formatNumber(agg.totalAcceptances)} accepted (${agg.acceptanceRate.toFixed(1)}%)`}
                 />
                 <SummaryCard
-                  icon={<MessageSquare className="h-4 w-4" />}
+                  icon={<ChatCircle className="h-4 w-4" />}
                   label="Total chats"
                   value={formatNumber(agg.totalChats + agg.totalDotcomChats)}
                   sub={`${formatNumber(agg.totalChatInsertions)} insertions · ${formatNumber(agg.totalChatCopies)} copies`}
@@ -663,7 +665,7 @@ export default function CopilotMetricsPanel({
                   sub="Auto-generated PR summaries"
                 />
                 <SummaryCard
-                  icon={<BarChart3 className="h-4 w-4" />}
+                  icon={<ChartBar className="h-4 w-4" />}
                   label="Lines accepted"
                   value={formatNumber(agg.totalLinesAccepted)}
                   sub={`of ${formatNumber(agg.totalLinesSuggested)} suggested (${agg.lineAcceptanceRate.toFixed(1)}%)`}
@@ -689,7 +691,7 @@ export default function CopilotMetricsPanel({
               {/* Section tabs */}
               <div className="flex flex-wrap gap-2">
                 {([
-                  { key: 'overview' as const, label: 'Overview', icon: <TrendingUp className="h-3.5 w-3.5" /> },
+                  { key: 'overview' as const, label: 'Overview', icon: <TrendUp className="h-3.5 w-3.5" /> },
                   { key: 'languages' as const, label: 'Languages', icon: <Code className="h-3.5 w-3.5" /> },
                   { key: 'editors' as const, label: 'Editors', icon: <Monitor className="h-3.5 w-3.5" /> },
                   { key: 'models' as const, label: 'Models', icon: <Cpu className="h-3.5 w-3.5" /> },
@@ -698,10 +700,10 @@ export default function CopilotMetricsPanel({
                     key={key}
                     type="button"
                     onClick={() => setActiveSection(key)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all ${
                       activeSection === key
-                        ? 'border-gh-accent bg-gh-accent/10 text-gh-accent-fg'
-                        : 'border-gh-border text-gh-fg-muted hover:border-gh-border-hover'
+                        ? 'bg-gh-accent text-white shadow-sm'
+                        : 'border border-gh-border text-gh-fg-muted hover:border-gh-border-hover hover:bg-gh-overlay'
                     }`}
                   >
                     {icon} {label}
@@ -762,7 +764,7 @@ export default function CopilotMetricsPanel({
 
               {agg.totalDays === 0 && !isLoading && (
                 <div
-                  className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
+                  className="rounded-md border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted shadow-sm"
                   data-testid="copilot-no-metrics"
                 >
                   No Copilot metrics data available for <span className="font-medium text-gh-fg">{accountData.org}</span>.
@@ -780,13 +782,13 @@ export default function CopilotMetricsPanel({
                   sub="From personal billing usage"
                 />
                 <SummaryCard
-                  icon={<MessageSquare className="h-4 w-4" />}
+                  icon={<ChatCircle className="h-4 w-4" />}
                   label="Premium requests"
                   value={formatNumber(personalAgg.totalPremiumRequests)}
                   sub="Metered Copilot premium requests"
                 />
                 <SummaryCard
-                  icon={<BarChart3 className="h-4 w-4" />}
+                  icon={<ChartBar className="h-4 w-4" />}
                   label="Net spend"
                   value={`$${personalAgg.totalNetAmount.toFixed(2)}`}
                   sub="Across Copilot-billed usage items"
@@ -814,7 +816,7 @@ export default function CopilotMetricsPanel({
 
               <BreakdownTable
                 title="Premium request analytics"
-                icon={<MessageSquare className="h-4 w-4 text-gh-accent-fg" />}
+                icon={<ChatCircle className="h-4 w-4 text-gh-accent-fg" />}
                 columns={[
                   { header: 'Product / model', accessor: (r) => r.name },
                   { header: 'Requests', accessor: (r) => formatNumber(r.quantity), align: 'right' },
@@ -840,7 +842,7 @@ export default function CopilotMetricsPanel({
 
               {personalAgg.productBreakdown.length === 0 && personalAgg.premiumRequestBreakdown.length === 0 && !isLoading && (
                 <div
-                  className="rounded-lg border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted"
+                  className="rounded-md border border-gh-border bg-gh-surface px-6 py-10 text-center text-sm text-gh-fg-muted shadow-sm"
                   data-testid="copilot-no-metrics"
                 >
                   No personal Copilot billing usage was returned for <span className="font-medium text-gh-fg">{accountData?.account ?? 'this account'}</span>.
