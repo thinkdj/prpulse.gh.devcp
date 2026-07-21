@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, ArrowSquareOut } from '@phosphor-icons/react'
+import { X, ArrowSquareOut, ShieldCheck } from '@phosphor-icons/react'
 
 type TokenSettingsProps = {
   token: string
@@ -78,13 +78,11 @@ function TokenSettingsForm({
           <label htmlFor="github-token" className="mb-1 block text-xs text-gh-fg-muted">
             GitHub Personal Access Token
           </label>
-          <p className="mb-2 text-xs text-gh-fg-muted">
-            Required for fetching live PR data. Recommend a <strong>fine-grained PAT</strong> with
-            read-only access to pull requests and checks. For the Copilot tab, personal analytics use your
-            account billing usage access and organization analytics may require a classic PAT with{' '}
-            <code>read:org</code> or <code>manage_billing:copilot</code>. Token is stored encrypted in this
-            browser profile&apos;s localStorage and remains until you clear it; a one-way fingerprint is
-            also stored for state tracking.{' '}
+          <p className="mb-2 text-xs leading-relaxed text-gh-fg-muted">
+            Use a <strong>fine-grained token</strong> — read-only access to pull requests and checks
+            is enough for the dashboard. The Copilot tab needs more: personal analytics use your
+            account&apos;s billing access, and organization analytics may need a classic token with{' '}
+            <code>read:org</code> or <code>manage_billing:copilot</code>.{' '}
             <a
               href="https://github.com/settings/personal-access-tokens/new"
               target="_blank"
@@ -104,6 +102,15 @@ function TokenSettingsForm({
             autoComplete="off"
             disabled={isSaving}
           />
+          <div className="mt-2 flex items-start gap-2 rounded-md border border-gh-accent/30 bg-gh-accent/10 px-3 py-2 text-xs leading-relaxed text-gh-fg-default">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gh-accent-fg" aria-hidden="true" />
+            <span>
+              <strong>Private by design.</strong> Your token is encrypted (AES-GCM) before it&apos;s
+              saved to this browser&apos;s local storage — there&apos;s no backend, and it&apos;s
+              sent nowhere but GitHub&apos;s API. <strong>Clear token</strong> removes it instantly;
+              a one-way fingerprint is also kept locally for state tracking.
+            </span>
+          </div>
         </div>
 
         {currentUser && (

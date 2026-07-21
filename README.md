@@ -2,7 +2,7 @@
 
 A lightweight GitHub control panel for monitoring pull requests, branches, and Copilot analytics across your repositories.
 
-Built with **TypeScript + React + Tailwind CSS + TanStack Query** using Vite.
+Built with **TypeScript + React + Tailwind CSS + TanStack Query + TanStack Table** using Vite.
 
 ## What it solves
 
@@ -11,6 +11,8 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 <img src="./public/dashboard-preview.png" alt="Dashboard preview" style="border-radius: 6px;" />
 <figcaption><em>Dashboard preview with repository filters, summary widgets, and PR status indicators.</em></figcaption>
 
+**Try it without a token:** open the app with `?demo=true` (or click **Try the demo** on the welcome screen) to explore the full dashboard with sample data. The plain homepage always serves the real app — demo mode is strictly opt-in.
+
 ## Features
 
 - **Live GitHub API integration** — fetches open PRs, reviews, and check-run status in real time using your GitHub PAT
@@ -18,47 +20,52 @@ When notifications become noisy, this dashboard gives a bird's-eye view of PRs t
 - **Repository selector** — toggle and remove tracked repositories; selection persists in localStorage
 - **Summary widgets** — clickable at-a-glance counts for open PRs, items needing your review, safe-to-merge, and blocked
 - **Color-coded status badges** — visual indicators for CI checks, Copilot review state, and merge safety
-- **Theme palettes + dark / light** — Slate (default), Warm, Ocean, Ember; brightness toggle; preferences in `localStorage`
-- **My actions** — tab surfacing PRs that need your review and related follow-ups
+- **Six theme palettes + dark / light** — Azure (default), Warm, Slate, Ocean, Ember, Zinc; brightness toggle; preferences persist in `localStorage`
+- **My actions** — tab surfacing reviews requested from you, plus your own PRs that are blocked, failing CI, or ready to merge
 - **Branch analysis** — optional per-repo run: stale / merged / active branch table, search, copy branch name, GitHub links
-- **Copilot Analytics** — org-level Copilot usage metrics plus personal-account Copilot Pro billing analytics and premium-request usage
-- **PR search and filtering** — search by title/author/number, filter by author/repo/label dropdowns, hide drafts / Copilot / yours
-- **Sortable columns** — sort by title, repo, author, opened, updated, checks, Copilot, merge safety, pushes, comments
+- **Copilot Analytics** — org-level Copilot usage metrics plus personal-account Copilot billing analytics and premium-request usage
+- **PR search and filtering** — search by title/author/number; click any repo, author, or label to filter; per-column filter inputs; quick-hide toggles for drafts / Copilot / Dependabot / your own PRs
+- **Sortable columns** — sort by repo, title, author, opened, updated, checks, Copilot, merge safety, pushes, comments
 - **Relative time** — e.g. "5 minutes ago" (full datetime on hover); color-coded by age where relevant
-- **PR detail side panel** — metadata, activity thread, optional comment (needs write permission on the repo)
+- **PR detail side panel** — metadata, diff stats (files changed / additions / deletions), activity thread, optional comment posting, plus Close PR and Delete branch actions (write access on the repo required)
 - **"Needs your review" highlighting** — amber dot and subtle background on PRs awaiting your review
 - **Draft PR indicator** — clearly marks draft PRs in the table
 - **Label display** — color-coded labels on each PR row, clickable to filter
 - **Push count tracking** — highlights PRs with many pushes after opening (potential re-review candidates)
 - **Auto-refresh** — data refreshes every 5 minutes; manual refresh button available
 - **Error handling** — clear messages for auth failures, rate limits, and API errors
-- **Clean zero state** — welcoming empty state when no token is configured; no dummy data
+- **Demo mode** — `?demo=true` loads the entire dashboard with realistic sample data; no token required
+- **Welcome zero state** — the empty state doubles as a product tour: the four views, privacy notes, and connect/demo actions; no dummy data
 
 ## Architecture
 
 ```
 src/
 ├── types.ts              # Shared type definitions (PullRequest, BranchAnalysis, Copilot metrics)
-├── github-api.ts         # GitHub REST API client
-├── storage.ts            # localStorage helpers (repos, token & theme)
+├── github-api.ts         # GitHub REST API client (+ in-memory GET cache, ~3 min TTL)
+├── storage.ts            # localStorage helpers (repos, theme & encrypted token persistence)
 ├── utils.ts              # Formatters and relative-time helper
 ├── seed-data.ts          # Seed data for tests
+├── demo-data.ts          # Sample fixtures for demo mode (lazy-loaded)
+├── hooks/
+│   └── useCopyFeedback.ts    # Copy-to-clipboard feedback state
 ├── components/
 │   ├── StatusBadge.tsx, SummaryWidgets.tsx, RepoSelector.tsx, RepoPickerModal.tsx
 │   ├── PullRequestTable.tsx, TokenSettings.tsx, PRDetailPanel.tsx, ConfirmDialog.tsx
-│   ├── BranchAnalysisPanel.tsx, ActionRequiredPanel.tsx
-│   ├── CopilotMetricsPanel.tsx
+│   ├── BranchAnalysisPanel.tsx, ActionRequiredPanel.tsx, CopilotMetricsPanel.tsx
+│   ├── CommentMarkdown.tsx, CopyClipboardIconButton.tsx
 ├── App.tsx               # Dashboard orchestrator
-├── App.test.tsx          # Component & integration tests
 ├── main.tsx              # Entry point
 ├── index.css             # Theme tokens & global styles
 └── test/
     └── setup.ts          # Vitest setup
 ```
 
+Unit and integration tests (`*.test.ts` / `*.test.tsx`) sit beside the code they cover.
+
 - **Storage:** `localStorage` for repo selection/theme and encrypted token persistence (plus one-way token fingerprint)
-- **Data fetching:** GitHub REST API via `fetch` with TanStack Query for caching, refetch, and error handling
-- **UI:** GitHub-inspired styling with Tailwind CSS; in-memory response cache (~3 min TTL) for GETs
+- **Data fetching:** GitHub REST API via `fetch` with TanStack Query for caching, refetch, and error handling; in-memory response cache (~3 min TTL) for GETs
+- **UI:** GitHub-inspired styling with Tailwind CSS; PR table built on TanStack Table; PR comments rendered with react-markdown + remark-gfm
 
 If you later need multi-device sync, audit history, or team-shared state, Cloudflare Wrangler services (D1/KV) can be added as a next step.
 
@@ -80,12 +87,14 @@ GitHub may also apply **secondary** throttling (e.g. concurrent requests, abuse 
 
 ## Setup
 
+Requires **Node 20.19+**.
+
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173, click **Set token**, and paste a GitHub token with the minimum access needed for the tabs you plan to use.
+Open http://localhost:5173, click **Set token**, and paste a GitHub token with the minimum access needed for the tabs you plan to use — or open http://localhost:5173/?demo=true to explore with sample data first.
 
 ### Required token permissions
 
@@ -97,7 +106,8 @@ Use a **fine-grained Personal Access Token** scoped to the repositories (or the 
 | **Checks** (fine-grained repo permission) | Read-only | Fetch CI check-run status for each PR |
 | **Metadata** (fine-grained repo permission) | Read-only | List repositories in the repo picker and read basic repo metadata |
 | **Contents** (fine-grained repo permission) | Read-only | Recommended for branch analysis on private repos, where branch/compare lookups can otherwise fail with 403 |
-| **Issues** or **Pull requests** (fine-grained repo permission) | Read/Write only if you want to post comments | Post a comment from the PR detail panel |
+| **Pull requests** (fine-grained repo permission; **Issues** also works for comments) | Read/Write only if you want to post comments or close PRs | Post a comment (via the Issues comments endpoint) or close a PR from the PR detail panel |
+| **Contents** (fine-grained repo permission) | Read/Write only if you want to delete branches | Delete a merged/closed PR's branch from the PR detail panel |
 | **Account billing access** (your own account) | Read-only | Personal Copilot analytics in the Copilot tab via `/users/{username}/settings/billing/usage` and `/users/{username}/settings/billing/premium_request/usage` |
 | `read:org` (classic PAT or OAuth scope) | Read-only | List org memberships, fetch org Copilot analytics, and fetch org Copilot billing data |
 | `manage_billing:copilot` (classic PAT or OAuth scope) | Read-only for this app | Fetch org Copilot billing / seat data and, where allowed by GitHub, org Copilot metrics |
@@ -132,8 +142,9 @@ The **Copilot Analytics** tab supports two data sources:
 
 > **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
 
-> **Security note:** The token is stored encrypted in your browser's `localStorage` and remains until you clear it from PR Pulse settings or browser storage.
+> **Security note:** The token is encrypted (AES-GCM via the Web Crypto API) before it is stored in your browser's `localStorage`, and remains until you clear it from PR Pulse settings or browser storage.
 > `localStorage` also keeps a one-way token fingerprint for state tracking.
+> There is no backend — the token is only ever sent to GitHub's API.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
 > (read-only access to pull requests, checks, and repository metadata). Avoid classic tokens with broad
 > scopes. If you suspect your browser environment may be compromised, use a short-lived token or clear
@@ -151,22 +162,27 @@ The **Copilot Analytics** tab supports two data sources:
 
 - Workflow file: `.github/workflows/deploy-gh-pages.yml`
 - Deploys automatically on pushes to `main` and supports manual dispatch.
-- CI/CD pipeline runs `npm ci`, `npm run lint`, `npm run test`, and then builds with:
-  - `npm run build -- --base=/<repo-name>/`
+- CI/CD pipeline runs `npm ci`, `npm run lint`, `npm run test`, and then builds with the
+  `VITE_BASE_PATH=/<repo-name>/` environment variable (consumed as Vite's `base` in `vite.config.ts`).
+- The deployed homepage serves the real app; demo mode stays opt-in via `?demo=true`.
 - Build output from `dist/` is published via GitHub Pages actions.
 
 ## Testing
 
-Focused tests validate:
+Vitest + Testing Library (jsdom) suites live beside the code they cover:
 
-- Dashboard renders summary widgets with seed data
-- Repository toggle filters visible PR counts
-- localStorage hydration and persistence
-- Invalid JSON fallback to defaults
-- Settings panel visibility toggle
-- PR filter buttons (All / Needs review)
-- Repository removal
-- Branch analysis panel and filtering
-- My Actions tab
-- PR detail panel open/close, Close PR, Delete branch actions
-- Copilot Analytics tab navigation, panel rendering, usage bars
+- **App integration** (`App.test.tsx`) — welcome zero state, token settings flow, tab navigation, summary widgets, repository toggling/removal, PR filters, branch analysis, My Actions, PR detail panel (open/close, Close PR, Delete branch), Copilot tab
+- **storage** — repo/theme/mode/Copilot-target persistence, encrypted token save/load round-trips, corrupt-data fallbacks
+- **github-api** — cache clearing and invalidation, `closePR`, `deleteBranch`, `postPRComment`, personal Copilot data
+- **Component units** — StatusBadge, SummaryWidgets, ConfirmDialog, CommentMarkdown
+- **utils** — status formatters and relative-time edge cases
+
+Run them with `npm run test`.
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for the plan — keyboard shortcuts, notification badges, column preferences, review timelines, and more.
+
+## License
+
+[GPL-3.0](./LICENSE)

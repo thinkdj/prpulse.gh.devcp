@@ -8,13 +8,14 @@ import {
   Moon,
   Key,
   Pulse,
-  CheckCircle,
+  Funnel,
   GitBranch,
-  Tag,
+  Palette,
   GitPullRequest,
   Lightning,
   Robot,
   Flask,
+  ShieldCheck,
   WarningCircle,
 } from '@phosphor-icons/react'
 import type { CopilotAccountData, CopilotAnalyticsTarget, DashboardFilter, PullRequest } from './types'
@@ -35,15 +36,44 @@ import ConfirmDialog from './components/ConfirmDialog'
 
 type DemoData = typeof import('./demo-data')
 
-// Deployed builds (e.g. GitHub Pages) can set VITE_DEFAULT_DEMO=true so visitors land straight
-// in demo mode; `?demo=false` still opts back out to the real welcome/token screen.
+// Demo mode is strictly opt-in via `?demo=true`; every other URL (including the deployed
+// homepage) shows the real app — welcome/token screen when no token is configured.
 const demoParam = new URLSearchParams(window.location.search).get('demo')
-const isDemoMode = demoParam === 'true' || (import.meta.env.VITE_DEFAULT_DEMO === 'true' && demoParam !== 'false')
+const isDemoMode = demoParam === 'true'
 const DEMO_TOKEN = 'demo-mode'
 // Keeps the header's loading bar visible for a minimum stretch on boot, even when data
 // (e.g. demo fixtures) is ready instantly — it's the project's one loading indicator.
 // Skipped under Vitest so tests don't have to wait out a real timer.
 const BOOT_WINDOW_MS = import.meta.env.MODE === 'test' ? 0 : 2500
+
+// Welcome-state feature map: mirrors the dashboard's actual tab row (same icons, same labels)
+// so the empty state doubles as a table of contents for the product.
+const WELCOME_VIEWS = [
+  {
+    icon: GitPullRequest,
+    title: 'Pull requests',
+    description:
+      'Every open PR across your repos: review state, CI checks, merge safety, drafts, labels, push counts. Search, sort, filter — or click any row for full detail.',
+  },
+  {
+    icon: Lightning,
+    title: 'My actions',
+    description:
+      'The short list of what’s waiting on you — reviews requested from you, plus your own PRs that are blocked, failing CI, or ready to merge.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Branch analysis',
+    description:
+      'An on-demand sweep of any repo for stale, merged, and active branches — searchable, with copy-ready names and direct GitHub links.',
+  },
+  {
+    icon: Robot,
+    title: 'Copilot',
+    description:
+      'Adoption and usage metrics for your organizations, plus personal Copilot billing and premium-request usage.',
+  },
+] as const
 
 function applyTheme(theme: Theme, mode: Mode) {
   document.documentElement.classList.remove('light', 'slate', 'ocean', 'ember', 'zinc', 'azure')
@@ -557,54 +587,76 @@ function App() {
         )}
 
         {!tokenHydrated && !isDemoMode ? null : !token && !isDemoMode ? (
-          /* ── Empty state: no token configured ── */
-          <section className="rounded-md border border-gh-border bg-gh-surface px-6 py-16 text-center shadow-sm md:py-20" data-testid="welcome-state">
-            <div className="mx-auto max-w-lg">
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gh-accent/10">
-                <Pulse className="h-9 w-9 text-gh-accent-fg" weight="bold" />
+          /* ── Empty state: no token configured — the product's homepage in miniature ── */
+          <section
+            className="relative overflow-hidden rounded-md border border-gh-border bg-gh-surface px-6 py-14 shadow-sm md:py-16"
+            data-testid="welcome-state"
+          >
+            {/* Same soft accent wash as the masthead — ties the hero to the app's signature treatment */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-gh-accent/[0.07] via-transparent to-transparent" aria-hidden="true" />
+            <div className="relative mx-auto max-w-2xl">
+              <div className="text-center">
+                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gh-accent/10">
+                  <Pulse className="pulse-mark h-9 w-9 text-gh-accent-fg" weight="bold" aria-hidden="true" />
+                </div>
+                <h2 className="text-[1.75rem] font-bold leading-tight tracking-tight text-gh-fg md:text-[2rem]">
+                  Welcome to PR Pulse
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-gh-fg-muted">
+                  When GitHub notifications turn into noise, this is the signal: everything that
+                  needs your attention, in one live view.
+                </p>
+                <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(true)}
+                    className="inline-flex items-center gap-2 rounded-md bg-gh-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
+                  >
+                    <Key className="h-4 w-4" /> Connect GitHub token
+                  </button>
+                  <a
+                    href="?demo=true"
+                    className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-5 py-2.5 text-sm font-semibold text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg"
+                  >
+                    <Flask className="h-4 w-4" /> Try the demo
+                  </a>
+                </div>
+                <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gh-fg-muted">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-gh-accent-fg" aria-hidden="true" />
+                  Your token is encrypted, stored only in this browser, and sent nowhere but GitHub.
+                </p>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-gh-fg">Welcome to PR Pulse</h2>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-gh-fg-muted">
-                Connect a token to get a live, filterable view of pull requests, branch health, and
-                Copilot usage across every repository you track.
+
+              <p className="mt-12 mb-4 text-center text-[11px] font-semibold uppercase tracking-wider text-gh-fg-muted">
+                The four views
               </p>
-              <ul className="mx-auto mt-6 grid max-w-md grid-cols-1 gap-2 text-left text-sm text-gh-fg-muted sm:grid-cols-2">
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <CheckCircle className="h-4 w-4 text-gh-success-fg shrink-0" /> PR status, reviews &amp; CI checks
+              <div className="grid grid-cols-1 gap-3 text-left sm:grid-cols-2">
+                {WELCOME_VIEWS.map(({ icon: Icon, title, description }) => (
+                  <div key={title} className="rounded-md border border-gh-border bg-gh-overlay/40 p-4">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 shrink-0 text-gh-accent-fg" aria-hidden="true" />
+                      <h3 className="text-sm font-semibold text-gh-fg">{title}</h3>
+                    </div>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-gh-fg-muted">{description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-gh-fg-muted">
+                <li className="flex items-center gap-1.5">
+                  <ArrowsClockwise className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Auto-refreshes every 5 minutes
                 </li>
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <GitBranch className="h-4 w-4 text-gh-fg-muted shrink-0" /> Stale and merged branches
+                <li className="flex items-center gap-1.5">
+                  <Funnel className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> One-click filters: needs review, safe to merge, blocked
                 </li>
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <Tag className="h-4 w-4 text-gh-fg-muted shrink-0" /> Filter by author, label, status
-                </li>
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <GitPullRequest className="h-4 w-4 text-gh-fg-muted shrink-0" /> Draft PRs &amp; push counts
-                </li>
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <Robot className="h-4 w-4 text-gh-fg-muted shrink-0" /> Copilot review &amp; usage analytics
-                </li>
-                <li className="flex items-center gap-2 rounded-md bg-gh-overlay/60 px-3 py-2">
-                  <Lightning className="h-4 w-4 text-gh-fg-muted shrink-0" /> Auto-refreshes every 5 minutes
+                <li className="flex items-center gap-1.5">
+                  <Palette className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Six color themes, light &amp; dark
                 </li>
               </ul>
-              <div className="mt-7 flex flex-col items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(true)}
-                  className="inline-flex items-center gap-2 rounded-md bg-gh-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
-                >
-                  <Key className="h-4 w-4" /> Connect GitHub Token
-                </button>
-                <a
-                  href="?demo=true"
-                  className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-5 py-2.5 text-sm font-semibold text-gh-fg-muted transition-colors hover:border-gh-border-hover hover:bg-gh-overlay hover:text-gh-fg"
-                >
-                  <Flask className="h-4 w-4" /> Try demo
-                </a>
-              </div>
-              <p className="mt-3 text-xs text-gh-fg-muted">
-                Works with a fine-grained PAT scoped to read-only pull request access.
+
+              <p className="mt-7 text-center text-xs text-gh-fg-muted">
+                Works with a fine-grained personal access token — read-only access to pull requests
+                and checks is enough to start.
               </p>
             </div>
           </section>

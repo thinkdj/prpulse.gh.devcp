@@ -38,10 +38,9 @@ jobs:
         run: npm run test
 
       - name: Build site
+        # Custom domain (prpulse.32mb.dev) serves from the root, so base stays '/'.
+        # The public/CNAME file is copied into dist/ and keeps the domain bound across deploys.
         run: npm run build
-        env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_DEFAULT_DEMO: 'true'
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
