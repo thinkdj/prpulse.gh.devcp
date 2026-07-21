@@ -87,11 +87,11 @@ GitHub may also apply **secondary** throttling (e.g. concurrent requests, abuse 
 
 ## Setup
 
-Requires **Node 20.19+**.
+Requires **Node 20.19+** and **pnpm** (pinned via the `packageManager` field — run `corepack enable` once and the right version is provisioned automatically).
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Open http://localhost:5173, click **Set token**, and paste a GitHub token with the minimum access needed for the tabs you plan to use — or open http://localhost:5173/?demo=true to explore with sample data first.
@@ -152,18 +152,18 @@ The **Copilot Analytics** tab supports two data sources:
 
 ## Scripts
 
-- `npm run dev` — start development server
-- `npm run lint` — run ESLint
-- `npm run test` — run unit tests (Vitest)
-- `npm run build` — type-check and build
-- `npm run preview` — preview production build
+- `pnpm dev` — start development server
+- `pnpm lint` — run ESLint
+- `pnpm test` — run unit tests (Vitest)
+- `pnpm build` — type-check and build
+- `pnpm preview` — preview production build
 
 ## GitHub Pages CI/CD
 
 - Workflow file: `.github/workflows/deploy-gh-pages.yml`
 - Deploys automatically on pushes to `main` and supports manual dispatch.
-- CI/CD pipeline runs `npm ci`, `npm run lint`, `npm run test`, and then builds with the
-  `VITE_BASE_PATH=/<repo-name>/` environment variable (consumed as Vite's `base` in `vite.config.ts`).
+- CI/CD pipeline runs `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm test`, and then `pnpm build`.
+- The build uses Vite's default base of `/` (`vite.config.ts`), which suits the custom domain; set `VITE_BASE_PATH` only when serving from a subpath.
 - The deployed homepage serves the real app; demo mode stays opt-in via `?demo=true`.
 - Build output from `dist/` is published via GitHub Pages actions.
 

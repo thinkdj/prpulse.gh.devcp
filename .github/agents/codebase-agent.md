@@ -62,11 +62,11 @@ src/
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Start Vite dev server (http://localhost:5173) |
-| `npm run build` | `tsc -b && vite build` — type-check then bundle |
-| `npm run lint` | `eslint .` — run ESLint with flat config |
-| `npm run test` | `vitest run` — run all tests once |
-| `npm run preview` | Preview production build locally |
+| `pnpm dev` | Start Vite dev server (http://localhost:5173) |
+| `pnpm build` | `tsc -b && vite build` — type-check then bundle |
+| `pnpm lint` | `eslint .` — run ESLint with flat config |
+| `pnpm test` | `vitest run` — run all tests once |
+| `pnpm preview` | Preview production build locally |
 
 ## Architecture & Data Flow
 
@@ -121,10 +121,10 @@ src/
 ## CI/CD Pipeline
 
 The GitHub Actions workflow (`.github/workflows/deploy-gh-pages.yml`) runs on push to `main` and manual dispatch:
-1. `npm ci` — install dependencies
-2. `npm run lint` — ESLint
-3. `npm run test` — Vitest
-4. `npm run build` — production build (base path via the `VITE_BASE_PATH` env var; defaults to `/`, which suits the custom domain `prpulse.32mb.dev`)
+1. `pnpm install --frozen-lockfile` — install dependencies
+2. `pnpm lint` — ESLint
+3. `pnpm test` — Vitest
+4. `pnpm build` — production build (base path via the `VITE_BASE_PATH` env var; defaults to `/`, which suits the custom domain `prpulse.32mb.dev`)
 5. Deploy `dist/` to GitHub Pages
 
 ## Key Patterns to Follow
