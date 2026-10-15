@@ -87,17 +87,29 @@ type CacheEntry<T = unknown> = { data: T; timestamp: number }
 
 const DEFAULT_CACHE_TTL = 3 * 60 * 1000 // 3 minutes
 const BRANCH_DETAIL_CONCURRENCY = 8
+const PR_DETAIL_CONCURRENCY = 6
+const PR_LIST_PER_PAGE = 100
+const PR_LIST_MAX_PAGES = 5 // 500 open PRs per repo cap — bounds API cost on huge repos
 
 const apiCache = new Map<string, CacheEntry>()
 
-/** Opaque id for cache keys — avoids storing the raw PAT string in Map keys. */
+/**
+ * Opaque id for cache keys — avoids storing the raw PAT string in Map keys.
+ * cyrb53 (64-bit, non-cryptographic): collision probability is negligible for
+ * an in-memory per-session cache, unlike the previous 32-bit FNV-1a hash.
+ * The token length is mixed in so different-length tokens never collide.
+ */
 function tokenCacheId(token: string): string {
-  let h = 2166136261
+  let h1 = 0xdeadbeef ^ token.length
+  let h2 = 0x41c6ce57 ^ token.length
   for (let i = 0; i < token.length; i += 1) {
-    h ^= token.charCodeAt(i)
-    h = Math.imul(h, 16777619)
+    const ch = token.charCodeAt(i)
+    h1 = Math.imul(h1 ^ ch, 2654435761)
+    h2 = Math.imul(h2 ^ ch, 1597334677)
   }
-  return (h >>> 0).toString(16)
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return `${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}`
 }
 
 function getCached<T>(key: string): T | undefined {
@@ -265,11 +277,11 @@ async function fetchPRDetails(
 
   const [reviewsResult, checksResult] = await Promise.allSettled([
     githubFetch<GitHubReview[]>(
-      `/repos/${fullRepo}/pulls/${pr.number}/reviews`,
+      `/repos/${fullRepo}/pulls/${pr.number}/reviews?per_page=100`,
       token,
     ),
     githubFetch<{ check_runs: GitHubCheckRun[] }>(
-      `/repos/${fullRepo}/commits/${pr.head.sha}/check-runs`,
+      `/repos/${fullRepo}/commits/${pr.head.sha}/check-runs?per_page=100`,
       token,
     ),
   ])
@@ -321,16 +333,23 @@ export async function fetchRepoPullRequests(
   const [owner, repo] = repoFullName.split('/')
   if (!owner || !repo) return []
 
-  const prs = await githubFetch<GitHubPR[]>(
-    `/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=50`,
-    token,
-  )
+  // Paginate the open-PR list so repos with 50+ open PRs are not silently truncated.
+  const prs: GitHubPR[] = []
+  for (let page = 1; page <= PR_LIST_MAX_PAGES; page += 1) {
+    const batch = await githubFetch<GitHubPR[]>(
+      `/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=${PR_LIST_PER_PAGE}&page=${page}`,
+      token,
+    )
+    prs.push(...batch)
+    if (batch.length < PR_LIST_PER_PAGE) break
+  }
 
-  const results = await Promise.all(
-    prs.map((pr) => fetchPRDetails(owner, repo, pr, token, currentUser)),
+  // Bound per-PR detail fan-out (2 API calls per PR) to avoid secondary rate limits.
+  return mapWithConcurrencyLimit(
+    prs,
+    PR_DETAIL_CONCURRENCY,
+    (pr) => fetchPRDetails(owner, repo, pr, token, currentUser),
   )
-
-  return results
 }
 
 export async function fetchUserRepos(token: string): Promise<GitHubRepo[]> {

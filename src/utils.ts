@@ -65,6 +65,19 @@ export const relativeTime = (dateString: string): string => {
   return formatAgeParts(Date.now() - then)
 }
 
+const KNOWN_COPILOT_BOT_LOGINS = new Set([
+  'copilot-pull-request-reviewer[bot]',
+  'github-copilot[bot]',
+  'copilot[bot]',
+])
+
+/** True only for Copilot bot authors — never for humans with "copilot" in their name. */
+export function isCopilotAuthor(author: string): boolean {
+  const normalized = author.toLowerCase()
+  if (KNOWN_COPILOT_BOT_LOGINS.has(normalized)) return true
+  return normalized.includes('copilot') && normalized.endsWith('[bot]')
+}
+
 /** Relative age from a Unix epoch milliseconds value (e.g. React Query `dataUpdatedAt`). */
 export function formatAgeAgoFromMs(epochMs: number): string {
   if (!epochMs) return '—'

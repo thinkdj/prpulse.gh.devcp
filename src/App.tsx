@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -27,12 +27,23 @@ import SummaryWidgets from './components/SummaryWidgets'
 import RepoSelector from './components/RepoSelector'
 import PullRequestTable from './components/PullRequestTable'
 import TokenSettings from './components/TokenSettings'
-import RepoPickerModal from './components/RepoPickerModal'
-import BranchAnalysisPanel from './components/BranchAnalysisPanel'
-import PRDetailPanel from './components/PRDetailPanel'
 import ActionRequiredPanel from './components/ActionRequiredPanel'
-import CopilotMetricsPanel from './components/CopilotMetricsPanel'
 import ConfirmDialog from './components/ConfirmDialog'
+
+// Code-split below-the-fold views: react-markdown (PR detail) and the
+// branch/Copilot panels stay out of the initial bundle until opened.
+const RepoPickerModal = lazy(() => import('./components/RepoPickerModal'))
+const BranchAnalysisPanel = lazy(() => import('./components/BranchAnalysisPanel'))
+const PRDetailPanel = lazy(() => import('./components/PRDetailPanel'))
+const CopilotMetricsPanel = lazy(() => import('./components/CopilotMetricsPanel'))
+
+function LazyPanelFallback({ label }: { label: string }) {
+  return (
+    <div className="rounded-md border border-gh-border bg-gh-surface px-4 py-12 text-center text-sm text-gh-fg-muted" role="status" aria-live="polite">
+      Loading {label}…
+    </div>
+  )
+}
 
 type DemoData = typeof import('./demo-data')
 
@@ -247,11 +258,14 @@ function App() {
     retry: 1,
   })
 
-  // Return nothing while the org query is still in-flight so personal repo owners
-  // don't flash as org candidates. Once settled, prefer API-confirmed org names;
-  // fall back to unique repo owners for users with direct org-repo access (not membership).
-  // Exclude the authenticated user's own login — personal accounts are not organisations
-  // and the /orgs/{user}/copilot/metrics endpoint does not exist for them.
+  // Prefer API-confirmed org memberships; fall back to unique repo owners so
+  // users with direct org-repo access (but no org membership) still get an org
+  // candidate. The fallback can include non-org owners (personal forks) — those
+  // simply surface a tolerated fetch error in the Copilot panel instead of
+  // failing silently. Exclude the authenticated user's own login: personal
+  // accounts are not organisations and /orgs/{user}/copilot/metrics 404s.
+  // Nothing is returned while the org query is in-flight to avoid flashing
+  // repo owners as org candidates.
   const copilotOrgs = useMemo(() => {
     const fromApi = new Set(userOrgs)
     if (fromApi.size > 0) return [...fromApi].sort()
@@ -383,13 +397,21 @@ function App() {
   const addRepo = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalized = newRepo.trim()
-    if (!normalized || repos.includes(normalized)) {
+    if (!normalized) {
       setRepoError('')
       return
     }
+    // GitHub owner/repo names: no spaces, exactly one slash, valid characters.
     const parts = normalized.split('/')
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    const namePattern = /^[A-Za-z0-9_.-]+$/
+    if (parts.length !== 2 || !parts[0] || !parts[1] || !namePattern.test(parts[0]) || !namePattern.test(parts[1])) {
       setRepoError('Use owner/repo format')
+      return
+    }
+    // Duplicate check is case-insensitive — GitHub repos are case-insensitive —
+    // but the user's original casing is preserved.
+    if (repos.some((r) => r.toLowerCase() === normalized.toLowerCase())) {
+      setRepoError('')
       return
     }
 
@@ -442,13 +464,14 @@ function App() {
   }
 
   const handleRepoPickerSave = (selected: string[]) => {
+    // Compute from current render state — no functional updater closing over a
+    // potentially stale `repos` value. Newly picked repos become selected.
     const selectedSet = new Set(selected)
+    const oldReposLower = new Set(repos.map((r) => r.toLowerCase()))
+    const kept = selectedRepos.filter((repo) => selectedSet.has(repo))
+    const newlyAdded = selected.filter((repo) => !oldReposLower.has(repo.toLowerCase()))
     setRepos(selected)
-    setSelectedRepos((prev) => {
-      const kept = prev.filter((repo) => selectedSet.has(repo))
-      const newlyAdded = selected.filter((repo) => !repos.includes(repo))
-      return [...kept, ...newlyAdded]
-    })
+    setSelectedRepos([...kept, ...newlyAdded])
   }
 
   return (
@@ -579,9 +602,11 @@ function App() {
             <span>
               {error instanceof Error
                 ? error.message
-                : activeView === 'pull_requests'
-                  ? 'Failed to fetch pull requests.'
-                  : 'Failed to fetch branch analysis.'}
+                : activeView === 'branches'
+                  ? 'Failed to fetch branch analysis.'
+                  : activeView === 'copilot'
+                    ? 'Failed to fetch Copilot data.'
+                    : 'Failed to fetch pull requests.'}
             </span>
           </div>
         )}
@@ -759,25 +784,29 @@ function App() {
                 selectedPR={selectedPR}
               />
             ) : activeView === 'branches' ? (
-              <BranchAnalysisPanel
-                branches={branches}
-                isLoading={branchIsLoading}
-                hasSelectedRepos={selectedRepos.length > 0}
-                repos={repos}
-                analysisRepos={effectiveBranchAnalysisRepos}
-                analysisTriggered={effectiveBranchAnalysisTriggered}
-                onRunAnalysis={handleRunBranchAnalysis}
-              />
+              <Suspense fallback={<LazyPanelFallback label="branch analysis" />}>
+                <BranchAnalysisPanel
+                  branches={branches}
+                  isLoading={branchIsLoading}
+                  hasSelectedRepos={selectedRepos.length > 0}
+                  repos={repos}
+                  analysisRepos={effectiveBranchAnalysisRepos}
+                  analysisTriggered={effectiveBranchAnalysisTriggered}
+                  onRunAnalysis={handleRunBranchAnalysis}
+                />
+              </Suspense>
             ) : activeView === 'copilot' ? (
-              <CopilotMetricsPanel
-                accountData={copilotData}
-                isLoading={copilotIsLoading}
-                targetsLoading={copilotTargetsLoading}
-                targets={copilotTargets}
-                selectedTarget={selectedCopilotTarget?.id ?? ''}
-                onTargetChange={handleCopilotTargetChange}
-                error={copilotError ? (copilotError instanceof Error ? copilotError.message : 'Failed to fetch Copilot data') : null}
-              />
+              <Suspense fallback={<LazyPanelFallback label="Copilot analytics" />}>
+                <CopilotMetricsPanel
+                  accountData={copilotData}
+                  isLoading={copilotIsLoading}
+                  targetsLoading={copilotTargetsLoading}
+                  targets={copilotTargets}
+                  selectedTarget={selectedCopilotTarget?.id ?? ''}
+                  onTargetChange={handleCopilotTargetChange}
+                  error={copilotError ? (copilotError instanceof Error ? copilotError.message : 'Failed to fetch Copilot data') : null}
+                />
+              </Suspense>
             ) : (
               <ActionRequiredPanel
                 pullRequests={pullRequests}
@@ -789,33 +818,37 @@ function App() {
             )}
 
             {selectedPR && (
-              <PRDetailPanel
-                pr={selectedPR}
-                token={token}
-                currentUser={currentUser}
-                isDemoMode={isDemoMode}
-                demoActivity={isDemoMode ? (demoData?.demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
-                onClose={() => setSelectedPR(null)}
-                onPRClosed={() => {
-                  setSelectedPR(null)
-                  clearApiCache()
-                  void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
-                }}
-                onBranchDeleted={() => {
-                  clearApiCache()
-                  void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
-                }}
-              />
+              <Suspense fallback={<LazyPanelFallback label="PR details" />}>
+                <PRDetailPanel
+                  pr={selectedPR}
+                  token={token}
+                  currentUser={currentUser}
+                  isDemoMode={isDemoMode}
+                  demoActivity={isDemoMode ? (demoData?.demoPRActivity[`${selectedPR.repo}/${selectedPR.id}`] ?? []) : undefined}
+                  onClose={() => setSelectedPR(null)}
+                  onPRClosed={() => {
+                    setSelectedPR(null)
+                    clearApiCache()
+                    void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+                  }}
+                  onBranchDeleted={() => {
+                    clearApiCache()
+                    void queryClient.invalidateQueries({ queryKey: ['repo-prs'] })
+                  }}
+                />
+              </Suspense>
             )}
 
             {showRepoPicker && (
-              <RepoPickerModal
-                availableRepos={userRepos}
-                selectedRepos={repos}
-                isLoading={reposLoading}
-                onSave={handleRepoPickerSave}
-                onClose={() => setShowRepoPicker(false)}
-              />
+              <Suspense fallback={<LazyPanelFallback label="repository picker" />}>
+                <RepoPickerModal
+                  availableRepos={userRepos}
+                  selectedRepos={repos}
+                  isLoading={reposLoading}
+                  onSave={handleRepoPickerSave}
+                  onClose={() => setShowRepoPicker(false)}
+                />
+              </Suspense>
             )}
           </>
         )}

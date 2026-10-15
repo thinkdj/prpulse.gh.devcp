@@ -44,6 +44,13 @@ const base64ToBytes = (value: string): Uint8Array => {
   return bytes
 }
 
+/**
+ * Obfuscation, not hardened secret storage: the key is derived from public
+ * values (origin + user-agent), and a plaintext copy lives in sessionStorage
+ * for the session. This defeats casual inspection of localStorage but not XSS
+ * or local-machine access — users should prefer short-lived, minimally-scoped
+ * tokens and clear them after each session on shared machines.
+ */
 const deriveTokenKey = async (): Promise<CryptoKey> => {
   if (!crypto?.subtle) {
     throw new Error('Web Crypto API unavailable')

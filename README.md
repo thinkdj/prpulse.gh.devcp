@@ -142,7 +142,7 @@ The **Copilot Analytics** tab supports two data sources:
 
 > **Premium requests percentage** (as shown in GitHub's billing UI) is not available through the public GitHub REST API. The dashboard instead surfaces the acceptance rate, seat utilisation, and engagement rate as the key quality and adoption indicators.
 
-> **Security note:** The token is encrypted (AES-GCM via the Web Crypto API) before it is stored in your browser's `localStorage`, and remains until you clear it from PR Pulse settings or browser storage.
+> **Security note:** The token is obfuscated with AES-GCM (key derived from origin + user-agent, not a secret) before it is stored in your browser's `localStorage`, and a plaintext copy is kept in `sessionStorage` for the session. This defeats casual inspection, but not XSS or local-machine access — it remains until you clear it from PR Pulse settings or browser storage.
 > `localStorage` also keeps a one-way token fingerprint for state tracking.
 > There is no backend — the token is only ever sent to GitHub's API.
 > For best security, use a **fine-grained Personal Access Token** with the minimum required permissions
@@ -177,7 +177,7 @@ Vitest + Testing Library (jsdom) suites live beside the code they cover:
 - **Component units** — StatusBadge, SummaryWidgets, ConfirmDialog, CommentMarkdown
 - **utils** — status formatters and relative-time edge cases
 
-Run them with `npm run test`.
+Run them with `pnpm test`.
 
 ## Roadmap
 

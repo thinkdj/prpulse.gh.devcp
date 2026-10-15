@@ -9,7 +9,7 @@ import {
 import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table'
 import { ArrowsClockwise, X, ChatCircle, ArrowSquareOut } from '@phosphor-icons/react'
 import type { PullRequest, DashboardFilter } from '../types'
-import { formatAgeAgoFromMs, relativeTime } from '../utils'
+import { formatAgeAgoFromMs, isCopilotAuthor, relativeTime } from '../utils'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import StatusBadge from './StatusBadge'
 import CopyClipboardIconButton from './CopyClipboardIconButton'
@@ -105,10 +105,7 @@ export default function PullRequestTable({
     else if (filter === 'safe') result = result.filter((pr) => pr.mergeSafety === 'safe')
     else if (filter === 'blocked') result = result.filter((pr) => pr.mergeSafety === 'blocked')
     if (hideDrafts) result = result.filter((pr) => !pr.isDraft)
-    if (hideCopilot) result = result.filter((pr) => {
-      const a = pr.author.toLowerCase()
-      return !a.includes('copilot')
-    })
+    if (hideCopilot) result = result.filter((pr) => !isCopilotAuthor(pr.author))
     if (hideDependabot) result = result.filter((pr) => {
       const a = pr.author.toLowerCase()
       return !a.includes('dependabot')
